@@ -1,0 +1,9 @@
+# Normaliza fim de linha no repositório: LF sempre.
+# Sem isso, alternar entre Windows e Linux gera diff de arquivo inteiro
+# e quebra script shell com CRLF.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.png binary
+*.jpg binary
+*.pdf binary

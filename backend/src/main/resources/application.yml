@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: crm
+
+  datasource:
+    # Sintaxe ${VAR:padrao}: usa a variável de ambiente quando existir.
+    # Em produção, nenhuma dessas terá valor padrão no arquivo.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/crm}
+    username: ${DB_USER:crm}
+    password: ${DB_PASSWORD:crm_dev_local}   # TESTE — TROCAR ANTES DE PRODUÇÃO
+
+  jpa:
+    hibernate:
+      # validate: o Hibernate confere se o banco bate com as entidades e
+      # falha se não bater. Nunca 'update' — ele altera o schema sozinho,
+      # sem histórico, e o que roda em produção deixa de ser reproduzível.
+      ddl-auto: validate
+    # Fecha a sessão ao sair da camada de serviço. Evita consulta preguiçosa
+    # disparada na serialização da resposta, que é onde nascem os erros de
+    # lazy initialization e boa parte dos N+1.
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+
+server:
+  port: 8080
+  # Faz a aplicação respeitar X-Forwarded-* quando houver proxy na frente.
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    br.com.pnp.crm: DEBUG
