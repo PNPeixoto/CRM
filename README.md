@@ -25,6 +25,10 @@ atual — está em [`contexto/`](contexto/). **Comece por
   (Testcontainers)
 - **Node 20+**
 
+> **No Linux (Nobara/Fedora), siga o [`SETUP-LINUX.md`](SETUP-LINUX.md)** —
+> guia completo do zero, com as pegadinhas do dnf5, SELinux e Testcontainers
+> já resolvidas.
+
 ## Subir o ambiente
 
 ```bash
