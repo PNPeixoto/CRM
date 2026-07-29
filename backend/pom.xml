@@ -29,6 +29,9 @@
 	<properties>
 		<java.version>25</java.version>
 		<spring-modulith.version>2.1.0</spring-modulith.version>
+		<!-- O BOM do Spring Boot não gerencia o BouncyCastle. Sem versão fixa
+		     aqui, o build não resolve a dependência. -->
+		<bouncycastle.version>1.85</bouncycastle.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -55,6 +58,25 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
+		<!-- Argon2PasswordEncoder do Spring Security delega o cálculo do hash
+		     para a implementação do BouncyCastle. Sem este jar no classpath,
+		     o encoder falha em tempo de execução, não de compilação — o
+		     aplicativo sobe e quebra no primeiro login. -->
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk18on</artifactId>
+			<version>${bouncycastle.version}</version>
+		</dependency>
+		<!-- Usado só pela metade: queremos o JwtDecoder/JwtEncoder e o
+		     nimbus-jose-jwt que vêm junto. Não vamos configurar nenhum fluxo
+		     OAuth2 — o CRM emite o próprio token. A alternativa era declarar
+		     nimbus-jose-jwt sozinho, mas aí seria preciso reescrever à mão a
+		     validação de assinatura, expiração e claims que o resource server
+		     já traz testada. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
@@ -80,12 +102,6 @@
 			<artifactId>spring-modulith-starter-jpa</artifactId>
 		</dependency>
 
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-docker-compose</artifactId>
-			<scope>runtime</scope>
-			<optional>true</optional>
-		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
