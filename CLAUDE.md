@@ -12,7 +12,12 @@ Consulte sob demanda, não por padrão:
 
 - `contexto/03-decisoes.md` — histórico de decisões (append-only)
 - `contexto/04-glossario.md` — termos do domínio
+- `contexto/05-reaproveitamento-finup.md` — o que aproveitar do projeto
+  anterior (FinUp), item a item, com veredito e motivo
 - `contexto/sessoes/` — log detalhado por data
+- `contexto/PROMPT-PROXIMA-SESSAO.md` — plano de trabalho corrente, com
+  faseamento e critérios de aceite. Substituído a cada sessão, não é
+  histórico.
 
 ## Regras de sessão
 

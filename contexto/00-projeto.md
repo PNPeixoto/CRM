@@ -154,7 +154,7 @@ outro módulo.
 ## 7. Direção visual
 
 - Fonte: **Manrope** (interface) e **JetBrains Mono** (dados técnicos, IDs, logs)
-- Cor principal: roxo `#6D4EF0`
+- Cor principal: índigo `#4B2ED4` (7,95:1 sobre branco — WCAG AAA)
 - SaaS premium, limpo, alta densidade de informação sem poluição
 - Bordas suaves, sombras discretas, espaçamento consistente, hierarquia forte
 - Status nunca depende só de cor — sempre acompanhado de ícone ou texto
@@ -163,10 +163,29 @@ outro módulo.
 - Acessibilidade WCAG: contraste, navegação por teclado, foco visível, labels,
   área de clique adequada
 
-> ⚠️ **Pendência a resolver antes do design system:** o protótipo HTML existente
-> usa fundo escuro (`#15121F`), enquanto o briefing de UX pede modo claro
-> obrigatório com estrutura preparada para escuro. Definir qual é o padrão
-> antes de gerar os tokens, porque isso muda toda a paleta de superfícies.
+### Tema — resolvido em 2026-07-27
+
+**Modo claro é o padrão.** Não havia conflito com o briefing: a leitura de que
+o protótipo era escuro estava errada. `#15121F` aparece nele apenas como
+sidebar, painel do login, moldura do mockup mobile e preview de white label —
+o canvas sempre foi `#F6F6FA` com texto `#17171F`. O padrão é **claro com
+shell de navegação escuro**.
+
+Tokens nomeados por papel, nunca por valor:
+
+| Usar | Não usar |
+|---|---|
+| `--surface-base`, `--surface-raised` | `--gray-50`, `--gray-100` |
+| `--text-strong`, `--text-muted` | `--gray-900` |
+| `--border-subtle` | `--gray-200` |
+
+Regra derivada: **nenhum hex literal em componente**. Cor que não existe como
+token vira token antes de ser usada. Toda cor semântica (sucesso, erro, alerta,
+informação) nasce com par claro/escuro definido — senão o modo escuro depois
+vira reescrita da paleta inteira.
+
+O seletor de tema é entregue **depois do P0**. A estrutura existe desde já; a
+funcionalidade não é P0.
 
 ---
 
