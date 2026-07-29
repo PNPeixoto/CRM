@@ -35,7 +35,10 @@ import java.lang.annotation.Target;
         // O worker de envio fica desligado: rodando, ele consumiria a fila
         // enquanto o teste ainda monta o cenário, e a falha seria
         // intermitente. Quem testar o worker o invoca diretamente.
-        "app.fila-de-saida.habilitada=false"
+        "app.fila-de-saida.habilitada=false",
+        "app.entrada-de-webhook.habilitada=false",
+        // 32 bytes em base64, exigidos pelo AES-256 do cofre de credenciais.
+        "app.security.channel-secret-key=dGVzdGUtY2hhbm5lbC1rZXktMzItYnl0ZXMtb2shISE="
 })
 public @interface TesteDeIntegracao {
 }

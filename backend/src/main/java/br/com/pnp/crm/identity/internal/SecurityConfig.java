@@ -53,6 +53,21 @@ class SecurityConfig {
      */
     private static final String ENDPOINT_WEBSOCKET = "/ws/**";
 
+    /**
+     * Webhooks de provedor não têm sessão e não podem ter.
+     *
+     * <p>Quem chama é o Telegram, não um usuário: exigir token de acesso aqui
+     * simplesmente impediria o canal de funcionar. A autenticidade vem da
+     * assinatura — no Telegram, o {@code secret_token} conferido em tempo
+     * constante dentro do controller; na Meta, o HMAC sobre o corpo cru.
+     *
+     * <p>CSRF também sai, e não é descuido: proteção contra CSRF existe para
+     * requisição que o navegador faz carregando credencial de sessão
+     * automaticamente. Não há navegador, não há sessão e não há cookie neste
+     * caminho.
+     */
+    private static final String ENDPOINT_WEBHOOKS = "/api/webhooks/**";
+
     private final String origensPermitidas;
     private final boolean cspExigeTlsNoWebsocket;
 
@@ -77,7 +92,8 @@ class SecurityConfig {
                         // O handshake do WebSocket não é uma mutação de estado
                         // e não carrega cookie de sessão como credencial — a
                         // credencial dele é o token no frame CONNECT.
-                        .ignoringRequestMatchers("/api/auth/login", "/api/auth/refresh", ENDPOINT_WEBSOCKET))
+                        .ignoringRequestMatchers("/api/auth/login", "/api/auth/refresh",
+                                ENDPOINT_WEBSOCKET, ENDPOINT_WEBHOOKS))
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp.policyDirectives(politicaCsp()))
                         .frameOptions(frame -> frame.deny())
@@ -98,6 +114,7 @@ class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(ENDPOINTS_PUBLICOS).permitAll()
                         .requestMatchers(ENDPOINT_WEBSOCKET).permitAll()
+                        .requestMatchers(ENDPOINT_WEBHOOKS).permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -436,3 +436,73 @@ mudar status. Quando existir tela de reenvio, é essa a operação. E o número 
 tentativas deixa de ser detalhe interno: ele é a fronteira entre "vai tentar
 de novo" e "não vai mais", então mudá-lo em produção reabre mensagens que já
 estavam encerradas.
+
+## 2026-07-29 — Credencial de canal cifrada com AES-256-GCM e chave própria
+
+**Decisão:** credenciais de canal (token do bot, segredo do webhook, tokens da
+Meta) vivem em `channel_credential`, cifradas com AES-256-GCM. A chave é
+`CHANNEL_SECRET_KEY`, **separada** de `APP_PEPPER` e `JWT_SIGNING_KEY`.
+
+**Alternativas descartadas:**
+- *AES-CBC* — não é autenticado. Quem tiver escrita no banco altera bytes do
+  texto cifrado e a aplicação decifra lixo sem perceber. GCM detecta.
+- *Reaproveitar `APP_PEPPER` ou `JWT_SIGNING_KEY`* — faria um único vazamento
+  comprometer senhas, sessões e credenciais de integração de uma vez.
+- *Coluna em `channel_connection`* — a conexão é lida em toda ingestão de
+  mensagem; o segredo só é necessário no envio. Em tabela separada, a consulta
+  comum nunca carrega material sensível para a memória.
+
+**Consequência:** `key_version` existe em cada linha para permitir rotação
+incremental — linhas antigas continuam decifráveis pela chave antiga enquanto
+as novas já usam a nova. E o que isto **não** protege: quem tem execução no
+servidor lê a variável e decifra tudo. A proteção é contra vazamento de dump,
+que é o incidente comum.
+
+## 2026-07-29 — Gravar o evento antes de responder 200
+
+**Decisão:** o webhook grava em `inbound_event` **antes** de devolver `200`,
+invertendo a ordem literal do enunciado do projeto ("responder 200
+imediatamente, depois gravar o evento cru").
+
+**Motivo:** responder primeiro significa que uma falha na gravação perde a
+mensagem para sempre — o Telegram já recebeu a confirmação e não vai
+reenviar. Gravar é uma inserção indexada, na casa de milissegundos, muito
+abaixo do limite que levaria o provedor a reenviar.
+
+**O que continua fora do request** é o **processamento**, que é a parte lenta
+e a que o enunciado realmente quer evitar: interpretar dentro do request faz
+um payload inesperado derrubar a resposta, o provedor reenviar e, depois de
+algumas falhas, desativar o webhook — o canal inteiro cai por causa de um
+formato não previsto.
+
+**Consequência:** `inbound_event` é a única cópia do payload original, porque
+o provedor não guarda. É o que permite corrigir o tradutor e reprocessar.
+
+## 2026-07-29 — Comunicação entre `channel` e `conversation` por evento
+
+**Decisão:** o módulo `channel` publica `MensagemNormalizadaEvent`;
+`conversation` escuta. `channel` não conhece `conversation`.
+
+**Por que não chamada direta:** `conversation` já depende de `channel.api`
+(usa `InboundMessage`, `ChannelAdapter`, `TipoConteudo`). Uma chamada de volta
+criaria ciclo entre os módulos, e `ApplicationModules.verify()` reprovaria —
+com razão, porque o ciclo impede entender ou extrair qualquer um dos dois
+isoladamente.
+
+**Consequência:** o listener é **síncrono** de propósito. O evento nasce
+dentro do worker de entrada, que precisa saber se a ingestão funcionou para
+decidir entre marcar processado ou deixar o evento voltar. Com listener
+assíncrono, o worker marcaria sucesso sem saber o resultado.
+
+## 2026-07-29 — Quinta função `SECURITY DEFINER`, e o gatilho para revisitar
+
+**Decisão:** `reservar_eventos_para_processar` entra na V4, mesma forma da
+reserva da fila de saída.
+
+**Registro do padrão:** são cinco. Todas pelo mesmo motivo — processo ou
+requisição sem sessão precisando descobrir o tenant. **Se aparecer uma sexta,
+a decisão a revisitar é adotar um papel de banco com `BYPASSRLS` para tarefas
+de fundo**, em vez de continuar multiplicando funções privilegiadas. O
+argumento contra o `BYPASSRLS` (blast radius de todas as tabelas) enfraquece à
+medida que o número de funções cresce, porque a superfície somada delas se
+aproxima do mesmo efeito com mais lugares para auditar.

@@ -15,6 +15,8 @@ app:
     pepper: ${APP_PEPPER:dev-pepper-trocar-antes-de-producao}
     # TESTE — TROCAR ANTES DE PRODUÇÃO. Mínimo de 32 bytes para HS256.
     jwt-signing-key: ${JWT_SIGNING_KEY:chave-de-desenvolvimento-nao-use-em-producao}
+    # TESTE — TROCAR ANTES DE PRODUÇÃO. 32 bytes em base64 (AES-256).
+    channel-secret-key: ${CHANNEL_SECRET_KEY:ZGV2LWNoYW5uZWwta2V5LXRyb2Nhci1lbS1wcm9kISE=}
     # false porque o desenvolvimento roda em http://localhost: com Secure=true
     # o navegador descarta o cookie e o refresh nunca funcionaria localmente.
     cookie-secure: false

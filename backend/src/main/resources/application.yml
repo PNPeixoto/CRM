@@ -41,6 +41,11 @@ app:
     # público não é pepper.
     pepper: ${APP_PEPPER}
     jwt-signing-key: ${JWT_SIGNING_KEY}
+    # Chave AES-256 (32 bytes em base64) para cifrar credenciais de canal em
+    # repouso. Separada de propósito das duas acima: reaproveitar uma delas
+    # faria um único vazamento comprometer senhas, sessões e credenciais de
+    # integração de uma vez.
+    channel-secret-key: ${CHANNEL_SECRET_KEY}
     # HTTPS obrigatório fora de desenvolvimento: o cookie de refresh não pode
     # trafegar em texto puro, e o CSP não deve aceitar WebSocket sem TLS.
     cookie-secure: true
@@ -59,6 +64,15 @@ app:
     max-tentativas: 5
     # Base do backoff exponencial: 30s, 60s, 120s, 240s, 480s.
     espera-base-segundos: 30
+
+  entrada-de-webhook:
+    habilitada: true
+    # Mais curto que a fila de saída: mensagem recebida precisa aparecer na
+    # tela do atendente rápido, e o processamento é local, sem rede.
+    intervalo-ms: 1000
+    tamanho-do-lote: 50
+    max-tentativas: 5
+    espera-base-segundos: 15
 
 server:
   port: 8080
