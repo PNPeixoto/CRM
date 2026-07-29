@@ -15,7 +15,7 @@ export default defineConfig({
   },
 
   server: {
-    port: 5173,
+    port: 5174,
     // Proxy do /api para o backend em desenvolvimento.
     // Assim o navegador vê tudo na mesma origem e não é preciso afrouxar
     // CORS só para desenvolver — CORS relaxado tende a vazar para produção.

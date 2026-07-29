@@ -3,6 +3,8 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ROTAS } from './routes';
 import { AppLayout } from '@/shared/layouts/AppLayout';
 import { LoginPage } from '@/pages/login';
+import { AuthProvider } from '@/shared/auth/AuthContext';
+import { RotaProtegida } from '@/shared/auth/RotaProtegida';
 
 /**
  * Mapa explícito rota -> página.
@@ -31,19 +33,28 @@ const PAGINAS: Record<string, LazyExoticComponent<ComponentType>> = {
 export function AppRouter() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<div className="p-6 text-sm">Carregando…</div>}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route element={<AppLayout />}>
-            {ROTAS.map(({ id, caminho }) => {
-              const Pagina = PAGINAS[id];
-              return <Route key={id} path={caminho} element={<Pagina />} />;
-            })}
-          </Route>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </Suspense>
+      <AuthProvider>
+        <Suspense fallback={<div className="p-6 text-sm">Carregando…</div>}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            {/*
+              Toda rota da aplicação nasce dentro da RotaProtegida. Deixar a
+              proteção para ser adicionada rota a rota garante que uma página
+              nova entre desprotegida — e ninguém percebe, porque ela funciona.
+            */}
+            <Route element={<RotaProtegida />}>
+              <Route element={<AppLayout />}>
+                {ROTAS.map(({ id, caminho }) => {
+                  const Pagina = PAGINAS[id];
+                  return <Route key={id} path={caminho} element={<Pagina />} />;
+                })}
+              </Route>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

@@ -1,1 +1,142 @@
 @import "tailwindcss";
+
+/*
+ * Design tokens.
+ *
+ * Regra que governa este arquivo: token nomeado por PAPEL, nunca por valor.
+ * `--surface-raised` e não `--gray-50`; `--text-muted` e não `--gray-500`.
+ * Nome por valor é uma mentira esperando para acontecer — no dia em que o
+ * modo escuro entrar, `--gray-50` vai valer quase preto.
+ *
+ * Consequência prática: nenhum hex literal em componente. Cor que não existe
+ * como token vira token antes de ser usada.
+ *
+ * O padrão é CLARO com shell de navegação escuro. O par escuro de cada cor
+ * nasce junto, mesmo sem seletor de tema — definir depois significaria
+ * reescrever a paleta inteira em vez de trocar um bloco.
+ */
+
+@theme {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+:root {
+  /* Superfícies */
+  --surface-base: #f6f6fa;
+  --surface-raised: #ffffff;
+  --surface-sunken: #ecedf3;
+  /* Shell de navegação: escuro nos dois temas, é a assinatura visual */
+  --surface-shell: #15121f;
+  --surface-shell-hover: #221d31;
+
+  /* Texto */
+  --text-strong: #17171f;
+  --text-muted: #5b5b6b;
+  --text-on-brand: #ffffff;
+  --text-on-shell: #e8e6f0;
+  --text-on-shell-muted: #9a95ad;
+
+  /* Bordas */
+  --border-subtle: #e2e2ea;
+  --border-strong: #c9c9d6;
+
+  /* Marca — 7,95:1 sobre branco (WCAG AAA) */
+  --brand: #4b2ed4;
+  --brand-hover: #3f26b5;
+  --brand-soft: #ede9fb;
+
+  /*
+   * Cores semânticas. Toda uma nasce com par claro/escuro definido.
+   * Status nunca depende só de cor: a UI acompanha com ícone ou texto,
+   * porque ~8% dos homens têm alguma deficiência de percepção de cor.
+   */
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --danger: #b91c1c;
+  --danger-soft: #fee2e2;
+  --warning: #a16207;
+  --warning-soft: #fef3c7;
+  --info: #1d4ed8;
+  --info-soft: #dbeafe;
+
+  /* Foco visível — exigência de acessibilidade, não enfeite */
+  --focus-ring: #4b2ed4;
+
+  --radius-control: 0.5rem;
+  --radius-surface: 0.75rem;
+}
+
+/*
+ * Paleta escura definida desde já, mas NÃO ativada por
+ * `prefers-color-scheme`. A decisão de 2026-07-27 é explícita: claro é o
+ * padrão e o seletor de tema é entregue depois do P0. Seguir a preferência
+ * do sistema entregaria o tema escuro agora, sem o usuário ter pedido e sem
+ * o seletor existir para ele voltar atrás.
+ *
+ * Ativa só com `data-theme="dark"` no elemento raiz. Quando o seletor for
+ * construído, ele passa a escrever esse atributo — e nada aqui muda.
+ *
+ * `#4b2ed4` puro dá 2,32:1 sobre `#15121f` e reprova AA. Por isso a marca no
+ * escuro é uma variante clareada, e não a mesma cor.
+ */
+/*
+ * Fora de @layer de propósito: o bloco `:root` do tema claro também está
+ * fora de camada, e regra sem camada sempre vence regra em camada,
+ * independentemente de especificidade. Dentro de `@layer base` este bloco
+ * seria ignorado — e o seletor de tema, quando existisse, não funcionaria.
+ */
+:root[data-theme="dark"] {
+    --surface-base: #12111a;
+    --surface-raised: #1b1926;
+    --surface-sunken: #0d0c14;
+    --surface-shell: #0d0c14;
+    --surface-shell-hover: #1b1926;
+
+    --text-strong: #f2f1f7;
+    --text-muted: #a3a0b3;
+    --text-on-shell: #e8e6f0;
+    --text-on-shell-muted: #9a95ad;
+
+    --border-subtle: #2b2938;
+    --border-strong: #3d3a4e;
+
+    --brand: #9b85f5;
+    --brand-hover: #b0a0f8;
+    --brand-soft: #241f3d;
+    --text-on-brand: #12111a;
+
+    --success: #4ade80;
+    --success-soft: #14301f;
+    --danger: #f87171;
+    --danger-soft: #3a1616;
+    --warning: #fbbf24;
+    --warning-soft: #3a2c0a;
+    --info: #60a5fa;
+    --info-soft: #14243f;
+
+    --focus-ring: #9b85f5;
+}
+
+@layer base {
+  * {
+    border-color: var(--border-subtle);
+  }
+
+  body {
+    background-color: var(--surface-base);
+    color: var(--text-strong);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * Foco visível global. O `:focus-visible` mostra o anel para navegação por
+   * teclado sem poluir o clique de mouse. Remover contorno de foco sem
+   * substituto torna o produto inutilizável por teclado.
+   */
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
