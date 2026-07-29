@@ -21,7 +21,7 @@ export interface RotaApp {
 
 export const ROTAS: readonly RotaApp[] = [
   { id: 'dashboard',    caminho: '/dashboard',    rotulo: 'Visão geral',       icone: 'layout-dashboard', status: 'pronto',      grupo: 'operacao' },
-  { id: 'inbox',        caminho: '/inbox',        rotulo: 'Caixa de entrada',  icone: 'messages-square',  status: 'em_producao', grupo: 'operacao' },
+  { id: 'inbox',        caminho: '/inbox',        rotulo: 'Caixa de entrada',  icone: 'messages-square',  status: 'pronto',      grupo: 'operacao' },
   { id: 'contacts',     caminho: '/contatos',     rotulo: 'Contatos',          icone: 'users',            status: 'em_producao', grupo: 'operacao' },
   { id: 'deals',        caminho: '/oportunidades',rotulo: 'Oportunidades',     icone: 'target',           status: 'em_producao', grupo: 'operacao' },
   { id: 'pipelines',    caminho: '/funis',        rotulo: 'Funis',             icone: 'git-branch',       status: 'em_producao', grupo: 'operacao' },

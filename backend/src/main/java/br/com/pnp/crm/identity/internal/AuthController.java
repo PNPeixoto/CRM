@@ -78,7 +78,7 @@ class AuthController {
                 // é sessão morta, não erro interno.
                 .orElseThrow(SessaoExpiradaException::new);
         return ResponseEntity.ok(new AuthDtos.UsuarioResponse(
-                usuario.id(), usuario.login(), usuario.nomeCompleto()));
+                usuario.id(), usuario.tenantId(), usuario.login(), usuario.nomeCompleto()));
     }
 
     private ResponseEntity<AuthDtos.SessaoResponse> respostaComCookie(
@@ -93,6 +93,7 @@ class AuthController {
                         AccessTokenService.VALIDADE.toSeconds(),
                         new AuthDtos.UsuarioResponse(
                                 sessao.usuario().id(),
+                                sessao.usuario().tenantId(),
                                 sessao.usuario().login(),
                                 sessao.usuario().nomeCompleto())));
     }

@@ -37,6 +37,17 @@ export function definirAccessToken(token: string | null): void {
   accessToken = token;
 }
 
+/**
+ * Lido pelo cliente STOMP, que precisa do token para o frame CONNECT.
+ *
+ * <p>Exposto por função e não como variável exportada de propósito: uma
+ * variável exportada é capturada por valor no momento do import, e quem
+ * importasse antes do login guardaria `null` para sempre.
+ */
+export function obterAccessToken(): string | null {
+  return accessToken;
+}
+
 type Metodo = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 function lerCookie(nome: string): string | null {

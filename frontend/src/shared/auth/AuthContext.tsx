@@ -3,6 +3,8 @@ import { api, definirAccessToken, tentarRenovarSessao } from '@/lib/api';
 
 export interface Usuario {
   readonly id: string;
+  /** Necessário para montar o destino STOMP. Ver AuthDtos.UsuarioResponse. */
+  readonly tenantId: string;
   readonly login: string;
   readonly nomeCompleto: string;
 }

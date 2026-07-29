@@ -51,6 +51,13 @@ final class AuthDtos {
             UsuarioResponse usuario) {
     }
 
-    record UsuarioResponse(UUID id, String login, String nomeCompleto) {
+    /**
+     * O {@code tenantId} sai daqui porque o cliente precisa dele para montar o
+     * destino STOMP em que vai se inscrever. Não é vazamento: ele já está no
+     * claim {@code tid} do token que o próprio cliente carrega, e conhecê-lo
+     * não autoriza nada — quem autoriza a inscrição é o backend, comparando o
+     * destino pedido com o tenant do token verificado.
+     */
+    record UsuarioResponse(UUID id, UUID tenantId, String login, String nomeCompleto) {
     }
 }
