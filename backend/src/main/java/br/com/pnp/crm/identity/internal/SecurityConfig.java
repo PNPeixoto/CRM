@@ -38,6 +38,21 @@ class SecurityConfig {
             "/error"
     };
 
+    /**
+     * O handshake do WebSocket precisa passar pelo filtro HTTP sem token, e
+     * isso <b>não</b> o torna público: a API {@code WebSocket} do navegador não
+     * permite definir cabeçalhos no handshake, então a autenticação acontece
+     * uma camada adentro, no frame STOMP CONNECT, pelo
+     * {@code StompAuthChannelInterceptor}. Uma conexão que chegue até aqui e
+     * não apresente credencial no CONNECT é derrubada antes de receber
+     * qualquer coisa.
+     *
+     * <p>A origem do handshake é conferida contra a mesma lista branca do CORS
+     * na configuração do endpoint STOMP — necessário porque a política de mesma
+     * origem do navegador não se aplica a WebSocket.
+     */
+    private static final String ENDPOINT_WEBSOCKET = "/ws/**";
+
     private final String origensPermitidas;
     private final boolean cspExigeTlsNoWebsocket;
 
@@ -59,7 +74,10 @@ class SecurityConfig {
                         // Login e refresh não têm sessão a proteger no momento
                         // em que são chamados. Mantê-los sob CSRF impediria o
                         // primeiro login de quem chega sem cookie algum.
-                        .ignoringRequestMatchers("/api/auth/login", "/api/auth/refresh"))
+                        // O handshake do WebSocket não é uma mutação de estado
+                        // e não carrega cookie de sessão como credencial — a
+                        // credencial dele é o token no frame CONNECT.
+                        .ignoringRequestMatchers("/api/auth/login", "/api/auth/refresh", ENDPOINT_WEBSOCKET))
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp.policyDirectives(politicaCsp()))
                         .frameOptions(frame -> frame.deny())
@@ -79,6 +97,7 @@ class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(ENDPOINTS_PUBLICOS).permitAll()
+                        .requestMatchers(ENDPOINT_WEBSOCKET).permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

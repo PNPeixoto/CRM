@@ -1,0 +1,64 @@
+package br.com.pnp.crm.conversation.internal;
+
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * REST de conversa.
+ *
+ * <p>É a fonte da verdade da interface. O WebSocket entrega atualização
+ * incremental enquanto a conexão está de pé; ao carregar a tela ou reconectar,
+ * o cliente vem aqui. Uma interface que dependa exclusivamente do socket fica
+ * silenciosamente desatualizada na primeira queda de rede, e o usuário não tem
+ * como saber que está vendo estado velho.
+ *
+ * <p>O tenant não aparece em nenhuma assinatura: ele já foi resolvido pelo
+ * {@code TenantContextFilter} a partir do token verificado, e é aplicado no
+ * banco pelo {@code TenantAwareDataSource}.
+ */
+@RestController
+@RequestMapping("/api/conversas")
+class ConversaController {
+
+    private final ConversaService conversas;
+
+    ConversaController(ConversaService conversas) {
+        this.conversas = conversas;
+    }
+
+    @GetMapping
+    ResponseEntity<List<ConversationDtos.ConversaResumo>> listar() {
+        return ResponseEntity.ok(conversas.listar());
+    }
+
+    @GetMapping("/{conversationId}/mensagens")
+    ResponseEntity<List<ConversationDtos.MensagemResposta>> mensagens(
+            @PathVariable UUID conversationId) {
+        return ResponseEntity.ok(conversas.mensagensDa(conversationId));
+    }
+
+    @PostMapping("/{conversationId}/mensagens")
+    ResponseEntity<ConversationDtos.MensagemResposta> enviar(
+            @PathVariable UUID conversationId,
+            @Valid @RequestBody ConversationDtos.EnviarMensagemRequest requisicao,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        // O autor sai do token, nunca do corpo. Aceitá-lo na requisição
+        // permitiria a um atendente registrar mensagem em nome de outro.
+        UUID autorId = UUID.fromString(jwt.getSubject());
+
+        return ResponseEntity.ok(
+                conversas.enviar(conversationId, requisicao.texto(), autorId));
+    }
+}
