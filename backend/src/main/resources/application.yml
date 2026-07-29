@@ -50,6 +50,16 @@ app:
     # falha fechada.
     allowed-origins: ${CORS_ALLOWED_ORIGINS:}
 
+  fila-de-saida:
+    habilitada: true
+    intervalo-ms: 2000
+    tamanho-do-lote: 50
+    # Teto de tentativas. É a fronteira entre "vai tentar de novo" e "não vai
+    # mais" — aumentar em produção reabre mensagens que já estavam encerradas.
+    max-tentativas: 5
+    # Base do backoff exponencial: 30s, 60s, 120s, 240s, 480s.
+    espera-base-segundos: 30
+
 server:
   port: 8080
   # Faz a aplicação respeitar X-Forwarded-* quando houver proxy na frente.

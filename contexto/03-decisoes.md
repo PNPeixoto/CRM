@@ -387,3 +387,52 @@ autenticação daquele provedor, e traduz para `InboundMessage`.
 modelada onde ela existe, e não empurrada para dentro da porta. Se algum dia
 um segundo provedor tiver janela, aí sim vira conceito da porta — com o
 segundo caso concreto na mão, como a regra manda.
+
+## 2026-07-29 — Quarta função `SECURITY DEFINER`, e a previsão anterior estava errada
+
+**Correção de registro.** A entrada de hoje sobre a terceira função dizia
+"terceira e — pela previsão de hoje — última". Errado: o worker da fila de
+saída exigiu uma quarta, `reservar_mensagens_para_envio`. Fica a lição de não
+declarar teto para uma categoria que ainda está crescendo.
+
+**Decisão:** o worker reserva mensagens por função `SECURITY DEFINER` que
+devolve apenas `(message_id, tenant_id)`, usando `FOR UPDATE SKIP LOCKED`.
+
+**Por que precisa existir:** o worker roda em segundo plano, sem sessão e sem
+tenant no contexto — com RLS ativo ele enxergaria zero linhas e nenhuma
+mensagem sairia. E ele não pode escolher um tenant antes de consultar, porque
+descobrir *em quais tenants há mensagem pendente* é exatamente o que ele
+precisa fazer.
+
+**Alternativas descartadas:**
+- *Papel de banco com `BYPASSRLS` para tarefas de fundo* — é a resposta de
+  manual e foi seriamente considerada. Descartada porque cria uma conexão que
+  ignora **todas** as políticas de **todas** as tabelas. A função ignora o RLS
+  de uma tabela só, para uma pergunta só, e devolve só identificadores; o
+  conteúdo é lido depois, já sob a política do tenant certo.
+- *Varrer tenant a tenant* — a tabela `tenant` também está sob RLS, então o
+  problema apenas se desloca.
+
+**Consequência:** `FOR UPDATE SKIP LOCKED` passa a ser o que sustenta o
+escalonamento horizontal do envio — sem ele, duas instâncias reservam as
+mesmas linhas e o cliente final recebe a mensagem duplicada. E o contador de
+tentativa é incrementado na **reserva**, não na conclusão: um processo que
+morre no meio do envio ainda consome uma tentativa, senão uma mensagem que
+derruba o worker seria reprocessada para sempre, travando a fila atrás dela.
+
+## 2026-07-29 — Fila morta sem estado próprio
+
+**Decisão:** a "fila morta" é o teto de tentativas na cláusula da consulta
+(`attempt_count < p_max_tentativas`), não um novo valor de `status`.
+
+**Alternativas descartadas:** um status `DEAD` ou uma tabela separada. Ambos
+exigiriam uma transição de estado extra que pode falhar, e criariam a
+pergunta "o que aparece na conversa quando a mensagem está morta". Com o teto,
+a mensagem permanece `FAILED` — que é o que o atendente precisa ver — e
+simplesmente deixa de ser candidata.
+
+**Consequência:** reprocessar uma mensagem morta é zerar `attempt_count`, não
+mudar status. Quando existir tela de reenvio, é essa a operação. E o número de
+tentativas deixa de ser detalhe interno: ele é a fronteira entre "vai tentar
+de novo" e "não vai mais", então mudá-lo em produção reabre mensagens que já
+estavam encerradas.

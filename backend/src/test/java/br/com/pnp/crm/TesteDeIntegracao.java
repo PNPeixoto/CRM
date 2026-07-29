@@ -31,7 +31,11 @@ import java.lang.annotation.Target;
         "app.security.pepper=pepper-de-teste",
         "app.security.jwt-signing-key=chave-de-teste-com-mais-de-32-bytes-ok",
         "app.security.cookie-secure=false",
-        "app.cors.allowed-origins=http://localhost:5173"
+        "app.cors.allowed-origins=http://localhost:5173",
+        // O worker de envio fica desligado: rodando, ele consumiria a fila
+        // enquanto o teste ainda monta o cenário, e a falha seria
+        // intermitente. Quem testar o worker o invoca diretamente.
+        "app.fila-de-saida.habilitada=false"
 })
 public @interface TesteDeIntegracao {
 }

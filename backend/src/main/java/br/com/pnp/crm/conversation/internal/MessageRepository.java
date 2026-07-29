@@ -1,6 +1,8 @@
 package br.com.pnp.crm.conversation.internal;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,4 +20,17 @@ interface MessageRepository extends JpaRepository<MessageEntity, UUID> {
             UUID channelConnectionId, String externalId);
 
     List<MessageEntity> findByConversationIdAndDeletedAtIsNullOrderByCreatedAtAsc(UUID conversationId);
+
+    /**
+     * Devolve só a coluna necessária, e não a conversa inteira. Carregar a
+     * entidade traria a conversa para o contexto de persistência e qualquer
+     * alteração acidental nela seria gravada no flush — efeito colateral
+     * invisível numa operação que deveria ser de leitura.
+     */
+    @Query("""
+            SELECT c.externalContactId
+              FROM ConversationEntity c
+             WHERE c.id = :conversationId
+            """)
+    Optional<String> buscarExternalContactIdDaConversa(@Param("conversationId") UUID conversationId);
 }
