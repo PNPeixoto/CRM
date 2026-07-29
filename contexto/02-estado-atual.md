@@ -33,24 +33,44 @@ Docker, que está instalado mas ainda não subiu nesta máquina.
   `LoginPage` real. Build passa; tela validada no navegador, incluindo o
   caminho de erro e a troca de tema.
 
-## Bloqueado
+## Pendente de execução — não é bloqueio do projeto
 
-- **Testes de integração nunca executados.** `IsolamentoEntreTenantsTest`,
-  `LoginRespostaUniformeTest`, `RefreshTokenRotacaoTest` e
-  `CrmApplicationTests` estão escritos e **compilam**, mas exigem
-  Testcontainers. Docker Desktop 4.84 foi instalado; falta **aceitar a
-  licença na primeira execução** e resolver o **WSL2**, que não está presente
-  nesta edição (Windows 11 IoT LTSC — `wsl --install` não funciona nela).
-- Consequência direta: a migration V1 **nunca foi aplicada em banco nenhum**.
-  Ela ainda é editável sem violar a regra de imutabilidade.
+**Testes de integração nunca executados.** `IsolamentoEntreTenantsTest`,
+`LoginRespostaUniformeTest`, `RefreshTokenRotacaoTest` e `CrmApplicationTests`
+estão escritos e **compilam**, mas exigem Testcontainers.
+
+Isto é limitação de **máquina**, não de código, e onde ela existe importa:
+
+| Ambiente | Roda os testes? |
+|---|---|
+| Notebook Linux | **Sim.** Docker nativo, sem WSL, sem a armadilha do AF_UNIX |
+| Windows 11 IoT LTSC (a máquina de 2026-07-28) | Não. Falta aceitar a licença do Docker Desktop e o WSL2, que não existe nessa edição |
+| Claude Code web | Provavelmente não — o sandbox costuma não ter Docker |
+
+**Então a Fase 1 fecha no notebook Linux.** Não há nada a corrigir no código
+antes disso; o que falta é rodar.
+
+Consequência direta: a migration V1 **nunca foi aplicada em banco nenhum** e
+ainda é editável sem violar a regra de imutabilidade. Isso deixa de valer no
+instante em que `./mvnw test` rodar pela primeira vez.
 
 ## Próximo passo
 
-1. Subir o Docker, rodar `docker compose up -d` na raiz e executar
-   `./mvnw test`. Só então a Fase 1 está verde.
-2. Validar o login ponta a ponta com o backend no ar (usuário `peixoto`,
-   empresa `pnp`).
+1. **No Linux:** `docker compose up -d` na raiz e `./mvnw test`. Só então a
+   Fase 1 está verde.
+2. Validar o login ponta a ponta com o backend no ar (empresa `pnp`, usuário
+   `peixoto`).
 3. Fase 2 — módulo `conversation`, porta `ChannelAdapter` e `LiveChatAdapter`.
+
+O trabalho de **escrita** da Fase 2 pode ser adiantado em qualquer ambiente,
+inclusive no web. A **validação** exige a máquina com Docker.
+
+## Trabalhando entre CLI e web
+
+O repositório é a única fonte de sincronia — não há estado fora dele. Antes de
+trocar de ambiente, commitar e dar push; ao chegar no outro, dar pull. Este
+arquivo é o que diz onde o trabalho parou, então ele precisa estar correto no
+momento do push, e não só no fim da sessão.
 
 ## Pendências conhecidas
 
