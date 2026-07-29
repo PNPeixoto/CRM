@@ -283,3 +283,107 @@ para ele voltar atrás.
 vence regra em camada independentemente de especificidade, e dentro de
 `@layer base` o tema escuro seria silenciosamente ignorado. Quando o seletor
 for construído, ele só precisa escrever o atributo; o CSS não muda.
+
+## 2026-07-29 — Telegram antes do WhatsApp como primeiro provedor externo
+
+**Decisão:** a ordem de canais passa a ser chat ao vivo → **Telegram** →
+WhatsApp Cloud API. O que era Fase 3 (WhatsApp) vira Fase 4.
+
+**O motivo principal não é o Telegram ser mais fácil.** É a regra da
+abstração deste projeto: só abstrair com o segundo caso de uso concreto na
+mão. O `LiveChatAdapter` **não é um provedor externo de verdade** — não tem
+webhook, não tem `external_id` de terceiro, não tem API de mídia, não reenvia
+evento. Desenhar a porta `ChannelAdapter` olhando só para ele significa
+abstrair a coisa errada, e a descoberta viria no meio da integração com a
+Meta.
+
+O Telegram é o primeiro provedor real e o mais barato de errar: webhook
+autenticado, `external_id` externo, mídia com link expirável e reenvio de
+evento. Errar a porta ali custa uma tarde; errar com o WhatsApp custa a fase
+inteira.
+
+**Alternativas descartadas:**
+- *Manter o WhatsApp como primeiro provedor* — trava o cronograma técnico nos
+  pré-requisitos comerciais da Meta (CNPJ, Business verificado, WABA, número
+  dedicado, cartão cadastrado), que levam semanas e não são contornáveis por
+  código.
+- *Ir direto do LiveChat ao WhatsApp* — deixaria a porta validada por um único
+  caso concreto, e um que não exercita webhook nem mídia externa.
+
+**Consequência:**
+- O Telegram **não exercita** quatro coisas que voltam na Fase 4: HMAC sobre o
+  corpo cru (com o detalhe de precisar dos bytes antes do Jackson), a máquina
+  de estados da janela de 24h, o ciclo de aprovação de template e a medição de
+  custo por tenant. Nenhuma delas fica mais barata por causa desta ordem.
+- **Risco assumido:** o Telegram não é o canal comercial do produto —
+  franquia brasileira vive no WhatsApp. Esta é reordenação de construção, não
+  de prioridade de produto, e o perigo é ela fazer o WhatsApp parecer distante.
+  Mitigação: a verificação do Meta Business começa **em paralelo, agora**,
+  justamente porque leva semanas. O Telegram ocupa o tempo de espera.
+- O webhook do Telegram usa `secret_token` no header
+  `X-Telegram-Bot-Api-Secret-Token`, não HMAC. Comparação em tempo constante
+  do mesmo jeito.
+- *Long polling* (`getUpdates`) fica **descartado** mesmo em desenvolvimento,
+  embora dispensasse tunnel: criaria dois caminhos de entrada, e o de produção
+  seria o menos testado.
+
+## 2026-07-29 — Terceira função `SECURITY DEFINER`, para a entrada de mensagem
+
+**Decisão:** `resolve_tenant_id_por_channel_connection(uuid)` entra na V2,
+com `search_path` fixo, seguindo a regra criada em 2026-07-28 de que nenhuma
+função privilegiada entra sem registro aqui.
+
+**Por que precisa existir:** a ingestão de mensagem acontece **sem sessão**.
+O webhook do Telegram é chamado pelo provedor, e o visitante do chat ao vivo
+não é usuário do CRM. Nos dois casos o único dado disponível é a conexão de
+canal, que está sob RLS — um SELECT normal devolveria vazio e nenhuma
+mensagem entraria no sistema.
+
+**Alternativas descartadas:**
+- *Deixar `channel_connection` fora do RLS* — a tabela lista por qual número e
+  qual bot cada cliente atende; é informação de cliente e precisa de
+  isolamento como qualquer outra.
+- *Colocar o `tenant_id` na URL do webhook* — voltaria a aceitar tenant vindo
+  de fora, exatamente o que foi recusado no refresh token.
+
+**Consequência:** a função resolve **roteamento, não autorização**. A
+autenticidade da requisição continua vindo da assinatura do provedor
+(`secret_token` no Telegram, HMAC na Meta) e nunca desta função — se algum
+dia alguém tratar "a função respondeu" como "a requisição é legítima", o
+endpoint de webhook vira porta aberta. A brecha é estreita: recebe um uuid de
+conexão e devolve um uuid de tenant, e uuid v7 não é enumerável na prática.
+
+## 2026-07-29 — Uma conversa ativa por interlocutor, garantida pelo banco
+
+**Decisão:** índice único parcial em
+`conversation (channel_connection_id, external_contact_id)` restrito a
+`status <> 'CLOSED'`.
+
+**Alternativas descartadas:** checar em código antes de inserir. Não resolve:
+quando alguém manda três mensagens seguidas — o caso normal, não o raro — as
+transações concorrentes leem "não existe" antes de qualquer uma inserir, e o
+atendimento aparece dividido em duas conversas na tela. Só o banco arbitra
+corrida.
+
+**Consequência:** reabrir atendimento com um contato exige encerrar a conversa
+anterior (`status = 'CLOSED'`), senão a inserção falha. O código de ingestão
+precisa tratar a violação de unicidade como "alguém criou primeiro, use a
+existente", e não como erro.
+
+## 2026-07-29 — `ChannelAdapter` com dois métodos apenas
+
+**Decisão:** a porta expõe `tipo()` e `enviar()`. Recebimento **não** está na
+interface: cada adaptador expõe o próprio endpoint de webhook, com a
+autenticação daquele provedor, e traduz para `InboundMessage`.
+
+**Alternativas descartadas:**
+- *Um método `receber()` genérico* — teria que aceitar o formato de todos os
+  provedores, que é o oposto de normalizar.
+- *Consulta de janela de atendimento na porta* — só o WhatsApp tem janela de
+  24h. Telegram e chat ao vivo seriam obrigados a implementar um conceito que
+  não existe no provedor deles.
+
+**Consequência:** quando o WhatsApp entrar (Fase 4), a janela de 24h será
+modelada onde ela existe, e não empurrada para dentro da porta. Se algum dia
+um segundo provedor tiver janela, aí sim vira conceito da porta — com o
+segundo caso concreto na mão, como a regra manda.
