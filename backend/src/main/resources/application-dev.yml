@@ -1,0 +1,26 @@
+# Profile de DESENVOLVIMENTO. Nada aqui vale em produção.
+spring:
+  flyway:
+    # A pasta db/dev entra apenas aqui. É por isso que o seed não tem como
+    # chegar a produção: não é disciplina, é configuração — produção carrega
+    # somente o que está em application.yml.
+    locations: classpath:db/migration,classpath:db/dev
+
+app:
+  security:
+    # TESTE — TROCAR ANTES DE PRODUÇÃO.
+    # Este pepper é o que valida os hashes do seed em db/dev. Trocá-lo
+    # invalida aqueles hashes, que é exatamente o efeito pretendido do pepper.
+    # Em produção o valor vem de APP_PEPPER e não existe padrão.
+    pepper: ${APP_PEPPER:dev-pepper-trocar-antes-de-producao}
+    # TESTE — TROCAR ANTES DE PRODUÇÃO. Mínimo de 32 bytes para HS256.
+    jwt-signing-key: ${JWT_SIGNING_KEY:chave-de-desenvolvimento-nao-use-em-producao}
+    # false porque o desenvolvimento roda em http://localhost: com Secure=true
+    # o navegador descarta o cookie e o refresh nunca funcionaria localmente.
+    cookie-secure: false
+    # Libera ws: além de wss: no CSP, pelo mesmo motivo.
+    websocket-exige-tls: false
+  cors:
+    # Origem do Vite. Em produção o frontend é servido pela mesma origem,
+    # atrás do proxy reverso, e esta lista fica vazia.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
