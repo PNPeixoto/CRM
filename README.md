@@ -47,7 +47,20 @@ a aplicação **não sobe**, e isso é intencional: não existe valor padrão de
 segredo em `application.yml`.
 
 ```bash
-cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+cd backend && ./mvnw spring-boot:run "-Dspring-boot.run.profiles=dev"
+```
+
+> **As aspas não são enfeite.** No PowerShell, `-Dspring-boot.run.profiles=dev`
+> sem aspas é partido em dois argumentos no hífen de `spring-boot`, e o Maven
+> recebe `.run.profiles=dev` solto — o erro que aparece é
+> `Unknown lifecycle phase`, que não diz nada sobre a causa. Em bash as aspas
+> são inofensivas, então o comando acima funciona nos dois.
+
+Alternativa que evita a tokenização de vez, e é a mesma forma usada em
+produção:
+
+```bash
+SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 ```
 
 Testes (exigem Docker):

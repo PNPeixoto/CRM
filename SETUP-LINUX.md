@@ -259,8 +259,13 @@ editáveis — isso deixa de valer no primeiro `flyway migrate` real.
 
 ```bash
 cd ~/crm-pnp/backend
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 ```
+
+A variável de ambiente é preferida à propriedade de sistema
+(`-Dspring-boot.run.profiles=dev`): é a mesma forma usada em produção e não
+depende de como o shell divide argumentos — no PowerShell, aquela propriedade
+sem aspas é partida em dois no hífen de `spring-boot`.
 
 O profile `dev` é obrigatório: é ele que carrega o seed de `db/dev` e fornece
 os segredos de desenvolvimento.
