@@ -33,4 +33,14 @@ interface MessageRepository extends JpaRepository<MessageEntity, UUID> {
              WHERE c.id = :conversationId
             """)
     Optional<String> buscarExternalContactIdDaConversa(@Param("conversationId") UUID conversationId);
+
+    @Query("""
+            SELECT COUNT(m) FROM MessageEntity m
+             WHERE m.tenantId = :tenantId
+               AND m.direction = br.com.pnp.crm.conversation.api.DirecaoMensagem.INBOUND
+               AND m.createdAt >= :desde
+               AND m.deletedAt IS NULL
+            """)
+    long contarRecebidasDesde(@Param("tenantId") UUID tenantId,
+                              @Param("desde") java.time.Instant desde);
 }

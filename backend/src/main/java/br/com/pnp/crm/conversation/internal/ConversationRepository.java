@@ -15,4 +15,6 @@ interface ConversationRepository extends JpaRepository<ConversationEntity, UUID>
     Optional<ConversationEntity> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
 
     List<ConversationEntity> findByTenantIdAndDeletedAtIsNullOrderByLastMessageAtDesc(UUID tenantId);
+
+    long countByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, StatusConversa status);
 }

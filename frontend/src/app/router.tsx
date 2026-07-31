@@ -48,6 +48,12 @@ export function AppRouter() {
                   const Pagina = PAGINAS[id];
                   return <Route key={id} path={caminho} element={<Pagina />} />;
                 })}
+                {/*
+                  Rota legada, fora de ROTAS de propósito: existe só para não
+                  quebrar link salvo de quando /oportunidades era uma página
+                  própria. Não deve aparecer na navegação.
+                */}
+                <Route path="/oportunidades" element={<PAGINAS.deals />} />
               </Route>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

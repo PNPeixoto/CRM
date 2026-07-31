@@ -1,11 +1,13 @@
-import { EmProducao } from '@/shared/components/EmProducao';
+import { Navigate } from 'react-router-dom';
 
 /**
- * Oportunidades
+ * Oportunidades e funil são a mesma tela.
  *
- * Espaço reservado. Substitua o conteúdo quando o módulo entrar em
- * desenvolvimento — a rota e a navegação já apontam para cá.
+ * <p>O esqueleto de rotas previa duas páginas separadas, mas no MVP a lista de
+ * oportunidades é o próprio kanban — manter duas telas mostrando os mesmos
+ * registros de formas quase iguais divide a atenção e dobra a manutenção. A
+ * rota continua existindo para não quebrar link salvo.
  */
 export function DealsPage() {
-  return <EmProducao titulo="Oportunidades" />;
+  return <Navigate to="/funis" replace />;
 }

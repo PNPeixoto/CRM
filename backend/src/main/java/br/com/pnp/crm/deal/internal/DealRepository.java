@@ -1,0 +1,31 @@
+package br.com.pnp.crm.deal.internal;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+interface DealRepository extends JpaRepository<DealEntity, UUID> {
+
+    List<DealEntity> findByTenantIdAndPipelineIdAndDeletedAtIsNullOrderByCreatedAtDesc(
+            UUID tenantId, UUID pipelineId);
+
+    Optional<DealEntity> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+
+    /**
+     * Soma em centavos, como inteiro até a borda da API. Converter para
+     * decimal aqui dentro faria o total do funil ganhar casas que ninguém
+     * consegue reconciliar com a soma linha a linha.
+     */
+    @Query("""
+            SELECT COALESCE(SUM(d.valueCents), 0) FROM DealEntity d
+             WHERE d.tenantId = :tenantId AND d.status = :status AND d.deletedAt IS NULL
+            """)
+    long somarValorPorStatus(@Param("tenantId") UUID tenantId,
+                             @Param("status") StatusOportunidade status);
+
+    long countByTenantIdAndStatusAndDeletedAtIsNull(UUID tenantId, StatusOportunidade status);
+}
