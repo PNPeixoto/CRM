@@ -40,9 +40,24 @@ class TenantLookupImpl implements TenantLookup {
         }
         return entityManager
                 .createNativeQuery("SELECT resolve_tenant_id_por_slug(:slug)", UUID.class)
-                .setParameter("slug", slug)
+                .setParameter("slug", normalizar(slug))
                 .getResultStream()
                 .findFirst()
                 .map(UUID.class::cast);
+    }
+
+    /**
+     * O slug é gravado em minúsculas — o CHECK da coluna na V1 só aceita esse
+     * formato. Normalizar a ENTRADA, e não afrouxar a consulta para
+     * {@code lower(slug) = lower(:slug)}, é o que mantém o índice único
+     * utilizável: uma função sobre a coluna faria o planejador ignorá-lo.
+     *
+     * <p>Sem isto, quem digita "PNP" recebe exatamente a mesma resposta de
+     * quem errou a senha — e a resposta uniforme, que existe para impedir
+     * enumeração de contas, viraria um beco sem saída para o usuário legítimo.
+     * Espaço nas pontas também some: é o caso de quem cola o valor.
+     */
+    private String normalizar(String slug) {
+        return slug.trim().toLowerCase(java.util.Locale.ROOT);
     }
 }

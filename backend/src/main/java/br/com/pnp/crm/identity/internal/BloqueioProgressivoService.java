@@ -94,7 +94,17 @@ class BloqueioProgressivoService {
         // O tenant entra na chave: o mesmo login existe em contas diferentes, e
         // bloquear "peixoto" globalmente deixaria um cliente derrubar o acesso
         // de outro.
-        return PREFIXO_CONTA + tenantId + ":" + login;
+        //
+        // A normalização é OBRIGATÓRIA e precisa casar com a da busca do
+        // usuário. Como o login é encontrado sem distinguir maiúsculas,
+        // "peixoto" e "Peixoto" chegam ao mesmo usuário — mas produziriam
+        // chaves de Redis diferentes, e o atacante contornaria o bloqueio
+        // apenas alternando a grafia a cada tentativa.
+        return PREFIXO_CONTA + tenantId + ":" + normalizar(login);
+    }
+
+    private String normalizar(String login) {
+        return login == null ? "" : login.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     private String chaveIp(String ip) {

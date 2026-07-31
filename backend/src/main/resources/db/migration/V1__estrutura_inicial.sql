@@ -115,11 +115,20 @@ CREATE TABLE app_user
 -- Login é único POR TENANT, não global: dois franqueados diferentes podem ter
 -- um "joao". O índice começa por tenant_id porque é assim que ele também
 -- serve as consultas de listagem, conforme a regra de índice composto.
+--
+-- LOWER porque login e e-mail são insensíveis a maiúsculas na expectativa de
+-- quem digita. Sem isso, "Joao" e "joao" viram DOIS usuários no mesmo tenant,
+-- e o login passa a depender de o usuário lembrar como digitou no cadastro —
+-- com a resposta de erro uniforme, ele não teria como descobrir.
+--
+-- O índice precisa ser sobre LOWER(...) e não só a consulta: uma função
+-- aplicada à coluna na cláusula WHERE faz o planejador ignorar um índice
+-- comum, e a unicidade deixaria de valer entre grafias diferentes.
 CREATE UNIQUE INDEX app_user_login_unico_por_tenant
-    ON app_user (tenant_id, login) WHERE deleted_at IS NULL;
+    ON app_user (tenant_id, lower(login)) WHERE deleted_at IS NULL;
 
 CREATE UNIQUE INDEX app_user_email_unico_por_tenant
-    ON app_user (tenant_id, email) WHERE deleted_at IS NULL;
+    ON app_user (tenant_id, lower(email)) WHERE deleted_at IS NULL;
 
 CREATE TRIGGER app_user_updated_at
     BEFORE UPDATE

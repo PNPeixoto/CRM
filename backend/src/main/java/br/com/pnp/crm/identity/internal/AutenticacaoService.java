@@ -150,7 +150,7 @@ class AutenticacaoService {
 
     @Transactional(readOnly = true)
     Optional<AppUserEntity> buscarUsuarioAtivo(UUID tenantId, String login) {
-        return usuarios.findByTenantIdAndLoginAndDeletedAtIsNull(tenantId, login)
+        return usuarios.buscarPorLogin(tenantId, login.trim())
                 .filter(AppUserEntity::isActive);
     }
 

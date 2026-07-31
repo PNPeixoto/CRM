@@ -506,3 +506,31 @@ de fundo**, em vez de continuar multiplicando funções privilegiadas. O
 argumento contra o `BYPASSRLS` (blast radius de todas as tabelas) enfraquece à
 medida que o número de funções cresce, porque a superfície somada delas se
 aproxima do mesmo efeito com mais lugares para auditar.
+
+## 2026-07-29 — Empresa e login insensíveis a maiúsculas
+
+**Decisão:** o slug do tenant e o login do usuário são comparados sem
+distinguir maiúsculas. Os índices únicos em `app_user` passam a ser sobre
+`lower(login)` e `lower(email)`; o slug é normalizado na entrada, porque a
+coluna já tem CHECK que só aceita minúsculas.
+
+**Motivo, e ele veio de uma pergunta real:** com busca exata, quem digitasse
+"PNP" ou "Peixoto" recebia exatamente a mesma resposta de quem errou a senha.
+A resposta uniforme existe para impedir enumeração de contas — mas, sem esta
+correção, ela vira beco sem saída para o usuário legítimo, que não tem como
+descobrir que o problema era só a caixa da letra. Segurança bem-feita não
+pode virar armadilha de usabilidade.
+
+**Alternativas descartadas:** afrouxar só a consulta
+(`lower(slug) = lower(:slug)`) sem mexer no índice. Uma função aplicada à
+coluna faz o planejador ignorar o índice comum — a consulta de login viraria
+varredura de tabela a cada tentativa, que é exatamente o caminho que um ataque
+de força bruta percorre. Pior: sem índice sobre `lower(login)`, "Joao" e
+"joao" poderiam coexistir como dois usuários no mesmo tenant.
+
+**Consequência, e é a parte que quase passou:** a chave de bloqueio
+progressivo no Redis usa o login. Com busca insensível e chave sensível,
+"peixoto" e "Peixoto" alcançam o mesmo usuário mas contam em contadores
+diferentes — o bloqueio por conta seria contornável apenas alternando a
+grafia a cada tentativa. A normalização da chave é obrigatória e precisa
+acompanhar a da busca; **mudar uma sem a outra reabre o furo.**

@@ -76,6 +76,9 @@ O seed cria dois tenants para tornar visível qualquer vazamento de isolamento.
 | `pnp` | `peixoto` |
 | `acme` | `peixoto` |
 
+Empresa e login são **insensíveis a maiúsculas** — "PNP" e "Peixoto" também
+entram. Espaços nas pontas são descartados.
+
 A senha não está escrita em nenhum arquivo do repositório, por regra do
 projeto. Os hashes são Argon2id com o pepper de desenvolvimento definido em
 `application-dev.yml` — **trocar o pepper invalida esses hashes**, que é o

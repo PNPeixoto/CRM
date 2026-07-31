@@ -292,6 +292,9 @@ permite o cookie de refresh usar `SameSite=Strict`.
 | Empresa | `pnp` |
 | Login | `peixoto` |
 
+Empresa e login são insensíveis a maiúsculas; espaços nas pontas são
+descartados.
+
 A senha não está escrita em nenhum arquivo do repositório, por regra do
 projeto. Se você não a tiver, gere um hash novo com o encoder configurado e
 substitua na migration de seed.
