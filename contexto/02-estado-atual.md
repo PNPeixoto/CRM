@@ -1,7 +1,7 @@
 # Estado atual
 
 > Reescrito ao fim de cada sessão. Máximo 150 linhas.
-> Última atualização: 2026-08-03 00:35 (America/Montevideo)
+> Última atualização: 2026-08-03 08:40 (America/Montevideo)
 
 ## Onde parei
 
@@ -75,16 +75,15 @@ executáveis: `backend:07` e `frontend:F4A`; F4 depende de F4A.
 
 ## Verificado nesta máquina
 
-- Baseline `793777d + working-tree`, branch `main`, Windows/JDK 25.0.4 e Docker
-  Desktop 29.6.2.
+- Baseline `bb22187`, branch `main`, Windows/JDK 25.0.4 e Docker Desktop 29.6.2.
 - Backend: 112 testes, 0 falhas, 0 erros, 0 ignorados; PostgreSQL/Redis reais com
   runtime restrito `crm_runtime_test`.
 - Flyway limpo até V11, caminho de atualização e os 14 artefatos do conjunto de
   migrations + seeds `dev` verificados.
 - Benchmark Argon2id local: média de 103 ms, cinco amostras após aquecimento.
-- Frontend: 56 testes em 14 arquivos, todos verdes — **medido em 2026-08-01, não
-  reexecutado após o Prompt 06** (que não tocou o frontend).
-- `npm run api:check` e build de produção passaram na mesma data.
+- Frontend: 56 testes em 14 arquivos, todos verdes, reexecutados em 2026-08-03
+  antes de versionar.
+- `npm run api:check` e build de produção passaram em 2026-08-01.
 - Lint frontend sem erros; permanecem três avisos conhecidos de Fast Refresh.
 
 ## Governança
@@ -97,22 +96,21 @@ executáveis: `backend:07` e `frontend:F4A`; F4 depende de F4A.
   alcance de autorização (ADR-0008).
 - A revisão integrada de 2026-08-02 permanece em
   `contexto/revisao-tecnica/resultados/`, com notas de fechamento por achado.
-- Nenhum commit foi criado nestas sessões; o working tree contém todo o trabalho
-  acumulado e deve ser revisado antes de versionar.
+- O acervo acumulado foi versionado em 2026-08-03 na `main`, em cinco commits
+  por área (infra/CI, backend, frontend, documentação, contexto), sobre
+  `793777d`. Ambas as suítes estavam verdes no momento do commit. Nenhum
+  segredo foi versionado: o único arquivo de ambiente rastreado é
+  `.env.example`, que contém apenas nomes.
 
 ## Próximo passo
 
-1. Versionar o acumulado antes de seguir — é a dívida mais barata de pagar agora
-   e a mais cara depois (GOV-001).
-2. Executar `backend:07` para baseline ASVS e threat model.
-3. Em paralelo de trilha, executar `frontend:F4A` para segurança do navegador e
+1. Executar `backend:07` para baseline ASVS e threat model.
+2. Em paralelo de trilha, executar `frontend:F4A` para segurança do navegador e
    supply chain; depois `frontend:F4` para sessão/refresh na UX.
-4. Fechar o Gate B somente após 07 e as evidências frontend associadas.
+3. Fechar o Gate B somente após 07 e as evidências frontend associadas.
 
 ## Riscos restantes
 
-- **203 arquivos não versionados sustentam o estado declarado.** Nada disso
-  existe em histórico; uma perda de máquina apaga o projeto (GOV-001).
 - **O compose em execução não corresponde ao código-fonte**: a imagem é de V8 e
   o código está em V11. Teste manual contra `localhost:8080` exercita build
   velha (ENV-001).

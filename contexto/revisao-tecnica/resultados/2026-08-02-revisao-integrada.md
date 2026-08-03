@@ -13,13 +13,21 @@
 
 ## 1. Veredito executivo
 
-> **Atualização de 2026-08-02, após a execução do Prompt 06.** O veredito abaixo
-> descreve o estado no momento da revisão e permanece como escrito. O que mudou
-> desde então: AUTZ-001 foi resolvido e AUTZ-002 parcialmente; a suíte passou de
-> 82 para 96 testes, todos verdes. O julgamento de **piloto controlado** deixa
-> de estar bloqueado por ausência de autorização, mas continua **não apto** por
-> GOV-001 e ENV-001, que são de operação e não foram tocados. Auditoria
-> (AUDIT-001) segue inexistente, então **produção — não apto** não muda.
+> **Atualização de 2026-08-03.** O veredito abaixo descreve o estado no momento
+> da revisão e permanece como escrito. O que mudou desde então: AUTZ-001
+> resolvido, AUTZ-002 parcialmente e GOV-001 resolvido; a suíte passou de 82
+> para 112 testes, todos verdes.
+>
+> **Piloto controlado** deixa de estar bloqueado por ausência de autorização e
+> por rastreabilidade, e passa a depender apenas de ENV-001 — operacional, ainda
+> não tocado. Auditoria (AUDIT-001) segue inexistente, então **produção — não
+> apto** não muda.
+>
+> Uma revisão corretiva em 2026-08-03 encontrou oito lacunas na primeira
+> implementação do Prompt 06, três delas de exposição real: recursos coletivos
+> aceitando alcance próprio, a consolidação `UNIT + OWN` anulando concessão
+> válida, e controllers que buscavam o id antes de checar permissão, criando
+> oráculo de existência entre 403 e 404. Todas fechadas e cobertas por teste.
 
 O núcleo transacional está sólido: isolamento por tenant apoiado em RLS com
 papel restrito, webhook que persiste antes de confirmar, credenciais de canal
@@ -278,6 +286,10 @@ propriedades de teste aparecem apenas por nome.
 > recomendação de TEST-001 sobre como a falha de infraestrutura se apresenta.
 
 ### `[P1] GOV-001 — 203 arquivos não versionados sustentam o estado declarado`
+
+> **Resolvido em 2026-08-03.** O acervo foi versionado na `main` em cinco
+> commits por área sobre `793777d`, com ambas as suítes verdes no momento do
+> commit e nenhum segredo entre os 476 arquivos rastreados.
 
 - **Tipo:** operação
 - **Certeza:** confirmado
