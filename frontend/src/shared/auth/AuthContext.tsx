@@ -1,5 +1,6 @@
-import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { definirAccessToken, tentarRenovarSessao } from '@/lib/api';
+import { criarCanalDeSessao } from './canalDeSessao';
 import { authApi, type Usuario } from './api';
 
 export type { Usuario } from './api';
@@ -16,6 +17,29 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const canal = useRef<ReturnType<typeof criarCanalDeSessao> | null>(null);
+
+  // O canal nasce e morre dentro do efeito. Criá-lo no corpo do componente
+  // sobreviveria à limpeza do StrictMode em desenvolvimento — que desmonta e
+  // remonta de propósito — e a remontagem herdaria um canal já fechado.
+  useEffect(() => {
+    const atual = criarCanalDeSessao();
+    canal.current = atual;
+
+    // Sair em uma aba encerra as demais. O token já foi invalidado no
+    // servidor; isto apenas impede que as outras abas sigam exibindo uma
+    // interface autenticada até esbarrarem no próximo 401.
+    const cancelar = atual.aoReceber(() => {
+      definirAccessToken(null);
+      setUsuario(null);
+    });
+
+    return () => {
+      cancelar();
+      atual.fechar();
+      canal.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelado = false;
@@ -44,8 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authApi.sair();
     } finally {
+      // Limpa localmente mesmo se a chamada falhar: manter a interface
+      // autenticada depois de o usuário pedir para sair é pior do que
+      // divergir do servidor por um instante.
       definirAccessToken(null);
       setUsuario(null);
+      canal.current?.anunciarSaida();
     }
   }, []);
 

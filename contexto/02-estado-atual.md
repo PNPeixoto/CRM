@@ -1,19 +1,16 @@
 # Estado atual
 
 > Reescrito ao fim de cada sessão. Máximo 150 linhas.
-> Última atualização: 2026-08-03 12:15 (America/Montevideo)
+> Última atualização: 2026-08-03 15:05 (America/Montevideo)
 
 ## Onde parei
 
-Os Prompts backend 00–07 e frontend F0–F3 estão concluídos. O Gate A está
-fechado. O Gate B está **aprovado do lado backend** e **aberto no conjunto**:
-faltam as provas de frontend F4A e F4. Autorização, sessão e supply chain de
-backend estão cobertas; segurança de navegador é a metade que falta.
+Os Prompts backend 00–07 e frontend F0–F4 estão concluídos. Os Gates A e B
+estão **fechados**.
 
-O backend está na migration V11 e a suíte tem 112 testes verdes. Próximo
-executável: `frontend:F4A`; F4 depende dele. `backend:08` fica para depois da
-revisão do Gate B, e já tem quatro itens endereçados a ele no backlog de
-segurança.
+O backend está na migration V11 com 112 testes verdes; o frontend tem 86.
+Próximo passo é a revisão integrada do Gate B e, em seguida, `backend:08` —
+que já tem quatro itens endereçados a ele no backlog de segurança.
 
 ## Implementado
 
@@ -59,15 +56,21 @@ segurança.
 - Cliente HTTP central com cookies, token em memória, CSRF, timeout,
   `AbortSignal`, correlação, paginação e retry limitado. Escrita só repete com
   chave e contrato de idempotência explícitos.
-- CI verifica a suíte backend, snapshot OpenAPI, geração TypeScript sem diff,
-  lint, testes e build frontend.
-- Job de segurança no CI: gitleaks sobre o histórico completo, auditoria de
-  dependência com exceção nomeada e revisão de dependência em PR. A exceção
-  exige responsável, prazo e fundamento, e o gate **reprova quando o prazo
-  vence** — aceite sem prazo vira permissão permanente.
-- Dependabot acompanha maven, npm, github-actions e docker.
+- CI verifica backend, snapshot OpenAPI, geração TypeScript sem diff, lint,
+  testes e build do frontend.
+- Job de segurança no CI: gitleaks no histórico completo, auditoria de
+  dependência e revisão em PR. A exceção exige responsável, prazo e fundamento,
+  e o gate **reprova quando o prazo vence**. Dependabot acompanha maven, npm,
+  github-actions e docker.
 - Baseline ASVS 5.0.0 nível 2, threat models por fluxo e backlog priorizado em
   `contexto/seguranca/`.
+- CSP no documento da SPA, verificada no navegador em modo `enforce`; sem
+  `eval`, `innerHTML` nem HTML arbitrário, com teste de contrato que reprova a
+  regressão. Cadeia de build fixada e source map de produção não publicado.
+- Access token só em memória; retorno pós-login validado contra
+  redirecionamento aberto; refresh single-flight provado com dez requisições
+  concorrentes; saída anunciada entre abas por `BroadcastChannel`, com verbo e
+  nunca com token.
 
 ## Migrations atuais
 
@@ -90,16 +93,16 @@ segurança.
 - Flyway limpo até V11, caminho de atualização e os 14 artefatos do conjunto de
   migrations + seeds `dev` verificados.
 - Benchmark Argon2id local: média de 103 ms, cinco amostras após aquecimento.
-- Frontend: 56 testes em 14 arquivos, todos verdes, reexecutados em 2026-08-03
-  antes de versionar.
-- `npm run api:check` e build de produção passaram em 2026-08-01.
+- Frontend: 86 testes em 18 arquivos, todos verdes.
+- `npm run api:check` passou em 2026-08-01; build de produção reexecutado em
+  2026-08-03, sem script inline e sem source map.
 - Lint frontend sem erros; permanecem três avisos conhecidos de Fast Refresh.
 
 ## Governança
 
 - `contexto/prompts/manifest.yaml` v3 é a trilha backend canônica.
 - `contexto/prompts/frontend/manifest.yaml` v4 é a trilha frontend companheira.
-- Prompts 00–07 e F0–F3 estão marcados como `completed`; a revisão corretiva do
+- Prompts 00–07 e F0–F4 estão marcados como `completed`; a revisão corretiva do
   Prompt 06 está registrada na sessão de 2026-08-03.
 - ADRs individuais registram banco, modelo organizacional, autenticação e o
   alcance de autorização (ADR-0008).
@@ -113,11 +116,10 @@ segurança.
 
 ## Próximo passo
 
-1. Executar `frontend:F4A` para segurança do navegador e supply chain; depois
-   `frontend:F4` para sessão/refresh na UX.
-2. Revisão integrada do Gate B, consolidando backend 05–07 e frontend F4A/F4.
-3. Executar `backend:08`, que já tem quatro itens endereçados no backlog de
+1. Revisão integrada do Gate B, consolidando backend 05–07 e frontend F4A/F4.
+2. Executar `backend:08`, que já tem quatro itens endereçados no backlog de
    segurança: `SEC-001`, `SEC-003`, `SEC-006` e `SEC-012`.
+3. Seguir para `backend:09` e `frontend:F5`.
 
 ## Riscos restantes
 
@@ -127,20 +129,22 @@ segurança.
 - O seletor de contexto do frontend segue alimentado por lista fabricada no
   cliente; `/api/organizacao/contextos` e `/api/organizacao/permissoes` ainda não
   têm consumidor.
+- `frame-ancestors` é ignorada pelo navegador quando vem em `<meta>`. Ela exige
+  cabeçalho do servidor de estáticos, que não existe no repositório: hoje a
+  proteção contra clickjacking do documento depende de configuração externa não
+  versionada.
 - Auditoria — classificada P0 pelo próprio produto — não existe (AUDIT-001);
   bloqueia o Gate E.
 - Cinco riscos médios abertos em `contexto/seguranca/backlog.md`: contrato
   OpenAPI público, ausência de limite de taxa e de tamanho de corpo fora do
   login, deriva de schema não detectada, inscrição WebSocket que sobrevive à
   revogação, e falha de infraestrutura que se apresenta como falha de teste.
-- A blocklist de senha é inicial; precisa de fonte mantida antes da produção pública.
-- Entrega de reset exige URL HTTPS/provedor configurado externamente em produção.
-- TOTP não é resistente a phishing; passkeys/WebAuthn seguem como evolução.
-- Revogar refresh não invalida access token já emitido; janela máxima é 15 minutos.
-- As duas vulnerabilidades altas do `npm audit` são de RSC no `react-router` e
-  não alcançam este frontend, que usa só `BrowserRouter`. Exceção nomeada com
-  prazo em 2026-11-30; o gate reprova quando vencer.
+- Herdados de autenticação: blocklist de senha inicial, entrega de reset
+  dependente de provedor externo, TOTP sem resistência a phishing, e janela de
+  até 15 minutos entre revogar o refresh e o access token expirar.
+- As duas vulnerabilidades altas do `npm audit` são de RSC no `react-router`,
+  que este frontend não usa. Exceção nomeada expira em 2026-11-30 e o gate
+  reprova quando vencer.
 - O broker STOMP em memória ainda impede escala horizontal.
-- Exportação e job não existem como superfície; a revalidação que o Prompt 06
-  exige para eles é herdada por `Autorizacao` quando forem criados, e o Prompt 21
-  é onde se comprova.
+- Exportação e job não existem como superfície; a revalidação exigida pelo
+  Prompt 06 é herdada por `Autorizacao` e comprovada no Prompt 21.

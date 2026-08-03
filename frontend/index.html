@@ -1,10 +1,28 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      CSP em meta é defesa em profundidade, não a defesa principal.
+
+      O servidor de estáticos DEVE enviar a mesma política como cabeçalho, mais
+      `frame-ancestors` — que o navegador IGNORA quando vem em meta. Sem o
+      cabeçalho, a aplicação continua embutível em iframe de terceiro. O
+      contrato está em SEGURANCA-NAVEGADOR.md.
+
+      Por que a política é viável: o build do Vite não emite script inline nem
+      `eval`. `style-src` aceita inline porque React e Tailwind injetam estilo
+      em atributo; `script-src` não aceita, que é onde execução acontece.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss:; object-src 'none'; base-uri 'self'; form-action 'self'"
+    />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <!-- Aplicação autenticada, não conteúdo público. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <title>CRM PNP</title>
   </head>
   <body>
     <div id="root"></div>

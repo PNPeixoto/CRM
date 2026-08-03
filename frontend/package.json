@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "packageManager": "npm@11.16.0",
   "scripts": {
     "api:generate": "openapi-typescript ../backend/openapi/openapi.json --output src/generated/api-schema.d.ts --alphabetize --immutable",
     "api:check": "openapi-typescript ../backend/openapi/openapi.json --output src/generated/api-schema.d.ts --alphabetize --immutable --check",

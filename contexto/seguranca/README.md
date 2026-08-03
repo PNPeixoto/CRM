@@ -46,6 +46,12 @@ afirmação sobre o código lido, não sobre comportamento observado.
 
 ## Veredito do Gate B
 
+> **Atualização de 2026-08-03, após F4A e F4.** O lado frontend foi executado:
+> CSP verificada no navegador com violação `enforce` reportada pelo próprio
+> Chrome, ausência de execução genérica coberta por teste de contrato, cadeia
+> de build fixada, e um redirecionamento aberto encontrado e corrigido
+> (`SEC-014`). **O Gate B está fechado nos dois lados.**
+
 **Aprovado do lado backend.** Nenhum achado crítico permaneceu aberto. Os dois
 riscos altos encontrados foram tratados nesta execução:
 
@@ -55,9 +61,12 @@ riscos altos encontrados foram tratados nesta execução:
 - `GHSA-qwww-vcr4-c8h2` em `react-router` — **não aplicável**, comprovado pelo
   aviso oficial, com exceção nomeada, responsável e prazo.
 
-O gate **permanece aberto no conjunto** enquanto as provas de frontend F4A e F4
-não existirem. Autorização, sessão e supply chain de backend estão cobertas;
-segurança de navegador é a metade que falta.
+Do lado frontend, o F4A e o F4 fecharam a metade que faltava. O detalhe da
+superfície de navegador está em `frontend/SEGURANCA-NAVEGADOR.md`, inclusive o
+que **não** é código do frontend: o servidor de estáticos precisa enviar a CSP
+como cabeçalho, mais `frame-ancestors`, que o navegador ignora quando vem em
+`<meta>`. Enquanto esse servidor não existir no repositório, o clickjacking
+depende de configuração externa não versionada — está registrado como limite.
 
 Riscos médios e baixos estão no backlog com responsável e prazo. Nenhum foi
 aceito informalmente — a exceção de dependência é verificada por máquina e

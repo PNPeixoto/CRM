@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/shared/auth/AuthContext';
+import { destinoInternoSeguro } from '@/shared/auth/destinoSeguro';
 
 /**
  * Mensagem única para toda falha de autenticação.
@@ -31,7 +32,11 @@ export function LoginPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
-  const destino = (localizacao.state as EstadoDeOrigem | null)?.de ?? '/dashboard';
+  // O destino vem do estado do histórico, que é gravável por qualquer código
+  // da página. Sem validar, `//host.externo` sairia daqui como redirecionamento
+  // para fora — partindo de uma tela de login legítima, que é o que dá
+  // credibilidade a um phishing.
+  const destino = destinoInternoSeguro((localizacao.state as EstadoDeOrigem | null)?.de);
 
   if (usuario) {
     return <Navigate to={destino} replace />;

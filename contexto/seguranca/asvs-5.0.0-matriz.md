@@ -37,11 +37,15 @@ Baseline: commit `a603534`, suíte backend com 112 testes verdes, frontend com
 
 | Controle | Aplicável | Implementação | Teste | Evidência |
 |---|---|---|---|---|
-| CSP | sim | `default-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`; `connect-src` lista `wss:` explicitamente porque `'self'` não cobre o esquema WebSocket | — | inspeção |
-| `style-src 'unsafe-inline'` | sim | Aceito conscientemente — ver `SEC-007` | — | inspeção |
+| CSP nas respostas de API | sim | `default-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`; `connect-src` lista `wss:` explicitamente porque `'self'` não cobre o esquema WebSocket | — | inspeção |
+| CSP no documento da SPA | sim | `<meta http-equiv>` em `index.html`, mais exigência documentada de cabeçalho no servidor de estáticos — `frame-ancestors` é ignorada em meta | `browser-security.contract.test.ts` | **execução, no navegador**: violação `script-src-elem` com `disposition: enforce` ao injetar script inline, e `img-src` ao carregar recurso externo |
+| `style-src 'unsafe-inline'` | sim | Aceito conscientemente — ver `SEC-007`. O F4A confirmou que a folga não alcança `script-src` | `browser-security.contract.test.ts` | execução |
+| Ausência de execução genérica | sim | Sem `eval`, `new Function`, `innerHTML`, `dangerouslySetInnerHTML` ou `document.write` em nenhum arquivo de produção | `browser-security.contract.test.ts` | execução |
+| Trusted Types | **avaliado, não imposto** | Não há sumidouro de DOM perigoso para bloquear; `<meta>` não suporta `Report-Only`, então impor sem observar arriscaria indisponibilidade. Caminho documentado | — | inspeção |
 | CSRF | sim | Double-submit com `CookieCsrfTokenRepository`; `SpaCsrfTokenRequestHandler`; isento apenas onde não há sessão a proteger (login, refresh, MFA, reset, webhook, handshake WS) | `AutenticacaoSeguraTest.cookieCsrfAndRevokeAll` | execução |
 | Clickjacking | sim | `frame-options: DENY` mais `frame-ancestors 'none'` | — | inspeção |
-| Armazenamento de token no cliente | sim | Access token **em memória**, nunca em `localStorage`; refresh em cookie `HttpOnly` | testes do cliente HTTP no frontend | execução |
+| Armazenamento de token no cliente | sim | Access token **em memória**, nunca persistido; refresh em cookie `HttpOnly`. `localStorage` guarda só preferência de menu, com a chave derivada por hash | `AuthContext.test.tsx`, `browser-security.contract.test.ts` | execução, mais conferência no navegador: `localStorage` e `sessionStorage` vazios, único cookie legível é o de CSRF |
+| Redirecionamento aberto | sim | `destinoInternoSeguro` valida o retorno pós-login por allowlist de forma, com confirmação de origem depois da normalização do parser | `destinoSeguro.test.ts`, 12 casos | execução |
 | `X-XSS-Protection` | sim | Desabilitado deliberadamente: depreciado, ignorado por navegador moderno e origem de vulnerabilidade própria nos antigos | — | inspeção |
 
 ## V4 — API and Web Service
@@ -84,7 +88,9 @@ e varredura. Registrado como `SEC-010`.
 | Validade do access token | sim | 15 minutos | `RefreshTokenRotacaoTest` | execução |
 | Rotação de refresh e detecção de reuso | sim **(nível 3)** | Rotação a cada uso; reuso revoga a **família** inteira; hash SHA-256, nunca o valor | `RefreshTokenRotacaoTest` | execução |
 | Inatividade e limite absoluto | sim | 1 hora de inatividade, 24 horas absolutas | `AutenticacaoSeguraTest.refreshHasInactivityAndAbsoluteLimits` | execução |
-| Encerramento | sim | Logout limpa o cookie; `revoke-all` encerra todos os dispositivos | `AutenticacaoSeguraTest.cookieCsrfAndRevokeAll` | execução |
+| Encerramento | sim | Logout limpa o cookie; `revoke-all` encerra todos os dispositivos. No cliente, sair anuncia às demais abas por `BroadcastChannel` — apenas o verbo `{tipo:'saiu'}`, nunca token nem dado pessoal | `AutenticacaoSeguraTest.cookieCsrfAndRevokeAll`, `AuthContext.test.tsx`, `sessao.test.ts` | execução |
+| Renovação concorrente | sim | Refresh *single-flight*: dez requisições expiradas simultâneas aguardam a mesma tentativa. Sem isso, dez renovações paralelas girariam a família de refresh tokens e a detecção de reuso derrubaria a sessão do usuário legítimo | `sessao.test.ts` | execução |
+| Ausência de laço de autenticação | sim | Uma repetição por cadeia; rotas `/auth/*` não disparam renovação | `sessao.test.ts` | execução |
 | Revogação imediata | **parcial** | Revogar refresh não invalida access token já emitido; janela máxima de 15 min. Mitigado em autorização: perda de membership nega na requisição seguinte | `AutorizacaoPorAlcanceTest.semMembershipVigenteNadaEhAutorizado` | execução |
 
 ## V8 — Authorization

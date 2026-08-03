@@ -7,6 +7,15 @@ import { fileURLToPath, URL } from 'node:url';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
 
+  build: {
+    // Explícito, e não herdado do padrão: source map publicado como ativo
+    // estático entrega o código original, os nomes internos e os comentários
+    // a qualquer visitante. O padrão do Vite já é `false`, mas um padrão pode
+    // mudar de versão sem ninguém notar — aqui a decisão fica registrada e o
+    // teste de contrato a verifica.
+    sourcemap: false,
+  },
+
   resolve: {
     // Permite importar como '@/pages/inbox' em vez de '../../../pages/inbox'.
     // Mover um arquivo deixa de quebrar os imports dos vizinhos.

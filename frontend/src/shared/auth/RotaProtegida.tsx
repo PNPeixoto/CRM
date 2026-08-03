@@ -26,8 +26,13 @@ export function RotaProtegida() {
 
   if (!usuario) {
     // `state` guarda o destino para devolver o usuário ao lugar certo depois
-    // do login, em vez de largá-lo sempre no dashboard.
-    return <Navigate to="/login" replace state={{ de: localizacao.pathname }} />;
+    // do login, em vez de largá-lo sempre no dashboard. Inclui consulta e
+    // âncora: voltar para a lista sem o filtro que a pessoa tinha aberto é
+    // devolver ao lugar errado com aparência de acerto.
+    //
+    // Quem lê este estado o valida antes de navegar — ver `destinoInternoSeguro`.
+    const de = `${localizacao.pathname}${localizacao.search}${localizacao.hash}`;
+    return <Navigate to="/login" replace state={{ de }} />;
   }
 
   return <Outlet />;

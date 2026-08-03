@@ -7,18 +7,19 @@ Baseline: commit `a603534`, 2026-08-03. Responsável único do projeto:
 **PNPeixoto**.
 
 **Critério de bloqueio:** risco crítico bloqueia o Gate B. Nenhum crítico
-permaneceu aberto. Os dois altos foram tratados nesta execução.
+permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
+`SEC-014` foi encontrado e corrigido no F4.
 
 | Severidade | Abertos | Resolvidos nesta execução | Aceitos com prazo |
 |---|---|---|---|
 | Crítico | 0 | 0 | 0 |
 | Alto | 0 | 1 | 1 |
-| Médio | 5 | 0 | 0 |
+| Médio | 5 | 1 | 0 |
 | Baixo | 4 | 0 | 2 |
 
 ---
 
-## Resolvidos nesta execução
+## Resolvidos
 
 ### `SEC-004` — `jackson-databind` com falha de autorização — **RESOLVIDO**
 
@@ -33,6 +34,22 @@ permaneceu aberto. Os dois altos foram tratados nesta execução.
   precedente já existente no `pom.xml` para a CVE do driver PostgreSQL.
 - **Evidência:** `mvnw dependency:tree` confirma 3.1.5 e 2.21.5 resolvidos;
   suíte com 112 testes verde após o bump.
+
+### `SEC-014` — Redirecionamento aberto no retorno pós-login — **RESOLVIDO**
+
+- **Severidade:** média · **Encontrado e corrigido no F4, 2026-08-03**
+- **Situação:** o destino de retorno vinha de `location.state` sem validação.
+  O estado do histórico é gravável por qualquer código da página, e um valor
+  como `//host.externo` é protocolo-relativo: o navegador o resolve como host
+  externo. O redirecionamento partiria de uma tela de login legítima, que é
+  justamente o que empresta credibilidade a um phishing.
+- **Correção:** `destinoInternoSeguro` valida por allowlist de forma — barra
+  única inicial, sem caractere de controle, e confirmação de origem depois da
+  normalização do parser. `/login` é recusado como destino, para não criar
+  laço.
+- **Evidência:** 12 casos em `destinoSeguro.test.ts`, incluindo uma
+  propriedade que exige que **toda** entrada resulte em destino da mesma
+  origem.
 
 ---
 
@@ -51,15 +68,22 @@ permaneceu aberto. Os dois altos foram tratados nesta execução.
   O CI **reprova** quando o prazo vence, de modo que o aceite não apodrece em
   silêncio.
 - **Gatilho de reavaliação imediata:** o dia em que o projeto adotar RSC.
+- **Reavaliado no F4A, 2026-08-03:** mantido. O F4A varreu o código e confirmou
+  que nenhum arquivo importa API de RSC ou de framework mode; o roteador segue
+  em modo declarativo com `BrowserRouter`. O prazo não foi estendido.
 
 ### `SEC-007` — CSP com `style-src 'unsafe-inline'`
 
 - **Severidade:** baixa
-- **Responsável:** PNPeixoto · **Prazo:** Prompt F4A
+- **Responsável:** PNPeixoto · **Prazo:** reavaliado no F4A em 2026-08-03,
+  **mantido**; próxima reavaliação no F10
 - **Fundamento:** React e Tailwind injetam estilo inline; remover exigiria
   nonce por requisição ou hash por estilo, com custo desproporcional ao ganho.
   `script-src` permanece **sem** `unsafe-inline` e sem `unsafe-eval`, que é
   onde a execução de código realmente acontece.
+- **Verificado no F4A:** o navegador reportou `script-src-elem` em modo
+  `enforce` ao bloquear script inline injetado na página. Ou seja, a folga de
+  `style-src` não contamina `script-src` — o que era a preocupação real.
 
 ### `SEC-008` — Pepper não rotacionável
 
@@ -72,6 +96,7 @@ permaneceu aberto. Os dois altos foram tratados nesta execução.
   no momento em que houver senha real armazenada.
 
 ---
+
 
 ## Abertos — médio
 
