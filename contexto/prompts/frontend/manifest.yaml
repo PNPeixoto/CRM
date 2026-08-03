@@ -1,0 +1,33 @@
+version: 4
+canonical: true
+kind: frontend-track
+namespace: frontend
+companion_to: "../manifest.yaml"
+supersedes: ["CRM PNP — Trilha de Frontend (v3)"]
+preamble: "PREAMBULO.md"
+status_owner: "integracao-ou-consolidacao"
+
+blocking_values:
+  - before-demo
+  - before-external-pilot
+  - before-production
+  - feature-activation
+  - evidence-triggered
+
+prompts:
+  - {id: "F0", canonical_id: "frontend:F0", name: diagnostico, file: "F0-diagnostico.md", phase: frontend_foundation, prerequisites: ["backend:00"], blocking: before-demo, gate: null, status: completed}
+  - {id: "F0A", canonical_id: "frontend:F0A", name: testes-base, file: "F0A-testes-base.md", phase: frontend_foundation, prerequisites: ["frontend:F0"], blocking: before-demo, gate: null, status: completed}
+  - {id: "F1", canonical_id: "frontend:F1", name: design-system-tokens, file: "F1-design-system-tokens.md", phase: frontend_foundation, prerequisites: ["frontend:F0", "frontend:F0A"], blocking: before-demo, gate: C, status: completed}
+  - {id: "F2", canonical_id: "frontend:F2", name: casca-navegacao, file: "F2-casca-navegacao.md", phase: frontend_foundation, prerequisites: ["frontend:F1"], blocking: before-demo, gate: C, status: completed}
+  - {id: "F3", canonical_id: "frontend:F3", name: contrato-camada-acesso, file: "F3-contrato-camada-acesso.md", phase: frontend_foundation, prerequisites: ["backend:05", "frontend:F2"], blocking: before-external-pilot, gate: C, status: completed}
+  - {id: "F4A", canonical_id: "frontend:F4A", name: seguranca-navegador-supply-chain, file: "F4A-seguranca-navegador-supply-chain.md", phase: frontend_security, prerequisites: ["frontend:F0A", "frontend:F3"], blocking: before-external-pilot, gate: B, status: ready}
+  - {id: "F4", canonical_id: "frontend:F4", name: sessao-refresh, file: "F4-sessao-refresh.md", phase: frontend_security, prerequisites: ["backend:05", "frontend:F3", "frontend:F4A"], blocking: before-external-pilot, gate: B, status: ready}
+  - {id: "F5", canonical_id: "frontend:F5", name: estado-servidor-cache, file: "F5-estado-servidor-cache.md", phase: frontend_foundation, prerequisites: ["frontend:F3", "frontend:F4"], blocking: before-external-pilot, gate: C, status: ready}
+  - {id: "F6", canonical_id: "frontend:F6", name: formularios-erros, file: "F6-formularios-erros.md", phase: frontend_foundation, prerequisites: ["frontend:F3", "frontend:F5"], blocking: before-external-pilot, gate: C, status: ready}
+  - {id: "F7", canonical_id: "frontend:F7", name: tela-dominio, file: "F7-tela-dominio.md", phase: frontend_product, prerequisites: ["frontend:F5", "frontend:F6"], blocking: before-demo, gate: C, repeatable: true, status: ready}
+  - {id: "F8", canonical_id: "frontend:F8", name: tempo-real, file: "F8-tempo-real.md", phase: frontend_product, prerequisites: ["backend:14", "frontend:F4", "frontend:F5"], blocking: "feature-activation:omnichannel", gate: D, status: ready}
+  - {id: "F9", canonical_id: "frontend:F9", name: listas-grandes, file: "F9-listas-grandes.md", phase: frontend_product, prerequisites: ["frontend:F5"], blocking: evidence-triggered, gate: null, status: ready}
+  - {id: "F10", canonical_id: "frontend:F10", name: auditoria-wcag, file: "F10-auditoria-wcag.md", phase: frontend_quality, prerequisites: ["frontend:F7"], blocking: before-production, gate: C, status: ready}
+  - {id: "F11", canonical_id: "frontend:F11", name: auditoria-performance, file: "F11-auditoria-performance.md", phase: frontend_quality, prerequisites: ["frontend:F7"], blocking: before-production, gate: C, status: ready}
+  - {id: "F12", canonical_id: "frontend:F12", name: auditoria-cobertura-e2e, file: "F12-auditoria-cobertura-e2e.md", phase: frontend_quality, prerequisites: ["frontend:F0A", "frontend:F7"], blocking: before-production, gate: C, status: ready}
+  - {id: "F13", canonical_id: "frontend:F13", name: telemetria-erros, file: "F13-telemetria-erros.md", phase: frontend_quality, prerequisites: ["backend:18", "backend:22", "frontend:F7"], blocking: before-production, gate: E, status: ready}

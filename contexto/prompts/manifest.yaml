@@ -1,0 +1,50 @@
+version: 3
+canonical: true
+supersedes: ["v1", "v2", "contexto/PROMPT-PROXIMA-SESSAO.md"]
+preamble: "PREAMBULO.md"
+gates_file: "GATES.md"
+status_owner: "integracao-ou-consolidacao"
+
+companion_manifests:
+  - {namespace: "frontend", version: 4, file: "frontend/manifest.yaml", canonical: true}
+
+gates:
+  A: {name: fundacao, closes_after: "04"}
+  B: {name: seguranca-do-nucleo, closes_after: "07"}
+  C: {name: produto-utilizavel, closes_after: "11"}
+  D: {name: omnichannel, closes_after: "16"}
+  E: {name: operacao-e-conformidade, closes_after: "24"}
+  F: {name: integracoes-privadas-e-escala, closes_after: "28"}
+
+prompts:
+  - {id: "00", name: diagnostico, file: "00-diagnostico.md", phase: foundation, prerequisites: [], gate: null, status: completed}
+  - {id: "01", name: docker-ambientes, file: "01-docker-ambientes.md", phase: foundation, prerequisites: ["00"], gate: A, status: completed}
+  - {id: "02", name: testes-base, file: "02-testes-base.md", phase: foundation, prerequisites: ["01"], gate: A, status: completed}
+  - {id: "03", name: banco-roles-rls-integridade, file: "03-banco-roles-rls-integridade.md", phase: foundation, prerequisites: ["01", "02"], gate: A, status: completed}
+  - {id: "04", name: modelo-organizacional-escopos, file: "04-modelo-organizacional-escopos.md", phase: foundation, prerequisites: ["00", "03"], gate: A, status: completed}
+  - {id: "05", name: autenticacao-sessao, file: "05-autenticacao-sessao.md", phase: core_security, prerequisites: ["03", "04"], gate: B, status: completed}
+  - {id: "06", name: autorizacao-multitenancy, file: "06-autorizacao-multitenancy.md", phase: core_security, prerequisites: ["04", "05"], gate: B, status: completed}
+  - {id: "07", name: baseline-asvs-threat-model, file: "07-baseline-asvs-threat-model.md", phase: core_security, prerequisites: ["05", "06"], gate: B, status: ready}
+  - {id: "08", name: correcoes-transversais, file: "08-correcoes-transversais.md", phase: usable_product, prerequisites: ["07"], gate: C, status: ready}
+  - {id: "09", name: design-system-casca, file: "09-design-system-casca.md", phase: usable_product, prerequisites: ["08"], gate: C, status: ready}
+  - {id: "10", name: vertical-slices, file: "10-vertical-slices.md", phase: usable_product, prerequisites: ["08", "09"], gate: C, status: ready}
+  - {id: "11", name: onboarding-segmentos, file: "11-onboarding-segmentos.md", phase: usable_product, prerequisites: ["06", "09", "10"], gate: C, status: ready}
+  - {id: "12", name: fundacao-canais, file: "12-fundacao-canais.md", phase: omnichannel, prerequisites: ["03", "06", "10"], gate: D, status: ready}
+  - {id: "13", name: adaptadores-provedor, file: "13-adaptadores-provedor.md", phase: omnichannel, prerequisites: ["12"], gate: D, status: ready}
+  - {id: "14", name: inbox-tempo-real, file: "14-inbox-tempo-real.md", phase: omnichannel, prerequisites: ["06", "12", "13"], gate: D, status: ready}
+  - {id: "15", name: motor-automacoes, file: "15-motor-automacoes.md", phase: omnichannel, prerequisites: ["10", "12"], gate: D, status: ready}
+  - {id: "16", name: conector-http-seguro, file: "16-conector-http-seguro.md", phase: omnichannel, prerequisites: ["07", "15"], gate: D, status: ready}
+  - {id: "17", name: auditoria, file: "17-auditoria.md", phase: operations_compliance, prerequisites: ["06", "08"], gate: E, status: ready}
+  - {id: "18", name: lgpd-retencao, file: "18-lgpd-retencao.md", phase: operations_compliance, prerequisites: ["07", "17"], gate: E, status: ready}
+  - {id: "19", name: entitlements-medicao, file: "19-entitlements-medicao.md", phase: operations_compliance, prerequisites: ["04", "08", "12"], gate: E, status: ready}
+  - {id: "20", name: billing, file: "20-billing.md", phase: operations_compliance, prerequisites: ["17", "19"], gate: E, status: ready}
+  - {id: "21", name: relatorios-exportacoes, file: "21-relatorios-exportacoes.md", phase: operations_compliance, prerequisites: ["06", "17", "18", "19"], gate: E, status: ready}
+  - {id: "22", name: observabilidade-slos, file: "22-observabilidade-slos.md", phase: operations_compliance, prerequisites: ["08", "12", "15"], gate: E, status: ready}
+  - {id: "23", name: backup-restore-runbooks, file: "23-backup-restore-runbooks.md", phase: operations_compliance, prerequisites: ["03", "18", "22"], gate: E, status: ready}
+  - {id: "24", name: cicd-deploy, file: "24-cicd-deploy.md", phase: operations_compliance, prerequisites: ["02", "07", "22", "23"], gate: E, status: ready}
+  - {id: "25", name: agente-protocolo-enrollment, file: "25-agente-protocolo-enrollment.md", phase: private_integrations_scale, prerequisites: ["07", "16", "24"], gate: F, status: ready}
+  - {id: "25B", name: agente-execucao-jobs, file: "25B-agente-execucao-jobs.md", phase: private_integrations_scale, prerequisites: ["25"], gate: F, status: ready}
+  - {id: "25C", name: agente-operacao-segura, file: "25C-agente-operacao-segura.md", phase: private_integrations_scale, prerequisites: ["25B", "22"], gate: F, status: ready}
+  - {id: "26", name: consolidacao-arquitetural, file: "26-consolidacao-arquitetural.md", phase: private_integrations_scale, prerequisites: ["24", "25C"], gate: F, status: ready}
+  - {id: "27", name: otimizacao-medida, file: "27-otimizacao-medida.md", phase: private_integrations_scale, prerequisites: ["22", "26"], gate: F, status: ready}
+  - {id: "28", name: escalabilidade-horizontal, file: "28-escalabilidade-horizontal.md", phase: private_integrations_scale, prerequisites: ["23", "24", "27"], gate: F, status: ready}

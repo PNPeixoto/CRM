@@ -29,14 +29,16 @@
 ### Camadas
 
 ```
-controller  →  application (use case)  →  domain  →  repository
+controller  →  application (use case)  →  domain quando necessário  →  repository
 ```
 
 - **Controller** só faz: receber DTO, validar formato, chamar caso de uso,
   mapear resposta. Zero regra de negócio, zero query.
 - **Application** orquestra: transação, autorização, chamada ao domínio,
   publicação de evento.
-- **Domain** contém a regra. Não conhece Spring, HTTP nem JPA.
+- **Domain** contém invariantes, cálculos e transições relevantes. Não conhece
+  Spring, HTTP nem JPA. CRUD sem invariantes não ganha entidade rica, value
+  object ou serviço de domínio artificial.
 - **Repository** só acessa dados.
 
 Entidade JPA **nunca** é serializada direto na resposta HTTP. DTO de entrada e
@@ -92,6 +94,17 @@ Regras do Spring Modulith:
 
 ## 3. Segurança
 
+### Baseline verificável
+
+- OWASP ASVS na versão vigente, nível 2 como alvo geral; nível 3 somente para
+  controle de alto impacto justificado.
+- NIST SP 800-63B vigente para autenticação e RFC oficial vigente quando houver
+  OAuth/OIDC. A versão e a data da fonte são registradas; memória não é fonte.
+- Cada controle adotado aparece em matriz com aplicabilidade, implementação,
+  teste e evidência.
+- Threat model é feito por fluxo crítico e mantido junto do backlog/testes, não
+  como documento genérico abandonado.
+
 ### Autenticação
 
 - Senha com **Argon2id** (ou BCrypt custo ≥ 12 se houver limitação de ambiente).
@@ -103,17 +116,30 @@ Regras do Spring Modulith:
 - MFA (TOTP) obrigatório para superadministrador e administrador da
   franqueadora; opcional para os demais.
 - Bloqueio progressivo por tentativa de login, por conta **e** por IP.
+- Recuperação de senha usa token único, curto, armazenado por hash, e permite
+  revogar todas as sessões.
+- A arquitetura não impede passkeys/WebAuthn no futuro, mas sua implementação
+  depende de decisão e threat model próprios.
 - Resposta de login errado é sempre idêntica, independentemente de o e-mail
   existir — senão vira enumeração de usuários.
 
 ### Autorização
 
+O modelo distingue `Tenant` (contratante), `Unit` (operação), `InternalUser`
+(trabalhador), `Contact/Customer` (cliente final), `Membership` (vínculo),
+`Role` (permissões) e `Scope` (rede/tenant/unidade/equipe/próprio registro).
+Usuário interno nunca representa consumidor final.
+
 - Verificada **no backend, em toda requisição**, na camada de aplicação. A UI
   esconder o botão é cosmético.
 - Checagem em três eixos: **ação** (criar/editar/excluir/exportar), **escopo**
   (tenant/região/unidade/equipe) e **registro** (é dono? é responsável?).
-- `tenant_id` vem do token verificado. Se aparecer no body ou na query string,
-  é ignorado — e o incidente é registrado na auditoria.
+- Módulo tecnicamente disponível, entitlement contratado, permissão do usuário e
+  visibilidade na navegação são quatro conceitos separados. Esconder menu não
+  concede nem remove autorização.
+- `tenant_id` vem do token verificado. Se aparecer no body, query string ou
+  header livre, a entrada é rejeitada e o incidente é registrado de forma
+  sanitizada.
 - RLS ativo em todas as tabelas com `tenant_id`, com `SET LOCAL app.tenant_id`
   no início da transação, feito por interceptor central.
 - Testes automatizados obrigatórios: usuário do tenant A **não** consegue ler,
@@ -132,6 +158,17 @@ Regras do Spring Modulith:
 - Resposta nunca inclui campo que o perfil não pode ver — filtrar no servidor,
   não no cliente.
 
+### Contratos de API
+
+- DTOs de entrada e saída são separados e usam allowlist de campos.
+- Toda resposta de erro segue contrato comum com `correlation_id`/`request_id`.
+- Operação repetível recebe idempotency key quando o efeito puder duplicar.
+- Versionamento só existe para quebra real; deploy preserva compatibilidade
+  backward durante a janela de migration.
+- Servidor impõe tamanho máximo de payload, paginação, ordenação e filtros.
+- Cursor/keyset é o padrão para mensagens e históricos extensos; offset é
+  aceitável em cadastros pequenos, medidos e sempre limitados.
+
 ### Segredos
 
 - Nunca no código, nunca no repositório, nunca em log, nunca em resposta de API,
@@ -144,6 +181,17 @@ Regras do Spring Modulith:
   `# TESTE — TROCAR ANTES DE PRODUÇÃO`.
 - Resposta de API externa passa por **sanitização** antes de virar log ou tela —
   ela pode ecoar o token enviado.
+
+### Conector HTTP
+
+- Bloquear IPv4/IPv6 privados, reservados, loopback, link-local e metadata;
+  resolver A e AAAA e proteger contra DNS rebinding.
+- Redirects desativados; quando aprovados, cada hop passa pela mesma validação.
+- Cliente dedicado, sem cookies, com timeout, limite de resposta, concorrência e
+  orçamento por tenant; produção usa política/proxy de egress.
+- Linguagem de expressão sem `eval`, JavaScript, shell ou SpEL irrestrito.
+- Efeito externo usa idempotency key quando suportado; request, response e erro
+  são sanitizados antes de persistir.
 
 ### Superfície HTTP
 
@@ -163,6 +211,13 @@ Regras do Spring Modulith:
 - Exportação e exclusão de dados do titular precisam existir como
   funcionalidade, não como favor manual.
 - Log **nunca** registra conteúdo de mensagem de cliente por padrão.
+- Papel de controlador/operador depende da finalidade concreta. A plataforma
+  pode operar dados do cliente do tenant e controlar dados próprios de conta,
+  faturamento, segurança e fraude; decisão jurídica não é codificada por palpite.
+- Manter inventário de tratamento, finalidade/hipótese, titulares/dados,
+  suboperadores, transferências, retenção, incidente, legal hold e descarte.
+- Verificar identidade antes de exportar/excluir e anonimizar quando exclusão não
+  for permitida.
 
 ---
 
@@ -170,18 +225,25 @@ Regras do Spring Modulith:
 
 - **Flyway sempre.** `ddl-auto` fica em `validate` — nunca `update` nem
   `create`.
+- Migration só é criada quando schema, índice, constraint, trigger, policy ou
+  seed estrutural mudar; slice sem alteração persistente não ganha migration.
 - Migration é imutável depois de aplicada em qualquer ambiente. Correção é nova
   migration.
 - Migration de dados separada de migration de estrutura.
-- Toda tabela de negócio: `id`, `tenant_id`, `created_at`, `updated_at`,
-  `created_by`, `updated_by`.
+- Entidade de negócio: `tenant_id`, criação/alteração e respectivos atores,
+  além de exclusão lógica quando fizer parte do ciclo de vida.
+- Evento append-only: `tenant_id`, `occurred_at`, `actor_id`, `event_type` e
+  chave de idempotência; não possui `updated_at`.
+- Fila técnica: timestamps de criação, reserva, tentativa e conclusão, estado,
+  lease/owner e erro sanitizado, com retenção técnica definida.
+- Referência realmente global e imutável não recebe `tenant_id`.
 - Chave primária: `UUID v7` (ordenável no tempo, sem expor volume) ou `BIGSERIAL`
   interno com UUID público. Nunca expor ID sequencial em URL de API pública.
 - Exclusão é **lógica** (`deleted_at`) para entidades de negócio. Exclusão
   física só no expurgo por retenção.
 - Dinheiro em centavos (`INTEGER`/`BIGINT`). Timestamp em `TIMESTAMPTZ`, UTC.
-- Índice em toda coluna usada em filtro de listagem, sempre começando por
-  `tenant_id` nos índices compostos.
+- Índice é justificado pelas consultas e medição; em tabela por tenant, índice
+  composto de acesso normalmente começa por `tenant_id`. Não indexe por ritual.
 
 ---
 
@@ -193,8 +255,13 @@ Regras do Spring Modulith:
   STOMP externo (RabbitMQ com plugin STOMP, por exemplo) ou uma ponte
   pub/sub própria. Decidir isso **antes** de subir a segunda instância — não é
   troca de configuração, muda o desenho.
-- WebSocket autentica no *handshake* e reautoriza por assinatura de tópico. Um
-  usuário não pode se inscrever em tópico de outro tenant ou de outra unidade.
+- WebSocket usa allowlist explícita de `Origin`, autentica no `CONNECT` e
+  autoriza `SUBSCRIBE` e toda ação recebida. Um usuário não pode se inscrever em
+  tópico de outro tenant ou unidade.
+- Limites de conexão por usuário/tenant, tamanho e frequência de mensagens,
+  heartbeat, timeout ocioso e backpressure são obrigatórios.
+- Expiração/revogação de sessão encerra ou reautoriza a conexão conforme a
+  política; logs não registram conteúdo da conversa.
 - Estado de sessão fora da aplicação (Redis), para que qualquer instância possa
   atender qualquer requisição.
 - Entrega em tempo real é **otimização**, não fonte da verdade: o cliente
@@ -227,13 +294,20 @@ questão de tempo.
 
 ### Recepção de webhook — padrão único
 
-1. Validar assinatura **antes** de ler o corpo como JSON
-2. Responder `200` imediatamente
-3. Gravar o evento cru em tabela de entrada
-4. Processar de forma assíncrona
+1. Receber os bytes crus com limite de tamanho
+2. Validar assinatura **antes** de ler o corpo como JSON
+3. Persistir o evento de forma durável e idempotente
+4. Responder com o sucesso exigido pelo provedor
+5. Processar de forma assíncrona
 
-Provedor que não recebe `200` rápido reenvia e pode desativar o webhook.
-Processar dentro do request é o erro clássico aqui.
+Provedor que não recebe sucesso rápido reenvia e pode desativar o webhook, mas
+confirmar antes da persistência perde o evento se o banco falhar. A inserção
+durável fica no request; interpretação e efeitos ficam fora. Falha ao persistir
+retorna erro transitório para provocar retry.
+
+O evento bruto tem acesso restrito, limite, mascaramento na interface, retenção
+curta configurada e criptografia quando necessária. Quando o corpo não precisar
+ser retido, preserve hash e metadados mínimos para diagnóstico.
 
 **Verificação por provedor:**
 
@@ -260,10 +334,13 @@ assinatura, não do usuário.
 
 ### Mídia
 
-Links de mídia da Meta são temporários e exigem token para download. O fluxo
-correto é: baixar assim que o webhook chega → validar tipo e tamanho →
-armazenar em storage próprio (S3/R2) → servir por URL assinada. Guardar só o
-link do provedor significa perder o anexo em poucos dias.
+Links de mídia do provedor são temporários. Baixe por host oficial ou endpoint
+autenticado, em streaming, com limite antes e durante o download. Valide tipo
+por magic bytes e parser quando aplicável, use nome e UUID gerados, quarentena e
+antivírus/sandbox quando disponíveis. HTML, SVG ativo e executáveis são
+bloqueados por padrão. Armazene fora do web root com chave contendo tenant,
+sirva por URL assinada curta e `Content-Disposition` seguro. Retenção e exclusão
+seguem política; link temporário do provedor nunca é a única cópia.
 
 ### Restrições de negócio que a arquitetura precisa refletir
 
@@ -278,11 +355,10 @@ link do provedor significa perder o anexo em poucos dias.
   agente humano. Exige conta profissional vinculada a uma página do Facebook.
 - **Telegram:** sem janela e sem template — é o canal mais simples, e por isso
   bom segundo alvo depois do chat ao vivo.
-- **Custo por mensagem precisa ser medido por tenant desde o começo.** Desde
-  julho de 2025 a Meta cobra por template entregue, e a partir de 1º de outubro
-  de 2026 as respostas livres dentro da janela de 24h, hoje gratuitas, passam a
-  ser cobradas. Sem medição por tenant, não há como repassar nem limitar
-  consumo, e o custo vira prejuízo direto da plataforma.
+- **Uso precisa ser medido por tenant desde o começo** em livro-razão append-only
+  e idempotente, com agregação posterior. Métrica e regra comercial são
+  configuráveis e verificadas na documentação oficial vigente do provedor; não
+  ficam congeladas como contador mutável ou política de cobrança no adapter.
 
 ### Decisão pendente: API oficial vs. bridge não oficial
 
@@ -292,10 +368,10 @@ Boa parte dos concorrentes brasileiros oferece conexão por leitura de QR Code
 aviso. A API oficial exige CNPJ, verificação de negócio e custo por mensagem,
 mas é estável e defensável contratualmente.
 
-Como a arquitetura usa adaptadores, os dois caminhos cabem na mesma porta. A
-decisão é comercial e jurídica, não técnica — mas precisa ser tomada com o risco
-explícito, porque o cliente perder o número dele por causa da sua plataforma é
-um evento do qual o produto não se recupera.
+Como a arquitetura usa adaptadores, os dois caminhos cabem tecnicamente na mesma
+porta. Em produção, bridge não oficial não é permitida sem decisão jurídica e
+comercial explícita; o default é API oficial. O risco inclui banimento do número
+do cliente e quebra contratual.
 
 ---
 
@@ -309,7 +385,10 @@ internos (ERP, por exemplo) nunca cheguem ao servidor central.
   adoção ser possível.
 - Registro por token de *enrollment* de uso único e curta validade. Depois do
   registro, o agente recebe credencial própria e o token é queimado.
+- Jobs e atualizações são assinados com nonce e expiração; replay é rejeitado.
 - Comunicação por mTLS ou token assinado, sempre sobre TLS.
+- O agente roda sob usuário sem privilégio e guarda credenciais no cofre do
+  sistema operacional.
 - Heartbeat periódico; agente sem heartbeat aparece como offline no painel e
   gera alerta.
 - O CRM central armazena **apenas a referência** ao segredo
@@ -319,7 +398,11 @@ internos (ERP, por exemplo) nunca cheguem ao servidor central.
   antes de subir para o CRM.
 - Agente valida a origem do comando: só executa integração previamente vinculada
   a ele. Comando arbitrário vindo do servidor é uma porta de execução remota.
-- Versão do agente é reportada; versão desatualizada gera aviso no painel.
+- Tipos de job usam allowlist; shell, caminho e comando arbitrários são proibidos.
+- Binário e atualização são assinados, com proteção contra downgrade, rotação de
+  credencial, revogação, compatibilidade de versão e limite de resposta.
+- Versão do agente é reportada; versão desatualizada gera aviso no painel. A
+  trilha cobre enrollment, job, atualização e revogação sem payload sensível.
 
 ---
 
@@ -419,14 +502,15 @@ falsa.
   falha de integração, conexões WebSocket ativas.
 - Alertas que importam de verdade: integração caindo, agente offline, fila
   crescendo, taxa de erro subindo, backup falhando, certificado perto de vencer.
-- Auditoria é **append-only** e separada do log de aplicação. Log é
-  operacional e expira; auditoria é registro de negócio e não expira.
+- Auditoria é **append-only** e separada do log de aplicação. Log é operacional
+  e tem retenção própria; cada categoria de auditoria possui finalidade,
+  fundamento, acesso, prazo e descarte/anonimização verificável.
 
 ---
 
 ## 12. Testes
 
-Obrigatórios, sem exceção:
+Obrigatórios conforme o risco aplicável:
 
 1. **Isolamento entre tenants** — tenant A não acessa dado de tenant B em
    nenhum endpoint
@@ -435,12 +519,22 @@ Obrigatórios, sem exceção:
 4. **Idempotência** — webhook e envio repetidos não duplicam
 5. **Fronteira de módulos** — `ApplicationModules.verify()` no CI
 
+Acrescente contract tests para provedores, testes de componente para UI, E2E
+somente para jornadas críticas e carga para login, inbox, filas e relatórios.
+Autorização multi-tenant cobre ação, escopo e registro em endpoints, arquivos,
+WebSocket, jobs, cache, reprocessamento e exportação.
+
 Testcontainers com PostgreSQL real. Mock de banco esconde exatamente os
 problemas que importam: RLS, constraint, índice, transação.
 
 Sem meta de cobertura percentual — cobertura alta em código trivial não protege
 nada. O critério é: **toda regra de negócio e toda regra de segurança têm
 teste**.
+
+Teste falho não é ignorado. Quarentena exige issue, responsável, justificativa,
+expiração e execução contínua; segurança, tenant, migration e cobrança não podem
+ser quarentenados. Evidência registra commit, ambiente, data, comando, resultado,
+artefato e responsável, sem dados sensíveis.
 
 ---
 

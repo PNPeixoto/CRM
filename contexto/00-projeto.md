@@ -126,15 +126,17 @@ outro módulo.
 | `booking` | Reservas, produtos e ativos (**desativável por segmento**) |
 | `campaign` | Segmentação e disparos |
 | `report` | Relatórios, filtros globais, exportação |
-| `audit` | Trilha de auditoria imutável |
+| `audit` | Trilha append-only com retenção por categoria |
 | `billing` | Plano, licença, consumo, cobrança |
 
 ---
 
 ## 6. Decisões de arquitetura já tomadas
 
-- **Auditoria é append-only.** Registro de alteração nunca é editado nem
-  apagado; correção entra como novo registro.
+- **Auditoria é append-only durante sua retenção.** Registro não é editado;
+  correção entra como novo evento. Cada categoria possui finalidade, fundamento,
+  acesso, prazo e descarte/anonimização verificável. Append-only não significa
+  retenção eterna.
 - **Segredos de integração podem viver no ambiente do cliente**, via agente
   privado. O CRM central armazena apenas a *referência* ao segredo, nunca o
   valor. Isso precisa estar refletido no modelo de dados e na UI.
@@ -146,7 +148,8 @@ outro módulo.
   fila, atribuição, tempo real, histórico.
 - **Erros de integração são sanitizados antes de virar log visível ao usuário** —
   resposta de API externa pode conter credencial.
-- **Timestamps em UTC no banco, exibidos em `America/Sao_Paulo`.**
+- **Timestamps em UTC no banco**, exibidos no timezone configurado pelo tenant
+  ou unidade; `America/Sao_Paulo` é apenas o default brasileiro inicial.
 - **Valores monetários em centavos, como inteiro.** Nunca `float`/`double`.
 
 ---
@@ -160,8 +163,8 @@ outro módulo.
 - Status nunca depende só de cor — sempre acompanhado de ícone ou texto
 - Sem aparência infantil, mesmo com cliente do ramo de brinquedos
 - Breakpoints: 1440px (principal), 1280px, tablet, mobile
-- Acessibilidade WCAG: contraste, navegação por teclado, foco visível, labels,
-  área de clique adequada
+- Acessibilidade WCAG 2.2 AA: contraste, teclado, foco não oculto, labels, alvo
+  mínimo, redução de movimento, zoom e reflow
 
 ### Tema — resolvido em 2026-07-27
 
@@ -191,14 +194,14 @@ funcionalidade não é P0.
 
 ## 8. Estado atual
 
-- Roadmap técnico escrito
-- Protótipo de design em HTML com as telas: dashboard da rede, inbox de chat,
-  funil kanban, rede/unidades, central de canais, relatórios, contatos,
-  tarefas/agenda, distribuição e regras, automações, integrações, auditoria,
-  configurações/perfis, assinatura, pessoas/equipes, marketing, reservas e
-  ativos, IA assistida, design system e mockups mobile
-- **Ainda não há código de produção.** O protótipo é referência visual, não base
-  de código a ser aproveitada.
+- Monólito modular Spring Boot e frontend React já existem e são executáveis.
+- Autenticação/sessão, tenants, contatos, oportunidades, tarefas, conversa,
+  canais, fila de saída e apresentação por segmento possuem fundações reais.
+- PostgreSQL usa migrations Flyway, RLS e papéis separados para migration e
+  runtime; a suíte de integração usa PostgreSQL real.
+- O protótipo visual continua sendo referência, não código-fonte do produto.
+- O retrato operacional detalhado e o próximo passo ficam exclusivamente em
+  `contexto/02-estado-atual.md`.
 
 ---
 
@@ -229,8 +232,11 @@ Nada de P1 ou P2 deve ser iniciado enquanto houver item de P0 aberto.
 - Nomes de tabela e coluna em `snake_case`, em inglês
 - Textos de interface em **português do Brasil**, dados fictícios brasileiros
   (nomes, cidades, telefones, valores em reais)
-- Toda entidade de negócio carrega `tenant_id`, `created_at`, `updated_at`
-- Toda operação que muda estado gera evento de auditoria
+- Entidade de negócio carrega tenant e auditoria de criação/alteração; evento
+  append-only, fila técnica e referência global seguem campos próprios da sua
+  categoria, conforme `01-padroes-tecnicos.md`
+- Operação de alto impacto ou relevante para rastreabilidade gera auditoria;
+  não se grava payload ou dado sensível por padrão
 - Operações que podem ser reenviadas (webhook, disparo, criação) precisam de
   chave de idempotência com `UNIQUE` no banco
 - DTOs de entrada e saída separados das entidades JPA

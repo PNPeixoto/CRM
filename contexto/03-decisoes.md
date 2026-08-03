@@ -534,3 +534,111 @@ progressivo no Redis usa o login. Com busca insensível e chave sensível,
 diferentes — o bloqueio por conta seria contornável apenas alternando a
 grafia a cada tentativa. A normalização da chave é obrigatória e precisa
 acompanhar a da busca; **mudar uma sem a outra reabre o furo.**
+
+## 2026-07-31 — Segmento como preset inicial versionado, não vertical de produto
+
+**Decisão:** o módulo `tenant` mantém `tenant_profile` e um catálogo em código
+com quatro presets na versão 1. O contrato público entrega apresentação e
+template de funil; os demais módulos não conhecem a entidade de perfil.
+
+**Alternativas descartadas:** módulos verticais de restaurante/locação,
+feature flags de plano e navegação persistida por tenant. Todos ampliariam o
+escopo antes de concluir o CRM central e transformariam a escolha inicial numa
+fronteira artificial de produto.
+
+**Consequência:** restaurante é somente uma demonstração de rótulos e etapas
+sobre o domínio `deal`; não é um domínio de pedidos. O usuário pode adaptar o
+CRM depois. Nova versão de preset não reescreve automaticamente funis existentes.
+
+## 2026-07-31 — Papéis PostgreSQL separados para migration e runtime
+
+**Decisão:** Flyway usa `crm_migrator`; JPA e JdbcTemplate usam `crm_runtime`,
+sem `SUPERUSER`, `BYPASSRLS`, `CREATE` ou `TRUNCATE`. Testcontainers segue a
+mesma separação e afirma os flags do papel conectado.
+
+**Alternativas descartadas:** continuar usando `POSTGRES_USER` na aplicação.
+Esse papel é superusuário no container oficial e ignora RLS mesmo com `FORCE`;
+um teste nessa conexão produz confiança falsa.
+
+**Consequência:** RLS só pode ser declarado validado quando a suíte rodar com o
+runtime restrito. Flyway recebe conexão própria. Volumes antigos precisam de
+migração de papéis ou recriação controlada; mudar o compose não os altera.
+
+## 2026-07-31 — Integridade multi-tenant também nas chaves estrangeiras
+
+**Decisão:** relações de negócio ganham FKs compostas por `tenant_id` e id.
+Endpoints validam referências por APIs públicas pequenas dos módulos donos, e
+o banco continua sendo a barreira final.
+
+**Alternativas descartadas:** confiar apenas no RLS ou em FK simples. RLS
+controla visibilidade da linha; FK simples confirma existência global e permite
+associar uma linha do tenant A a uma chave do tenant B.
+
+**Consequência:** dados antigos com vínculo cruzado fazem a V8 falhar e precisam
+ser saneados explicitamente. Módulos continuam sem importar pacotes `internal`.
+
+## 2026-07-31 — Funil inicial com inserção atômica e dependente do onboarding
+
+**Decisão:** a criação usa o índice parcial existente com `INSERT ... ON
+CONFLICT DO NOTHING`. Somente o vencedor cria etapas; o perdedor relê. Sem
+perfil concluído, a API não cria um funil geral por chamada direta.
+
+**Alternativas descartadas:** capturar `DataIntegrityViolationException` dentro
+da mesma transação JPA. Depois de uma violação no flush, a transação pode ficar
+marcada para rollback e a releitura não é uma recuperação confiável.
+
+**Consequência:** concorrência é arbitrada pelo PostgreSQL, criação é
+idempotente e um funil existente nunca é recriado nem atualizado pelo preset.
+
+## 2026-07-31 — Uma navegação resolvida por routeId para menu e roteador
+
+**Decisão:** IDs de `ROTAS` permanecem estáveis. Uma função pura aplica rótulo,
+grupo, ordem e visibilidade; desconhecidos são ignorados e sempre há destino
+inicial seguro. Menu e roteador consomem o mesmo resultado.
+
+**Alternativas descartadas:** condicionais de segmento nos componentes e listas
+separadas para menu/roteador. Ambas espalhariam o preset e permitiriam as duas
+visões saírem de sincronia.
+
+**Consequência:** visibilidade continua sendo UX, nunca autorização. Rotas
+ocultas permanecem registradas e o backend protege os dados. Personalização
+persistida e drag-and-drop ficam para uma fase futura.
+
+## 2026-07-31 — Migration de perfil é V7 porque V6 já existe
+
+**Decisão:** usar `V7__perfil_e_apresentacao_do_tenant.sql`.
+
+**Alternativas descartadas:** reutilizar V6 como pedia o briefing. O código real
+já contém `V6__registro_de_eventos.sql`; dois arquivos com a mesma versão fazem
+o Flyway recusar a migration e renomear uma V6 possivelmente aplicada quebra o
+histórico.
+
+**Consequência:** o número do briefing cede ao estado real do repositório, como
+determina a regra do projeto. A finalidade e o desvio ficam documentados.
+
+## 2026-07-31 — Rotação de refresh serializada no banco
+
+**Decisão:** a leitura do refresh usa lock pessimista pelo par tenant e hash.
+Quando um token usado reaparece, a revogação da família é confirmada mesmo
+que a resposta HTTP seja 401.
+
+**Alternativas descartadas:** sincronização em memória, que não funciona com
+mais de uma instância, e leitura seguida de update sem lock, que permite duas
+requisições observarem o mesmo token como válido.
+
+**Consequência:** no máximo uma requisição concorrente recebe rotação; a
+segunda percorre a regra de detecção de reuso. A exceção de sessão expirada
+não pode provocar rollback da revogação que a antecede.
+
+## 2026-07-31 — Ingestão transacional sem recuperar transação abortada
+
+**Decisão:** a persistência vive em bean separado e serializa no PostgreSQL as
+chaves de idempotência de mensagem e conversa com advisory locks transacionais.
+
+**Alternativas descartadas:** capturar `DataIntegrityViolationException` e
+continuar na mesma transação. O PostgreSQL já a marcou como abortada depois da
+violação; capturar apenas a exceção Java não restaura o estado da conexão.
+
+**Consequência:** a chamada passa pelo proxy Spring, eventos são publicados em
+transação real e duas entregas concorrentes convergem para uma mensagem e uma
+conversa. As constraints continuam como barreira final contra outros escritores.
