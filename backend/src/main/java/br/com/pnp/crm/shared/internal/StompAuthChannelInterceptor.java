@@ -1,5 +1,7 @@
 package br.com.pnp.crm.shared.internal;
 
+import br.com.pnp.crm.shared.api.AcessoNegadoException;
+import br.com.pnp.crm.shared.api.AutorizacaoDeEscuta;
 import br.com.pnp.crm.shared.api.TopicosTempoReal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,9 +47,11 @@ class StompAuthChannelInterceptor implements ChannelInterceptor {
     private static final String CLAIM_TENANT = "tid";
 
     private final JwtDecoder jwtDecoder;
+    private final AutorizacaoDeEscuta autorizacao;
 
-    StompAuthChannelInterceptor(JwtDecoder jwtDecoder) {
+    StompAuthChannelInterceptor(JwtDecoder jwtDecoder, AutorizacaoDeEscuta autorizacao) {
         this.jwtDecoder = jwtDecoder;
+        this.autorizacao = autorizacao;
     }
 
     @Override
@@ -89,32 +93,50 @@ class StompAuthChannelInterceptor implements ChannelInterceptor {
     }
 
     private Message<?> autorizarInscricao(Message<?> message, StompHeaderAccessor acessor) {
-        UUID tenantDoUsuario = tenantDoPrincipal(acessor);
+        Jwt token = tokenDoPrincipal(acessor);
+        if (token == null) {
+            throw new StompNaoAutorizadoException("Inscrição sem sessão autenticada.");
+        }
+        UUID tenantDoUsuario = tenantDe(token);
         if (tenantDoUsuario == null) {
             throw new StompNaoAutorizadoException("Inscrição sem sessão autenticada.");
         }
 
-        UUID tenantDoDestino = TopicosTempoReal.tenantDoDestino(acessor.getDestination())
+        TopicosTempoReal.Destino destino = TopicosTempoReal
+                .analisarDestino(acessor.getDestination())
                 .orElse(null);
 
         // Destino fora do padrão é recusado, não liberado. Um destino
         // desconhecido pode ser tanto erro de cliente quanto tentativa de
         // alcançar um broker interno, e a diferença não é observável aqui.
-        if (tenantDoDestino == null || !tenantDoDestino.equals(tenantDoUsuario)) {
+        if (destino == null || !destino.tenantId().equals(tenantDoUsuario)) {
             log.warn("SUBSCRIBE recusado. destino={} tenantDoUsuario={}",
                     acessor.getDestination(), tenantDoUsuario);
+            throw new StompNaoAutorizadoException("Destino não autorizado.");
+        }
+
+        // Tenant certo não é permissão. Sem esta segunda checagem, qualquer
+        // usuário autenticado do tenant — inclusive um cujo papel não dá
+        // acesso à caixa de entrada — recebe toda mensagem de cliente em tempo
+        // real, que é justamente o dado que o REST lhe nega.
+        try {
+            autorizacao.exigirEscutaDeConversas(tenantDoUsuario, UUID.fromString(token.getSubject()));
+        } catch (AcessoNegadoException e) {
             throw new StompNaoAutorizadoException("Destino não autorizado.");
         }
 
         return message;
     }
 
-    private UUID tenantDoPrincipal(StompHeaderAccessor acessor) {
-        if (acessor.getUser() instanceof JwtAuthenticationToken autenticacao) {
-            String tenantId = autenticacao.getToken().getClaimAsString(CLAIM_TENANT);
-            return tenantId == null ? null : UUID.fromString(tenantId);
-        }
-        return null;
+    private Jwt tokenDoPrincipal(StompHeaderAccessor acessor) {
+        return acessor.getUser() instanceof JwtAuthenticationToken autenticacao
+                ? autenticacao.getToken()
+                : null;
+    }
+
+    private UUID tenantDe(Jwt token) {
+        String tenantId = token.getClaimAsString(CLAIM_TENANT);
+        return tenantId == null ? null : UUID.fromString(tenantId);
     }
 
     private String extrairToken(StompHeaderAccessor acessor) {

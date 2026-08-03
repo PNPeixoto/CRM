@@ -17,9 +17,9 @@ import javax.sql.DataSource;
  * responsabilidade de reconfigurar o pool inteiro — trabalho recorrente a cada
  * upgrade, em troca de nada.
  *
- * <p>Como o Flyway também recebe este bean, as migrations rodam sob o mesmo
- * regime. É proposital: se uma migration de dados só funciona com o RLS
- * desligado, ela é a que está errada.
+ * <p>O Flyway usa uma conexão administrativa própria, configurada por
+ * {@code spring.flyway.*}. Este bean envolve somente os DataSources da
+ * aplicação; assim JPA e JdbcTemplate nunca herdam os privilégios de migration.
  */
 @Configuration(proxyBeanMethods = false)
 class DataSourceConfig implements BeanPostProcessor {

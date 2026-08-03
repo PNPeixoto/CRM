@@ -84,6 +84,11 @@ class AppUserEntity {
         return passwordHash;
     }
 
+    void changePasswordHash(String newPasswordHash, UUID changedBy) {
+        this.passwordHash = newPasswordHash;
+        this.updatedBy = changedBy;
+    }
+
     boolean isActive() {
         return active;
     }

@@ -12,31 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Casos de uso de autenticação: entrar, renovar, sair, identificar-se.
- *
- * <p>Esta é a camada de aplicação: orquestra transação, contexto de tenant e
- * bloqueio, e não contém regra criptográfica nem acesso direto a dados.
- */
+/** Orquestra login, MFA, rotação e revogação de sessão. */
 @Service
 class AutenticacaoService {
-
-    /**
-     * Hash Argon2id de um valor que nenhum usuário tem, usado quando o login
-     * não existe.
-     *
-     * <p>Sem isto, o caminho "usuário inexistente" retorna em microssegundos e
-     * o caminho "senha errada" gasta o tempo do Argon2 — dezenas de
-     * milissegundos, medíveis pela rede. A diferença transforma a tela de
-     * login num verificador de existência de contas, que é o primeiro passo de
-     * qualquer ataque dirigido. Comparar contra este hash iguala os dois
-     * tempos.
-     *
-     * <p>Foi gerado com os mesmos parâmetros do encoder real. Não é segredo e
-     * não precisa ser: ele existe para gastar tempo, não para proteger nada.
-     */
-    private static final String HASH_DUMMY =
-            "$argon2id$v=19$m=16384,t=2,p=1$3nUgapjwXyOihLKkHEykhQ$+y6IgEuBhsJemmGjKglEZv3MQvbtcuGvu9Tln3JwzaQ";
 
     private final TenantLookup tenantLookup;
     private final AppUserRepository usuarios;
@@ -44,101 +22,96 @@ class AutenticacaoService {
     private final AccessTokenService accessTokenService;
     private final RefreshTokenService refreshTokenService;
     private final BloqueioProgressivoService bloqueio;
+    private final MfaService mfa;
+    private final String hashDummy;
 
-    AutenticacaoService(TenantLookup tenantLookup,
-                        AppUserRepository usuarios,
-                        PasswordEncoder passwordEncoder,
-                        AccessTokenService accessTokenService,
+    AutenticacaoService(TenantLookup tenantLookup, AppUserRepository usuarios,
+                        PasswordEncoder passwordEncoder, AccessTokenService accessTokenService,
                         RefreshTokenService refreshTokenService,
-                        BloqueioProgressivoService bloqueio) {
+                        BloqueioProgressivoService bloqueio, MfaService mfa) {
         this.tenantLookup = tenantLookup;
         this.usuarios = usuarios;
         this.passwordEncoder = passwordEncoder;
         this.accessTokenService = accessTokenService;
         this.refreshTokenService = refreshTokenService;
         this.bloqueio = bloqueio;
+        this.mfa = mfa;
+        // Gerado pelo encoder real na subida: acompanha automaticamente toda
+        // mudança de parâmetros e mantém o custo de conta inexistente igual.
+        this.hashDummy = passwordEncoder.encode(SegredosAleatorios.gerarUrlSeguro(24));
     }
 
-    /**
-     * Autentica e abre sessão.
-     *
-     * <p>Todo caminho de falha termina em {@link CredenciaisInvalidasException}
-     * — mesmo corpo, mesmo status, mesmo tempo. Tenant inexistente, login
-     * inexistente, senha errada e conta inativa são indistinguíveis de fora.
-     */
-    SessaoAberta entrar(String tenantSlug, String login, String senha, String ip) {
-        // Tenant inexistente também precisa gastar o tempo do hash, senão o
-        // slug vira o canal de enumeração que o login deixou de ser.
-        Optional<UUID> tenantId = tenantLookup.resolverIdPorSlug(tenantSlug);
-        if (tenantId.isEmpty()) {
-            gastarTempoDeVerificacao(senha);
-            throw new CredenciaisInvalidasException();
-        }
-
-        UUID tenant = tenantId.get();
-
-        if (bloqueio.estaBloqueado(tenant, login, ip)) {
-            // Resposta idêntica à de credencial errada: dizer "bloqueado"
-            // confirmaria que a conta existe e que alguém está atacando.
-            throw new CredenciaisInvalidasException();
-        }
-
-        return TenantContext.executarComo(tenant, () -> {
-            Optional<AppUserEntity> usuario = buscarUsuarioAtivo(tenant, login);
-
-            if (usuario.isEmpty() || !passwordEncoder.matches(senha, usuario.get().getPasswordHash())) {
-                // A chamada acima já gastou o tempo do Argon2 quando o usuário
-                // existe. Quando não existe, o curto-circuito do || pularia a
-                // verificação, então ela é feita aqui contra o hash dummy.
-                if (usuario.isEmpty()) {
-                    gastarTempoDeVerificacao(senha);
-                }
-                bloqueio.registrarFalha(tenant, login, ip);
-                throw new CredenciaisInvalidasException();
+    SessaoAberta entrar(String tenantSlug, String login, String senha,
+                        String codigoMfa, String ip) {
+        Credencial credencial = validarCredencial(tenantSlug, login, senha, ip);
+        return TenantContext.executarComo(credencial.tenantId(), () -> {
+            boolean mfaVerified;
+            try {
+                mfaVerified = mfa.verifyForLogin(
+                        credencial.tenantId(), credencial.usuario().getId(), codigoMfa);
+            } catch (MfaInvalidException invalid) {
+                bloqueio.registrarFalha(credencial.tenantId(), login, ip);
+                throw invalid;
             }
-
-            AppUserEntity encontrado = usuario.get();
-            bloqueio.registrarSucesso(tenant, login);
-
-            String accessToken = accessTokenService.emitir(
-                    encontrado.getId(), tenant, encontrado.getLogin());
-            RefreshTokenService.TokenEmitido refresh =
-                    refreshTokenService.abrirSessao(tenant, encontrado.getId());
-
-            return new SessaoAberta(accessToken, refresh, paraDto(encontrado));
+            bloqueio.registrarSucesso(credencial.tenantId(), login, ip);
+            return abrirSessao(credencial.usuario(), mfaVerified);
         });
     }
 
-    /**
-     * Rotaciona o refresh token e emite um novo access token.
-     *
-     * <p>O tenant é descoberto a partir do próprio token, nunca informado pelo
-     * cliente, e o contexto só é definido depois disso — daí a resolução
-     * acontecer fora do {@code executarComo}.
-     */
+    MfaService.Enrollment iniciarCadastroMfa(String tenantSlug, String login, String senha,
+                                             String codigoMfaAtual, String ip) {
+        Credencial credencial = validarCredencial(tenantSlug, login, senha, ip);
+        return TenantContext.executarComo(credencial.tenantId(), () -> {
+            try {
+                MfaService.Enrollment enrollment = mfa.startEnrollment(
+                        credencial.tenantId(), credencial.usuario(), codigoMfaAtual, tenantSlug);
+                bloqueio.registrarSucesso(credencial.tenantId(), login, ip);
+                return enrollment;
+            } catch (MfaInvalidException invalid) {
+                bloqueio.registrarFalha(credencial.tenantId(), login, ip);
+                throw invalid;
+            }
+        });
+    }
+
+    CadastroMfaAtivado ativarCadastroMfa(String challenge, String codigo) {
+        UUID tenantId = mfa.resolveEnrollmentTenant(challenge)
+                .orElseThrow(MfaEnrollmentInvalidException::new);
+        return TenantContext.executarComo(tenantId, () -> {
+            MfaService.Activation activation = mfa.activate(tenantId, challenge, codigo);
+            AppUserEntity user = buscarUsuarioAtivoPorId(tenantId, activation.userId())
+                    .orElseThrow(MfaEnrollmentInvalidException::new);
+            return new CadastroMfaAtivado(abrirSessao(user, true), activation.recoveryCodes());
+        });
+    }
+
     SessaoAberta renovar(String refreshTokenApresentado) {
         UUID tenant = refreshTokenService.resolverTenant(refreshTokenApresentado)
                 .orElseThrow(SessaoExpiradaException::new);
-
         return TenantContext.executarComo(tenant, () -> {
-            RefreshTokenService.RotacaoResultado rotacao =
+            RefreshTokenService.RotacaoResultado rotation =
                     refreshTokenService.rotacionar(refreshTokenApresentado);
-
-            AppUserEntity usuario = buscarUsuarioAtivoPorId(tenant, rotacao.usuarioId())
-                    // Usuário desativado ou excluído entre a emissão e a
-                    // renovação: a sessão morre aqui, sem esperar o token expirar.
+            AppUserEntity user = buscarUsuarioAtivoPorId(tenant, rotation.usuarioId())
                     .orElseThrow(SessaoExpiradaException::new);
-
             String accessToken = accessTokenService.emitir(
-                    usuario.getId(), tenant, usuario.getLogin());
-
-            return new SessaoAberta(accessToken, rotacao.token(), paraDto(usuario));
+                    user.getId(), tenant, user.getLogin(),
+                    rotation.token().familyId(), rotation.mfaVerified());
+            return new SessaoAberta(accessToken, rotation.token(), paraDto(user),
+                    rotation.mfaVerified());
         });
     }
 
-    void sair(UUID tenantId, UUID usuarioId) {
+    void sair(UUID tenantId, UUID usuarioId, UUID familyId) {
         TenantContext.executarComo(tenantId, () -> {
-            refreshTokenService.encerrarSessoesDoUsuario(usuarioId, "logout");
+            refreshTokenService.revogarFamilia(tenantId, familyId, "logout");
+            return null;
+        });
+    }
+
+    void sairDeTodosOsDispositivos(UUID tenantId, UUID usuarioId) {
+        TenantContext.executarComo(tenantId, () -> {
+            refreshTokenService.encerrarSessoesDoUsuario(
+                    tenantId, usuarioId, "revogacao solicitada pelo usuario");
             return null;
         });
     }
@@ -150,7 +123,7 @@ class AutenticacaoService {
 
     @Transactional(readOnly = true)
     Optional<AppUserEntity> buscarUsuarioAtivo(UUID tenantId, String login) {
-        return usuarios.buscarPorLogin(tenantId, login.trim())
+        return usuarios.buscarPorLogin(tenantId, normalizarLogin(login))
                 .filter(AppUserEntity::isActive);
     }
 
@@ -160,8 +133,48 @@ class AutenticacaoService {
                 .filter(AppUserEntity::isActive);
     }
 
+    private Credencial validarCredencial(String tenantSlug, String login, String senha, String ip) {
+        Optional<UUID> tenantId = tenantLookup.resolverIdPorSlug(tenantSlug);
+        if (tenantId.isEmpty()) {
+            gastarTempoDeVerificacao(senha);
+            throw new CredenciaisInvalidasException();
+        }
+        UUID tenant = tenantId.get();
+        if (bloqueio.estaBloqueado(tenant, login, ip)) {
+            gastarTempoDeVerificacao(senha);
+            throw new CredenciaisInvalidasException();
+        }
+
+        return TenantContext.executarComo(tenant, () -> {
+            Optional<AppUserEntity> user = buscarUsuarioAtivo(tenant, login);
+            boolean matches = user.map(found ->
+                    passwordEncoder.matches(senha, found.getPasswordHash())).orElseGet(() -> {
+                        gastarTempoDeVerificacao(senha);
+                        return false;
+                    });
+            if (!matches) {
+                bloqueio.registrarFalha(tenant, login, ip);
+                throw new CredenciaisInvalidasException();
+            }
+            return new Credencial(tenant, user.orElseThrow());
+        });
+    }
+
+    private SessaoAberta abrirSessao(AppUserEntity user, boolean mfaVerified) {
+        RefreshTokenService.TokenEmitido refresh = refreshTokenService.abrirSessao(
+                user.getTenantId(), user.getId(), mfaVerified);
+        String accessToken = accessTokenService.emitir(
+                user.getId(), user.getTenantId(), user.getLogin(),
+                refresh.familyId(), mfaVerified);
+        return new SessaoAberta(accessToken, refresh, paraDto(user), mfaVerified);
+    }
+
     private void gastarTempoDeVerificacao(String senha) {
-        passwordEncoder.matches(senha, HASH_DUMMY);
+        passwordEncoder.matches(senha, hashDummy);
+    }
+
+    private static String normalizarLogin(String login) {
+        return login == null ? "" : login.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     private static UsuarioAutenticado paraDto(AppUserEntity entity) {
@@ -169,8 +182,16 @@ class AutenticacaoService {
                 entity.getId(), entity.getTenantId(), entity.getLogin(), entity.getFullName());
     }
 
-    record SessaoAberta(String accessToken,
-                        RefreshTokenService.TokenEmitido refreshToken,
-                        UsuarioAutenticado usuario) {
+    private record Credencial(UUID tenantId, AppUserEntity usuario) {
+    }
+
+    record SessaoAberta(String accessToken, RefreshTokenService.TokenEmitido refreshToken,
+                        UsuarioAutenticado usuario, boolean mfaVerified) {
+    }
+
+    record CadastroMfaAtivado(SessaoAberta sessao, java.util.List<String> codigosRecuperacao) {
+        CadastroMfaAtivado {
+            codigosRecuperacao = java.util.List.copyOf(codigosRecuperacao);
+        }
     }
 }

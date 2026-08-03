@@ -1,0 +1,26 @@
+# Testcontainers fornece PostgreSQL e Redis; este perfil nunca importa seed de
+# desenvolvimento nem depende de serviço instalado na máquina do executor.
+spring:
+  flyway:
+    locations: classpath:db/migration
+    out-of-order: false
+    placeholders:
+      runtime_role: crm_runtime_test
+
+app:
+  security:
+    cookie-secure: false
+    websocket-exige-tls: false
+  cors:
+    allowed-origins: http://localhost:5174
+  fila-de-saida:
+    habilitada: false
+  entrada-de-webhook:
+    habilitada: false
+
+server:
+  forward-headers-strategy: none
+
+logging:
+  level:
+    br.com.pnp.crm: INFO

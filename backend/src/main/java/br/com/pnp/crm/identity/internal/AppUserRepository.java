@@ -9,6 +9,8 @@ import java.util.UUID;
 
 interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
 
+    boolean existsByIdAndTenantIdAndActiveTrueAndDeletedAtIsNull(UUID id, UUID tenantId);
+
     /**
      * Busca o usuário pelo login, ignorando maiúsculas.
      *
@@ -31,6 +33,16 @@ interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
             """)
     Optional<AppUserEntity> buscarPorLogin(@Param("tenantId") UUID tenantId,
                                            @Param("login") String login);
+
+    @Query("""
+            SELECT u FROM AppUserEntity u
+             WHERE u.tenantId = :tenantId
+               AND (LOWER(u.login) = LOWER(:identificador)
+                    OR LOWER(u.email) = LOWER(:identificador))
+               AND u.deletedAt IS NULL
+            """)
+    Optional<AppUserEntity> buscarPorLoginOuEmail(@Param("tenantId") UUID tenantId,
+                                                   @Param("identificador") String identificador);
 
     Optional<AppUserEntity> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
 }

@@ -1,5 +1,7 @@
 package br.com.pnp.crm.conversation.internal;
 
+import br.com.pnp.crm.organization.api.Autorizacao;
+import br.com.pnp.crm.organization.api.Permissao;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,19 +34,30 @@ import java.util.UUID;
 class ConversaController {
 
     private final ConversaService conversas;
+    private final Autorizacao autorizacao;
 
-    ConversaController(ConversaService conversas) {
+    ConversaController(ConversaService conversas, Autorizacao autorizacao) {
         this.conversas = conversas;
+        this.autorizacao = autorizacao;
     }
 
+    /**
+     * Conversa tem atendente atribuído, mas a caixa de entrada é compartilhada
+     * por desenho: a fila só funciona se quem está livre enxergar o que ainda
+     * não tem dono. Por isso estes endpoints exigem que a permissão tenha
+     * alcance de tenant. Uma concessão OWN não é promovida a acesso coletivo;
+     * ela só poderá ser usada quando existir uma inbox individual filtrada.
+     */
     @GetMapping
     ResponseEntity<List<ConversationDtos.ConversaResumo>> listar() {
+        autorizacao.exigirNoTenant(Permissao.CONVERSATIONS_READ);
         return ResponseEntity.ok(conversas.listar());
     }
 
     @GetMapping("/{conversationId}/mensagens")
     ResponseEntity<List<ConversationDtos.MensagemResposta>> mensagens(
             @PathVariable UUID conversationId) {
+        autorizacao.exigirNoTenant(Permissao.CONVERSATIONS_READ);
         return ResponseEntity.ok(conversas.mensagensDa(conversationId));
     }
 
@@ -53,6 +66,8 @@ class ConversaController {
             @PathVariable UUID conversationId,
             @Valid @RequestBody ConversationDtos.EnviarMensagemRequest requisicao,
             @AuthenticationPrincipal Jwt jwt) {
+
+        autorizacao.exigirNoTenant(Permissao.CONVERSATIONS_WRITE);
 
         // O autor sai do token, nunca do corpo. Aceitá-lo na requisição
         // permitiria a um atendente registrar mensagem em nome de outro.

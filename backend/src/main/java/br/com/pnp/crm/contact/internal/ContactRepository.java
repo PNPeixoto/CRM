@@ -11,6 +11,8 @@ import java.util.UUID;
 
 interface ContactRepository extends JpaRepository<ContactEntity, UUID> {
 
+    boolean existsByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+
     Optional<ContactEntity> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
 
     /**
@@ -20,17 +22,26 @@ interface ContactRepository extends JpaRepository<ContactEntity, UUID> {
      * "é só um LIKE". Concatenação em filtro dinâmico é a origem mais comum de
      * injeção em CRM, porque o campo de busca aceita qualquer coisa.
      */
+    /**
+     * @param responsavelId quando não nulo, restringe ao alcance próprio. O
+     *                      filtro é aplicado <b>na consulta</b>, e não sobre a
+     *                      página já carregada: filtrar depois devolveria
+     *                      páginas de tamanho imprevisível e ainda faria o
+     *                      banco ler o que o usuário não pode ver.
+     */
     @Query("""
             SELECT c FROM ContactEntity c
              WHERE c.tenantId = :tenantId
                AND c.deletedAt IS NULL
-               AND (:termo IS NULL
-                    OR LOWER(c.name) LIKE LOWER(CONCAT('%', :termo, '%'))
-                    OR LOWER(c.email) LIKE LOWER(CONCAT('%', :termo, '%'))
-                    OR LOWER(c.companyName) LIKE LOWER(CONCAT('%', :termo, '%')))
+               AND (:responsavelId IS NULL OR c.ownerUserId = :responsavelId)
+               AND (CAST(:termo AS string) IS NULL
+                    OR LOWER(c.name) LIKE LOWER(CONCAT('%', CAST(:termo AS string), '%'))
+                    OR LOWER(c.email) LIKE LOWER(CONCAT('%', CAST(:termo AS string), '%'))
+                    OR LOWER(c.companyName) LIKE LOWER(CONCAT('%', CAST(:termo AS string), '%')))
              ORDER BY c.name
             """)
     Page<ContactEntity> buscar(@Param("tenantId") UUID tenantId,
+                               @Param("responsavelId") UUID responsavelId,
                                @Param("termo") String termo,
                                Pageable pageable);
 

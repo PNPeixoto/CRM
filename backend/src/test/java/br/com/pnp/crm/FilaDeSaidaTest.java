@@ -86,8 +86,9 @@ class FilaDeSaidaTest {
         UUID mensagem = criarMensagemPendente(tenantA, conversaA, conexaoA);
 
         // Simula tentativas já gastas e libera o backoff.
-        jdbc.update("UPDATE message SET attempt_count = ?, next_attempt_at = now() - interval '1 hour' "
-                + "WHERE id = ?", MAX_TENTATIVAS, mensagem);
+        TenantContext.executarComo(tenantA, () -> jdbc.update(
+                "UPDATE message SET attempt_count = ?, next_attempt_at = now() - interval '1 hour' "
+                        + "WHERE id = ?", MAX_TENTATIVAS, mensagem));
 
         assertThat(reservar())
                 .as("a fila morta é o teto na consulta, não um estado novo")
@@ -101,11 +102,11 @@ class FilaDeSaidaTest {
     @Test
     @DisplayName("mensagem recebida nunca entra na fila de saída")
     void apenasSaidaEhReservada() {
-        jdbc.update("""
+        TenantContext.executarComo(tenantA, () -> jdbc.update("""
                 INSERT INTO message (id, tenant_id, conversation_id, channel_connection_id,
                                      external_id, direction, content_type, text_content, status)
                 VALUES (?, ?, ?, ?, 'ext-1', 'INBOUND', 'TEXT', 'oi', 'RECEIVED')
-                """, UuidV7.gerar(), tenantA, conversaA, conexaoA);
+                """, UuidV7.gerar(), tenantA, conversaA, conexaoA));
 
         assertThat(reservar()).isEmpty();
     }
@@ -137,8 +138,8 @@ class FilaDeSaidaTest {
     }
 
     private int tentativasDe(UUID messageId) {
-        Integer tentativas = jdbc.queryForObject(
-                "SELECT attempt_count FROM message WHERE id = ?", Integer.class, messageId);
+        Integer tentativas = TenantContext.executarComo(tenantA, () -> jdbc.queryForObject(
+                "SELECT attempt_count FROM message WHERE id = ?", Integer.class, messageId));
         return tentativas == null ? 0 : tentativas;
     }
 

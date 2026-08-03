@@ -6,6 +6,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.text.Normalizer;
+
 /**
  * Argon2id com pepper.
  *
@@ -44,15 +46,17 @@ class PasswordEncoderConfig {
      * do Argon2 ficam onde estão, e a única coisa que este código faz é mudar
      * a entrada.
      *
-     * <p>Os parâmetros vêm de {@code defaultsForSpringSecurity_v5_8()}
-     * (m=16384, t=2, p=1). Não estão fixados no código porque o
-     * {@code Argon2PasswordEncoder} lê os parâmetros da própria string PHC ao
-     * verificar: aumentar o custo depois é trocar esta linha, e os hashes
-     * antigos continuam validando até serem regravados no próximo login.
+     * <p>Os parâmetros m=32768, t=3, p=1 foram fixados depois de benchmark no
+     * ambiente alvo. O {@code Argon2PasswordEncoder} lê os parâmetros da
+     * própria string PHC ao verificar, portanto hashes antigos continuam
+     * validando durante uma futura elevação gradual de custo.
      */
     private static final class PepperedArgon2PasswordEncoder implements PasswordEncoder {
 
-        private final Argon2PasswordEncoder argon2 = Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
+        // Benchmark 2026-08-01 no ambiente local: m=32768, t=3, p=1 mantém o
+        // custo em torno de 100 ms, sem tornar o login uma via fácil de DoS.
+        private final Argon2PasswordEncoder argon2 =
+                new Argon2PasswordEncoder(16, 32, 1, 32_768, 3);
         private final String pepper;
 
         private PepperedArgon2PasswordEncoder(String pepper) {
@@ -61,12 +65,16 @@ class PasswordEncoderConfig {
 
         @Override
         public String encode(CharSequence senha) {
-            return argon2.encode(senha.toString() + pepper);
+            return argon2.encode(normalizar(senha) + pepper);
         }
 
         @Override
         public boolean matches(CharSequence senha, String hashArmazenado) {
-            return argon2.matches(senha.toString() + pepper, hashArmazenado);
+            return argon2.matches(normalizar(senha) + pepper, hashArmazenado);
+        }
+
+        private String normalizar(CharSequence senha) {
+            return Normalizer.normalize(senha.toString(), Normalizer.Form.NFC);
         }
     }
 }

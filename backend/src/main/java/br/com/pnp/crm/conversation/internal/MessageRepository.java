@@ -10,16 +10,19 @@ import java.util.UUID;
 
 interface MessageRepository extends JpaRepository<MessageEntity, UUID> {
 
+    Optional<MessageEntity> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+
     /**
      * Checagem de idempotência antes da inserção. Não substitui a constraint
      * do banco: entre esta consulta e o INSERT existe uma janela, e duas
      * entregas simultâneas do mesmo webhook passariam as duas por aqui. A
      * consulta evita o caso comum; a constraint resolve a corrida.
      */
-    Optional<MessageEntity> findByChannelConnectionIdAndExternalId(
-            UUID channelConnectionId, String externalId);
+    Optional<MessageEntity> findByTenantIdAndChannelConnectionIdAndExternalId(
+            UUID tenantId, UUID channelConnectionId, String externalId);
 
-    List<MessageEntity> findByConversationIdAndDeletedAtIsNullOrderByCreatedAtAsc(UUID conversationId);
+    List<MessageEntity> findByTenantIdAndConversationIdAndDeletedAtIsNullOrderByCreatedAtAsc(
+            UUID tenantId, UUID conversationId);
 
     /**
      * Devolve só a coluna necessária, e não a conversa inteira. Carregar a
@@ -30,9 +33,12 @@ interface MessageRepository extends JpaRepository<MessageEntity, UUID> {
     @Query("""
             SELECT c.externalContactId
               FROM ConversationEntity c
-             WHERE c.id = :conversationId
+             WHERE c.tenantId = :tenantId
+               AND c.id = :conversationId
             """)
-    Optional<String> buscarExternalContactIdDaConversa(@Param("conversationId") UUID conversationId);
+    Optional<String> buscarExternalContactIdDaConversa(
+            @Param("tenantId") UUID tenantId,
+            @Param("conversationId") UUID conversationId);
 
     @Query("""
             SELECT COUNT(m) FROM MessageEntity m

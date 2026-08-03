@@ -18,6 +18,8 @@ final class ContactDtos {
      * escolher em nome de quem, e em qual empresa, o registro é criado.
      */
     record ContatoRequest(
+            ContactKind tipo,
+
             @NotBlank(message = "Informe o nome.")
             @Size(max = 200)
             String nome,
@@ -40,6 +42,7 @@ final class ContactDtos {
 
     record ContatoResponse(
             UUID id,
+            ContactKind tipo,
             String nome,
             String email,
             String telefone,

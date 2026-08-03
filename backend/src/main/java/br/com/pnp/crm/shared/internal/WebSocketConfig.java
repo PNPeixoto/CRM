@@ -1,5 +1,6 @@
 package br.com.pnp.crm.shared.internal;
 
+import br.com.pnp.crm.shared.api.AutorizacaoDeEscuta;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -32,11 +33,13 @@ import java.util.List;
 class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JwtDecoder jwtDecoder;
+    private final AutorizacaoDeEscuta autorizacao;
     private final String origensPermitidas;
 
-    WebSocketConfig(JwtDecoder jwtDecoder,
+    WebSocketConfig(JwtDecoder jwtDecoder, AutorizacaoDeEscuta autorizacao,
                     @Value("${app.cors.allowed-origins:}") String origensPermitidas) {
         this.jwtDecoder = jwtDecoder;
+        this.autorizacao = autorizacao;
         this.origensPermitidas = origensPermitidas;
     }
 
@@ -62,7 +65,7 @@ class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(new StompAuthChannelInterceptor(jwtDecoder));
+        registration.interceptors(new StompAuthChannelInterceptor(jwtDecoder, autorizacao));
     }
 
     /**

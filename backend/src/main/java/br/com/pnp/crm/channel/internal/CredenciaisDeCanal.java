@@ -1,5 +1,6 @@
 package br.com.pnp.crm.channel.internal;
 
+import br.com.pnp.crm.shared.api.TenantContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +30,8 @@ class CredenciaisDeCanal {
     void guardar(UUID tenantId, UUID channelConnectionId, TipoCredencial tipo, String valorEmClaro) {
         // Substitui a anterior em vez de acumular: credencial antiga guardada
         // "por precaução" é credencial válida esquecida em produção.
-        repository.findByChannelConnectionIdAndKindAndDeletedAtIsNull(channelConnectionId, tipo)
+        repository.findByTenantIdAndChannelConnectionIdAndKindAndDeletedAtIsNull(
+                        tenantId, channelConnectionId, tipo)
                 .ifPresent(repository::delete);
 
         repository.save(ChannelCredentialEntity.nova(
@@ -43,7 +45,8 @@ class CredenciaisDeCanal {
     @Transactional(readOnly = true)
     Optional<String> recuperar(UUID channelConnectionId, TipoCredencial tipo) {
         return repository
-                .findByChannelConnectionIdAndKindAndDeletedAtIsNull(channelConnectionId, tipo)
+                .findByTenantIdAndChannelConnectionIdAndKindAndDeletedAtIsNull(
+                        TenantContext.obrigatorio(), channelConnectionId, tipo)
                 .map(ChannelCredentialEntity::getCiphertext)
                 .map(cofre::decifrar);
     }

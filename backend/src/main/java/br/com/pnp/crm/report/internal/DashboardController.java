@@ -4,6 +4,8 @@ import br.com.pnp.crm.channel.api.ChannelMetrics;
 import br.com.pnp.crm.contact.api.ContactMetrics;
 import br.com.pnp.crm.conversation.api.ConversationMetrics;
 import br.com.pnp.crm.deal.api.DealMetrics;
+import br.com.pnp.crm.organization.api.Autorizacao;
+import br.com.pnp.crm.organization.api.Permissao;
 import br.com.pnp.crm.task.api.TaskMetrics;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,18 +32,27 @@ class DashboardController {
     private final DealMetrics oportunidades;
     private final TaskMetrics tarefas;
     private final ChannelMetrics canais;
+    private final Autorizacao autorizacao;
 
     DashboardController(ConversationMetrics conversas, ContactMetrics contatos,
-                        DealMetrics oportunidades, TaskMetrics tarefas, ChannelMetrics canais) {
+                        DealMetrics oportunidades, TaskMetrics tarefas, ChannelMetrics canais,
+                        Autorizacao autorizacao) {
         this.conversas = conversas;
         this.contatos = contatos;
         this.oportunidades = oportunidades;
         this.tarefas = tarefas;
         this.canais = canais;
+        this.autorizacao = autorizacao;
     }
 
     @GetMapping("/visao-geral")
     ResponseEntity<VisaoGeralResponse> visaoGeral() {
+        // Agregado do tenant inteiro: exigir REPORTS_READ não basta, porque
+        // quem só alcança os próprios registros não pode ver totais que
+        // incluem os alheios. Um relatório por alcance próprio é trabalho
+        // futuro; até lá, o acesso ao consolidado é de alcance de tenant.
+        autorizacao.exigirNoTenant(Permissao.REPORTS_READ);
+
         ConversationMetrics.ResumoDeConversas c = conversas.resumo();
         DealMetrics.ResumoDoFunil d = oportunidades.resumo();
         TaskMetrics.ResumoDeTarefas t = tarefas.resumo();

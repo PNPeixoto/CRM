@@ -1,91 +1,165 @@
 package br.com.pnp.crm.shared.internal;
 
+import br.com.pnp.crm.shared.api.AcessoNegadoException;
 import br.com.pnp.crm.shared.api.CredenciaisInvalidasException;
 import br.com.pnp.crm.shared.api.DomainException;
 import br.com.pnp.crm.shared.api.ErroResponse;
+import br.com.pnp.crm.shared.api.RecursoNaoEncontradoException;
 import br.com.pnp.crm.shared.api.SessaoExpiradaException;
+import br.com.pnp.crm.shared.api.TenantNaoDefinidoException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Traduz exceção em resposta HTTP num único lugar.
- *
- * <p>Regra que governa todo este arquivo: o cliente recebe código, mensagem
- * genérica e um id de correlação. O detalhe — stack trace, mensagem do banco,
- * qual constraint quebrou — vai só para o log. Mensagem de erro detalhada é
- * uma das fontes mais produtivas de reconhecimento: "duplicate key value
- * violates constraint app_user_email_unico_por_tenant" entrega o nome da
- * tabela, do índice e a confirmação de que aquele e-mail existe.
- */
+/** Traduz falhas para RFC 9457 sem expor detalhe interno. */
 @RestControllerAdvice
 class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
-    private static final String MENSAGEM_ERRO_INTERNO =
+    private static final String CORRELATION_HEADER = "X-Correlation-ID";
+    private static final String INTERNAL_DETAIL =
             "Não foi possível concluir a operação. Tente novamente.";
 
     @ExceptionHandler(CredenciaisInvalidasException.class)
-    ResponseEntity<ErroResponse> credenciaisInvalidas(CredenciaisInvalidasException ex) {
-        // Sem log de warn com o login tentado: isso transformaria o log em uma
-        // lista de logins válidos e inválidos. O registro da tentativa é feito
-        // na auditoria, com o cuidado devido.
-        return resposta(HttpStatus.UNAUTHORIZED, ex, novaCorrelacao());
+    ResponseEntity<ErroResponse> invalidCredentials(
+            CredenciaisInvalidasException exception, HttpServletRequest request) {
+        return response(HttpStatus.UNAUTHORIZED, exception, request, correlation(request));
     }
 
     @ExceptionHandler(SessaoExpiradaException.class)
-    ResponseEntity<ErroResponse> sessaoExpirada(SessaoExpiradaException ex) {
-        return resposta(HttpStatus.UNAUTHORIZED, ex, novaCorrelacao());
+    ResponseEntity<ErroResponse> expiredSession(
+            SessaoExpiradaException exception, HttpServletRequest request) {
+        return response(HttpStatus.UNAUTHORIZED, exception, request, correlation(request));
+    }
+
+    @ExceptionHandler(AcessoNegadoException.class)
+    ResponseEntity<ErroResponse> denied(
+            AcessoNegadoException exception, HttpServletRequest request) {
+        return response(HttpStatus.FORBIDDEN, exception, request, correlation(request));
+    }
+
+    @ExceptionHandler(RecursoNaoEncontradoException.class)
+    ResponseEntity<ErroResponse> notFound(
+            RecursoNaoEncontradoException exception, HttpServletRequest request) {
+        return response(HttpStatus.NOT_FOUND, exception, request, correlation(request));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    ResponseEntity<ErroResponse> validacao(MethodArgumentNotValidException ex) {
-        String correlacaoId = novaCorrelacao();
-        List<ErroResponse.ErroCampo> campos = ex.getBindingResult().getFieldErrors().stream()
-                .map(erro -> new ErroResponse.ErroCampo(erro.getField(), erro.getDefaultMessage()))
+    ResponseEntity<ErroResponse> validation(
+            MethodArgumentNotValidException exception, HttpServletRequest request) {
+        String correlationId = correlation(request);
+        List<ErroResponse.ErroCampo> fields = exception.getBindingResult().getFieldErrors().stream()
+                .map(error -> new ErroResponse.ErroCampo(error.getField(), error.getDefaultMessage()))
                 .toList();
-        // Erro de formato pode voltar detalhado: o cliente precisa saber qual
-        // campo corrigir, e a informação já é dele.
-        return ResponseEntity.badRequest().body(new ErroResponse(
-                "VALIDACAO", "Verifique os campos informados.", correlacaoId, campos, Instant.now()));
+        ErroResponse body = new ErroResponse(
+                URI.create("/problemas/validacao"), "Requisição inválida", 400,
+                "Verifique os campos informados.", instance(request), "VALIDACAO",
+                correlationId, fields, Instant.now());
+        return problem(HttpStatus.BAD_REQUEST, correlationId, body);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<ErroResponse> invalidJson(
+            HttpMessageNotReadableException exception, HttpServletRequest request) {
+        String correlationId = correlation(request);
+        log.debug("Corpo JSON inválido. correlacaoId={}", correlationId);
+        return problem(HttpStatus.BAD_REQUEST, correlationId,
+                ErroResponse.de(400, "Requisição inválida", "JSON_INVALIDO",
+                        "Corpo da requisição inválido.", correlationId, instance(request)));
+    }
+
+    @ExceptionHandler(TenantNaoDefinidoException.class)
+    ResponseEntity<ErroResponse> missingTenant(
+            TenantNaoDefinidoException exception, HttpServletRequest request) {
+        String correlationId = correlation(request);
+        log.error("Tenant ausente em operação protegida. correlacaoId={}", correlationId, exception);
+        return problem(HttpStatus.INTERNAL_SERVER_ERROR, correlationId,
+                ErroResponse.de(500, "Erro interno", "ERRO_INTERNO", INTERNAL_DETAIL,
+                        correlationId, instance(request)));
     }
 
     @ExceptionHandler(DomainException.class)
-    ResponseEntity<ErroResponse> dominio(DomainException ex) {
-        String correlacaoId = novaCorrelacao();
-        log.warn("Regra de domínio violada. correlacaoId={} codigo={}", correlacaoId, ex.getCodigo(), ex);
-        return resposta(HttpStatus.UNPROCESSABLE_ENTITY, ex, correlacaoId);
+    ResponseEntity<ErroResponse> domain(
+            DomainException exception, HttpServletRequest request) {
+        String correlationId = correlation(request);
+        log.warn("Regra de domínio violada. correlacaoId={} codigo={}",
+                correlationId, exception.getCodigo());
+        HttpStatus status = statusForDomain(exception);
+        return response(status, exception, request, correlationId);
     }
 
-    /**
-     * Rede de segurança. Tudo que não foi previsto vira 500 com corpo genérico.
-     * O {@code catch} amplo é intencional aqui e só aqui: é a última barreira
-     * antes de o Spring devolver a página de erro padrão, que inclui detalhes
-     * da exceção.
-     */
     @ExceptionHandler(Exception.class)
-    ResponseEntity<ErroResponse> naoPrevisto(Exception ex) {
-        String correlacaoId = novaCorrelacao();
-        log.error("Erro não tratado. correlacaoId={}", correlacaoId, ex);
-        return ResponseEntity.internalServerError().body(
-                ErroResponse.de("ERRO_INTERNO", MENSAGEM_ERRO_INTERNO, correlacaoId));
+    ResponseEntity<ErroResponse> unexpected(Exception exception, HttpServletRequest request) {
+        String correlationId = correlation(request);
+        log.error("Erro não tratado. correlacaoId={}", correlationId, exception);
+        return problem(HttpStatus.INTERNAL_SERVER_ERROR, correlationId,
+                ErroResponse.de(500, "Erro interno", "ERRO_INTERNO", INTERNAL_DETAIL,
+                        correlationId, instance(request)));
     }
 
-    private ResponseEntity<ErroResponse> resposta(HttpStatus status, DomainException ex, String correlacaoId) {
-        return ResponseEntity.status(status).body(
-                ErroResponse.de(ex.getCodigo(), ex.getMessage(), correlacaoId));
+    private ResponseEntity<ErroResponse> response(HttpStatus status, DomainException exception,
+                                                  HttpServletRequest request, String correlationId) {
+        return problem(status, correlationId,
+                ErroResponse.de(status.value(), statusTitle(status), exception.getCodigo(),
+                        exception.getMessage(), correlationId, instance(request)));
     }
 
-    private String novaCorrelacao() {
+    private ResponseEntity<ErroResponse> problem(HttpStatus status, String correlationId,
+                                                 ErroResponse body) {
+        return ResponseEntity.status(status)
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .header(CORRELATION_HEADER, correlationId)
+                .body(body);
+    }
+
+    private static HttpStatus statusForDomain(DomainException exception) {
+        if ("PERFIL_INICIAL_JA_CONCLUIDO".equals(exception.getCodigo())) {
+            return HttpStatus.CONFLICT;
+        }
+        if (exception.getCodigo().endsWith("_NAO_ENCONTRADA")) {
+            return HttpStatus.NOT_FOUND;
+        }
+        return HttpStatus.UNPROCESSABLE_ENTITY;
+    }
+
+    private static URI instance(HttpServletRequest request) {
+        return URI.create(request.getRequestURI());
+    }
+
+    private static String statusTitle(HttpStatus status) {
+        return switch (status) {
+            case BAD_REQUEST -> "Requisição inválida";
+            case UNAUTHORIZED -> "Autenticação necessária";
+            case FORBIDDEN -> "Acesso negado";
+            case NOT_FOUND -> "Recurso não encontrado";
+            case CONFLICT -> "Conflito";
+            case TOO_MANY_REQUESTS -> "Muitas requisições";
+            case UNPROCESSABLE_ENTITY -> "Regra de negócio não atendida";
+            default -> "Falha na requisição";
+        };
+    }
+
+    private static String correlation(HttpServletRequest request) {
+        String recebido = request.getHeader(CORRELATION_HEADER);
+        if (recebido != null) {
+            try {
+                return UUID.fromString(recebido).toString();
+            } catch (IllegalArgumentException ignored) {
+                // Entrada não confiável: substitui, não registra nem reflete.
+            }
+        }
         return UUID.randomUUID().toString();
     }
 }

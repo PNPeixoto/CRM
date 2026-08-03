@@ -45,7 +45,8 @@ class ConversaService {
     @Transactional(readOnly = true)
     List<ConversationDtos.MensagemResposta> mensagensDa(UUID conversationId) {
         ConversationEntity conversa = carregar(conversationId);
-        return mensagens.findByConversationIdAndDeletedAtIsNullOrderByCreatedAtAsc(conversa.getId())
+        return mensagens.findByTenantIdAndConversationIdAndDeletedAtIsNullOrderByCreatedAtAsc(
+                        TenantContext.obrigatorio(), conversa.getId())
                 .stream()
                 .map(ConversaService::paraResposta)
                 .toList();

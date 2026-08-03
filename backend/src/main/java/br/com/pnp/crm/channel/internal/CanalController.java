@@ -1,6 +1,8 @@
 package br.com.pnp.crm.channel.internal;
 
 import br.com.pnp.crm.channel.api.TipoCanal;
+import br.com.pnp.crm.organization.api.Autorizacao;
+import br.com.pnp.crm.organization.api.Permissao;
 import br.com.pnp.crm.shared.api.RecursoNaoEncontradoException;
 import br.com.pnp.crm.shared.api.TenantContext;
 import jakarta.validation.Valid;
@@ -35,14 +37,21 @@ class CanalController {
     private final ChannelConnectionRepository conexoes;
     private final CredenciaisDeCanal credenciais;
 
-    CanalController(ChannelConnectionRepository conexoes, CredenciaisDeCanal credenciais) {
+    private final Autorizacao autorizacao;
+
+    CanalController(ChannelConnectionRepository conexoes, CredenciaisDeCanal credenciais,
+                    Autorizacao autorizacao) {
         this.conexoes = conexoes;
         this.credenciais = credenciais;
+        this.autorizacao = autorizacao;
     }
 
     @GetMapping
     @Transactional(readOnly = true)
     ResponseEntity<List<CanalResponse>> listar() {
+        // Canal é recurso do tenant, não de um responsável: não há alcance
+        // próprio a aplicar, só a permissão.
+        autorizacao.exigirNoTenant(Permissao.CHANNELS_READ);
         return ResponseEntity.ok(
                 conexoes.findByTenantIdAndDeletedAtIsNullOrderByName(TenantContext.obrigatorio())
                         .stream().map(this::paraResposta).toList());
@@ -52,6 +61,7 @@ class CanalController {
     @Transactional
     ResponseEntity<CanalResponse> criar(@Valid @RequestBody CanalRequest requisicao,
                                         @AuthenticationPrincipal Jwt jwt) {
+        autorizacao.exigirNoTenant(Permissao.CHANNELS_WRITE);
         UUID autorId = UUID.fromString(jwt.getSubject());
         ChannelConnectionEntity conexao = ChannelConnectionEntity.nova(
                 TenantContext.obrigatorio(), requisicao.tipo(), requisicao.nome(),
@@ -68,6 +78,7 @@ class CanalController {
     ResponseEntity<CanalResponse> atualizar(@PathVariable UUID id,
                                             @Valid @RequestBody CanalRequest requisicao,
                                             @AuthenticationPrincipal Jwt jwt) {
+        autorizacao.exigirNoTenant(Permissao.CHANNELS_WRITE);
         ChannelConnectionEntity conexao = carregar(id);
         conexao.renomear(requisicao.nome(), requisicao.identificadorExterno(),
                 UUID.fromString(jwt.getSubject()));
@@ -79,6 +90,7 @@ class CanalController {
     @Transactional
     ResponseEntity<CanalResponse> alternarAtivacao(@PathVariable UUID id,
                                                    @AuthenticationPrincipal Jwt jwt) {
+        autorizacao.exigirNoTenant(Permissao.CHANNELS_WRITE);
         ChannelConnectionEntity conexao = carregar(id);
         conexao.alternarAtivacao(UUID.fromString(jwt.getSubject()));
         return ResponseEntity.ok(paraResposta(conexao));

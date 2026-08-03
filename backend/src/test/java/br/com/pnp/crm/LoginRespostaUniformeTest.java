@@ -111,8 +111,8 @@ class LoginRespostaUniformeTest {
 
         return new Resultado(
                 resultado.getResponse().getStatus(),
-                String.valueOf(JsonPath.read(json, "$.codigo")),
-                String.valueOf(JsonPath.read(json, "$.mensagem")),
+                JsonPath.<String>read(json, "$.codigo"),
+                JsonPath.<String>read(json, "$.detail"),
                 duracao);
     }
 

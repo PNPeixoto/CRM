@@ -39,6 +39,8 @@ class AccessTokenService {
     private static final String EMISSOR = "crm-pnp";
     static final String CLAIM_TENANT = "tid";
     static final String CLAIM_LOGIN = "login";
+    static final String CLAIM_SESSION = "sid";
+    static final String CLAIM_AUTH_METHODS = "amr";
 
     // HS256 exige chave de no mínimo 256 bits. Abaixo disso o Nimbus recusa a
     // emissão, o que é o comportamento certo: chave curta de HMAC é quebrável.
@@ -59,7 +61,8 @@ class AccessTokenService {
                 new ImmutableSecret<>(new SecretKeySpec(bytes, "HmacSHA256")));
     }
 
-    String emitir(UUID usuarioId, UUID tenantId, String login) {
+    String emitir(UUID usuarioId, UUID tenantId, String login, UUID familyId,
+                  boolean mfaVerified) {
         Instant agora = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(EMISSOR)
@@ -71,6 +74,9 @@ class AccessTokenService {
                 .subject(usuarioId.toString())
                 .claim(CLAIM_TENANT, tenantId.toString())
                 .claim(CLAIM_LOGIN, login)
+                .claim(CLAIM_SESSION, familyId.toString())
+                .claim(CLAIM_AUTH_METHODS, mfaVerified
+                        ? java.util.List.of("pwd", "otp") : java.util.List.of("pwd"))
                 .build();
 
         return encoder.encode(JwtEncoderParameters.from(

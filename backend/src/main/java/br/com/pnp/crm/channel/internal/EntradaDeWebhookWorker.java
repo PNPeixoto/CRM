@@ -93,7 +93,9 @@ class EntradaDeWebhookWorker {
 
         @Transactional
         void processar(UUID eventId) {
-            InboundEventEntity evento = eventos.findById(eventId).orElse(null);
+            InboundEventEntity evento = eventos
+                    .findByIdAndTenantId(eventId, TenantContext.obrigatorio())
+                    .orElse(null);
             if (evento == null) {
                 log.warn("Evento reservado não encontrado no contexto do tenant. eventId={}", eventId);
                 return;

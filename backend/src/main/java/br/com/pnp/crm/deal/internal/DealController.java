@@ -1,5 +1,9 @@
 package br.com.pnp.crm.deal.internal;
 
+import br.com.pnp.crm.contact.api.ContactLookup;
+import br.com.pnp.crm.identity.api.UsuarioLookup;
+import br.com.pnp.crm.organization.api.Autorizacao;
+import br.com.pnp.crm.organization.api.Permissao;
 import br.com.pnp.crm.shared.api.RecursoNaoEncontradoException;
 import br.com.pnp.crm.shared.api.TenantContext;
 import jakarta.validation.Valid;
@@ -28,13 +32,20 @@ class DealController {
     private final PipelineStageRepository etapas;
     private final DealRepository oportunidades;
     private final FunilPadraoService funilPadrao;
+    private final ContactLookup contacts;
+    private final UsuarioLookup users;
+    private final Autorizacao autorizacao;
 
     DealController(PipelineRepository funis, PipelineStageRepository etapas,
-                   DealRepository oportunidades, FunilPadraoService funilPadrao) {
+                   DealRepository oportunidades, FunilPadraoService funilPadrao,
+                   ContactLookup contacts, UsuarioLookup users, Autorizacao autorizacao) {
         this.funis = funis;
         this.etapas = etapas;
         this.oportunidades = oportunidades;
         this.funilPadrao = funilPadrao;
+        this.contacts = contacts;
+        this.users = users;
+        this.autorizacao = autorizacao;
     }
 
     /**
@@ -45,6 +56,7 @@ class DealController {
     @GetMapping("/funis")
     @Transactional
     ResponseEntity<List<DealDtos.FunilResponse>> listarFunis(@AuthenticationPrincipal Jwt jwt) {
+        autorizacao.exigir(Permissao.DEALS_READ);
         funilPadrao.obterOuCriar(UUID.fromString(jwt.getSubject()));
 
         List<DealDtos.FunilResponse> resposta =
@@ -63,6 +75,8 @@ class DealController {
     ResponseEntity<List<DealDtos.OportunidadeResponse>> listarOportunidades(
             @PathVariable UUID funilId) {
 
+        UUID responsavelId = filtroDeResponsavel(Permissao.DEALS_READ);
+
         // Confirma que o funil é do tenant antes de listar. O RLS já barraria,
         // mas devolver lista vazia para um id de outro cliente é pior que
         // devolver "não encontrado": esconde o erro de quem está integrando.
@@ -70,9 +84,16 @@ class DealController {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Funil"));
 
         return ResponseEntity.ok(
-                oportunidades.findByTenantIdAndPipelineIdAndDeletedAtIsNullOrderByCreatedAtDesc(
-                                TenantContext.obrigatorio(), funilId)
+                oportunidades.listarDoFunil(TenantContext.obrigatorio(), funilId,
+                                responsavelId)
                         .stream().map(DealController::paraResposta).toList());
+    }
+
+    /** Ver a explicação equivalente em {@code ContactController}. */
+    private UUID filtroDeResponsavel(Permissao permissao) {
+        return autorizacao.alcanceDe(permissao) == Autorizacao.Alcance.PROPRIO
+                ? autorizacao.usuarioCorrente()
+                : null;
     }
 
     @PostMapping("/oportunidades")
@@ -80,6 +101,8 @@ class DealController {
     ResponseEntity<DealDtos.OportunidadeResponse> criar(
             @Valid @RequestBody DealDtos.OportunidadeRequest requisicao,
             @AuthenticationPrincipal Jwt jwt) {
+
+        autorizacao.exigir(Permissao.DEALS_WRITE);
 
         UUID autorId = UUID.fromString(jwt.getSubject());
         PipelineStageEntity etapa = carregarEtapa(requisicao.etapaId());
@@ -90,6 +113,7 @@ class DealController {
         // Passa pelo mesmo caminho de mudança de etapa, para que uma
         // oportunidade criada já em "Ganho" nasça com o status correto.
         oportunidade.moverPara(etapa, autorId);
+        autorizacao.exigirSobreRegistro(Permissao.DEALS_WRITE, oportunidade.getOwnerUserId());
 
         return ResponseEntity.ok(paraResposta(oportunidades.save(oportunidade)));
     }
@@ -101,10 +125,13 @@ class DealController {
             @Valid @RequestBody DealDtos.OportunidadeRequest requisicao,
             @AuthenticationPrincipal Jwt jwt) {
 
+        autorizacao.exigir(Permissao.DEALS_WRITE);
         UUID autorId = UUID.fromString(jwt.getSubject());
         DealEntity oportunidade = carregar(id);
+        autorizacao.exigirSobreRegistro(Permissao.DEALS_WRITE, oportunidade.getOwnerUserId());
         aplicar(oportunidade, requisicao, autorId);
         oportunidade.moverPara(carregarEtapa(requisicao.etapaId()), autorId);
+        autorizacao.exigirSobreRegistro(Permissao.DEALS_WRITE, oportunidade.getOwnerUserId());
 
         return ResponseEntity.ok(paraResposta(oportunidade));
     }
@@ -117,8 +144,10 @@ class DealController {
             @Valid @RequestBody DealDtos.MoverRequest requisicao,
             @AuthenticationPrincipal Jwt jwt) {
 
+        autorizacao.exigir(Permissao.DEALS_WRITE);
         UUID autorId = UUID.fromString(jwt.getSubject());
         DealEntity oportunidade = carregar(id);
+        autorizacao.exigirSobreRegistro(Permissao.DEALS_WRITE, oportunidade.getOwnerUserId());
         oportunidade.moverPara(carregarEtapa(requisicao.etapaId()), autorId);
         oportunidade.registrarMotivoDePerda(requisicao.motivoPerda());
 
@@ -128,12 +157,16 @@ class DealController {
     @DeleteMapping("/oportunidades/{id}")
     @Transactional
     ResponseEntity<Void> excluir(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
-        carregar(id).excluir(UUID.fromString(jwt.getSubject()));
+        autorizacao.exigir(Permissao.DEALS_WRITE);
+        DealEntity oportunidade = carregar(id);
+        autorizacao.exigirSobreRegistro(Permissao.DEALS_WRITE, oportunidade.getOwnerUserId());
+        oportunidade.excluir(UUID.fromString(jwt.getSubject()));
         return ResponseEntity.noContent().build();
     }
 
     private List<DealDtos.EtapaResponse> etapasDe(UUID funilId) {
-        return etapas.findByPipelineIdAndDeletedAtIsNullOrderByPosition(funilId).stream()
+        return etapas.findByTenantIdAndPipelineIdAndDeletedAtIsNullOrderByPosition(
+                        TenantContext.obrigatorio(), funilId).stream()
                 .map(e -> new DealDtos.EtapaResponse(
                         e.getId(), e.getName(), e.getPosition(), e.isWon(), e.isLost()))
                 .toList();
@@ -150,8 +183,22 @@ class DealController {
     }
 
     private void aplicar(DealEntity d, DealDtos.OportunidadeRequest r, UUID autorId) {
+        UUID tenantId = TenantContext.obrigatorio();
+        UUID responsavelId = autorizacao.responsavelPadrao(
+                Permissao.DEALS_WRITE, r.responsavelId());
+        autorizacao.exigirSobreRegistro(Permissao.DEALS_WRITE, responsavelId);
+        if (responsavelId != null && !users.existsActive(tenantId, responsavelId)) {
+            throw new RecursoNaoEncontradoException("Responsável");
+        }
+        if (r.contatoId() != null) {
+            ContactLookup.ContactReference contato = contacts.findReference(tenantId, r.contatoId())
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Contato"));
+            autorizacao.exigirSobreRegistro(
+                    Permissao.CONTACTS_READ, contato.ownerUserId());
+        }
         d.aplicar(r.titulo(), r.valorCentavos(), r.contatoId(),
-                r.previsaoFechamento(), r.responsavelId(), autorId);
+                r.previsaoFechamento(), responsavelId,
+                autorId);
     }
 
     private static DealDtos.OportunidadeResponse paraResposta(DealEntity d) {

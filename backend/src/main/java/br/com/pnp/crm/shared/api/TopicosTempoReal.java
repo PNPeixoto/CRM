@@ -37,6 +37,35 @@ public final class TopicosTempoReal {
     }
 
     /**
+     * Analisa somente destinos que o backend publica hoje.
+     *
+     * <p>Validar apenas o prefixo e o tenant deixaria qualquer destino futuro
+     * sob {@code /topic/tenant/{id}/...} autorizado por padrão. Segurança de
+     * SUBSCRIBE usa allowlist: inbox e conversa são aceitos; todo o resto
+     * falha fechado até ganhar decisão e teste próprios.
+     */
+    public static Optional<Destino> analisarDestino(String destino) {
+        if (destino == null || !destino.startsWith(PREFIXO_TENANT)) {
+            return Optional.empty();
+        }
+
+        String[] segmentos = destino.substring(PREFIXO_TENANT.length()).split("/", -1);
+        try {
+            UUID tenantId = UUID.fromString(segmentos[0]);
+            if (segmentos.length == 2 && "inbox".equals(segmentos[1])) {
+                return Optional.of(new Destino(tenantId, TipoDestino.INBOX, null));
+            }
+            if (segmentos.length == 3 && "conversa".equals(segmentos[1])) {
+                UUID conversationId = UUID.fromString(segmentos[2]);
+                return Optional.of(new Destino(tenantId, TipoDestino.CONVERSA, conversationId));
+            }
+            return Optional.empty();
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
      * Extrai o tenant de um destino, para conferir contra o token de quem se
      * inscreve.
      *
@@ -44,16 +73,14 @@ public final class TopicosTempoReal {
      * padrão é recusado, nunca liberado por omissão
      */
     public static Optional<UUID> tenantDoDestino(String destino) {
-        if (destino == null || !destino.startsWith(PREFIXO_TENANT)) {
-            return Optional.empty();
-        }
-        String resto = destino.substring(PREFIXO_TENANT.length());
-        int fim = resto.indexOf('/');
-        String candidato = fim < 0 ? resto : resto.substring(0, fim);
-        try {
-            return Optional.of(UUID.fromString(candidato));
-        } catch (IllegalArgumentException e) {
-            return Optional.empty();
-        }
+        return analisarDestino(destino).map(Destino::tenantId);
+    }
+
+    public record Destino(UUID tenantId, TipoDestino tipo, UUID conversationId) {
+    }
+
+    public enum TipoDestino {
+        INBOX,
+        CONVERSA
     }
 }

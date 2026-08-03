@@ -161,7 +161,12 @@ CREATE TABLE refresh_token
     -- permite forjar sessão. Não é Argon2 de propósito: o segredo já tem
     -- entropia máxima, então não há ataque de dicionário a encarecer, e o
     -- refresh precisa ser barato o bastante para rodar a cada 15 minutos.
-    token_hash    char(64)    NOT NULL,
+    -- varchar(64) e NÃO char(64). O `char(n)` do Postgres é bpchar: preenche
+    -- com espaços à direita até o tamanho fixo, e o valor volta padded pelo
+    -- JDBC. Numa comparação de hash isso é armadilha pura. O tipo também não
+    -- casa com o `length = 64` da entidade, e o ddl-auto: validate recusa a
+    -- subida — foi assim que o problema apareceu.
+    token_hash    varchar(64) NOT NULL,
     issued_at     timestamptz NOT NULL DEFAULT now(),
     expires_at    timestamptz NOT NULL,
     -- Marcado no momento da rotação. Token com used_at preenchido que volta a

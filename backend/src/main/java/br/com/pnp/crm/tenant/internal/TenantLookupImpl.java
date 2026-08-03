@@ -5,6 +5,7 @@ import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,10 +39,12 @@ class TenantLookupImpl implements TenantLookup {
         if (slug == null || slug.isBlank()) {
             return Optional.empty();
         }
-        return entityManager
+        List<UUID> encontrados = entityManager
                 .createNativeQuery("SELECT resolve_tenant_id_por_slug(:slug)", UUID.class)
                 .setParameter("slug", normalizar(slug))
-                .getResultStream()
+                .getResultList();
+        return encontrados.stream()
+                .filter(java.util.Objects::nonNull)
                 .findFirst()
                 .map(UUID.class::cast);
     }

@@ -29,9 +29,17 @@
 	<properties>
 		<java.version>25</java.version>
 		<spring-modulith.version>2.1.0</spring-modulith.version>
+		<!-- Override temporário do BOM do Spring Boot: 42.7.11 é afetado pela
+		     CVE-2026-54291; 42.7.12 contém a correção upstream. -->
+		<postgresql.version>42.7.12</postgresql.version>
 		<!-- O BOM do Spring Boot não gerencia o BouncyCastle. Sem versão fixa
 		     aqui, o build não resolve a dependência. -->
 		<bouncycastle.version>1.85</bouncycastle.version>
+		<springdoc.version>3.0.3</springdoc.version>
+		<!-- A suíte normal cobre unitários + integração e deixa carga fora do
+		     caminho cotidiano. Os profiles abaixo tornam cada corte reproduzível. -->
+		<testes.grupos.incluidos></testes.grupos.incluidos>
+		<testes.grupos.excluidos>carga</testes.grupos.excluidos>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -80,6 +88,12 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+		<!-- Springdoc 3.x é a linha oficial compatível com Spring Boot 4.x. -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+			<version>${springdoc.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -222,7 +236,45 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<groups>${testes.grupos.incluidos}</groups>
+					<excludedGroups>${testes.grupos.excluidos}</excludedGroups>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>gate-rapido</id>
+			<properties>
+				<testes.grupos.excluidos>integracao | carga | quarentena</testes.grupos.excluidos>
+			</properties>
+		</profile>
+		<profile>
+			<id>integracao</id>
+			<properties>
+				<testes.grupos.incluidos>integracao</testes.grupos.incluidos>
+				<testes.grupos.excluidos>carga | quarentena</testes.grupos.excluidos>
+			</properties>
+		</profile>
+		<profile>
+			<id>quarentena</id>
+			<properties>
+				<testes.grupos.incluidos>quarentena</testes.grupos.incluidos>
+				<testes.grupos.excluidos></testes.grupos.excluidos>
+			</properties>
+		</profile>
+		<profile>
+			<id>carga</id>
+			<properties>
+				<testes.grupos.incluidos>carga</testes.grupos.incluidos>
+				<testes.grupos.excluidos></testes.grupos.excluidos>
+			</properties>
+		</profile>
+	</profiles>
 
 </project>

@@ -2,6 +2,8 @@ package br.com.pnp.crm;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.boot.flyway.autoconfigure.FlywayConnectionDetails;
+import org.springframework.boot.jdbc.autoconfigure.JdbcConnectionDetails;
 import org.springframework.context.annotation.Bean;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -21,9 +23,57 @@ import org.testcontainers.utility.DockerImageName;
 class TestcontainersConfiguration {
 
 	@Bean
-	@ServiceConnection
 	PostgreSQLContainer postgresContainer() {
-		return new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"));
+		return new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"))
+				.withDatabaseName("crm_test")
+				.withUsername("crm_migrator_test")
+				.withPassword("migrator-test-password")
+				.withInitScript("db/test/init_roles.sql");
+	}
+
+	@Bean
+	JdbcConnectionDetails runtimeConnectionDetails(PostgreSQLContainer container) {
+		return new JdbcConnectionDetails() {
+			@Override
+			public String getUsername() {
+				return "crm_runtime_test";
+			}
+
+			@Override
+			public String getPassword() {
+				return "runtime-test-password";
+			}
+
+			@Override
+			public String getJdbcUrl() {
+				return container.getJdbcUrl();
+			}
+		};
+	}
+
+	@Bean
+	FlywayConnectionDetails flywayConnectionDetails(PostgreSQLContainer container) {
+		return new FlywayConnectionDetails() {
+			@Override
+			public String getUsername() {
+				return container.getUsername();
+			}
+
+			@Override
+			public String getPassword() {
+				return container.getPassword();
+			}
+
+			@Override
+			public String getJdbcUrl() {
+				return container.getJdbcUrl();
+			}
+		};
+	}
+
+	@Bean
+	TestDatabaseCleaner testDatabaseCleaner(PostgreSQLContainer container) {
+		return new TestDatabaseCleaner(container);
 	}
 
 	@Bean

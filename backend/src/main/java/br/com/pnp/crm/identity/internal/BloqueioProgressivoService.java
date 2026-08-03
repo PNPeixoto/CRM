@@ -28,10 +28,11 @@ import java.util.UUID;
 @Service
 class BloqueioProgressivoService {
 
-    private static final String PREFIXO_CONTA = "login:bloqueio:conta:";
+    private static final String PREFIXO_CONTA = "login:observacao:conta:";
+    private static final String PREFIXO_PAR = "login:bloqueio:par:";
     private static final String PREFIXO_IP = "login:bloqueio:ip:";
 
-    private static final int TENTATIVAS_ATE_BLOQUEIO_CONTA = 5;
+    private static final int TENTATIVAS_ATE_BLOQUEIO_PAR = 5;
     private static final int TENTATIVAS_ATE_BLOQUEIO_IP = 20;
 
     private static final Duration JANELA = Duration.ofMinutes(15);
@@ -50,12 +51,17 @@ class BloqueioProgressivoService {
     }
 
     boolean estaBloqueado(UUID tenantId, String login, String ip) {
-        return excedeu(chaveConta(tenantId, login), TENTATIVAS_ATE_BLOQUEIO_CONTA)
+        // A conta isolada nunca é bloqueada: um atacante não pode derrubar o
+        // acesso da vítima repetindo o login dela. O par conta+origem e a
+        // origem global são limitados; o contador da conta fica como sinal de
+        // credential stuffing para observabilidade/risk engine.
+        return excedeu(chavePar(tenantId, login, ip), TENTATIVAS_ATE_BLOQUEIO_PAR)
                 || excedeu(chaveIp(ip), TENTATIVAS_ATE_BLOQUEIO_IP);
     }
 
     void registrarFalha(UUID tenantId, String login, String ip) {
-        incrementar(chaveConta(tenantId, login), TENTATIVAS_ATE_BLOQUEIO_CONTA);
+        incrementarObservacao(chaveConta(tenantId, login));
+        incrementar(chavePar(tenantId, login, ip), TENTATIVAS_ATE_BLOQUEIO_PAR);
         incrementar(chaveIp(ip), TENTATIVAS_ATE_BLOQUEIO_IP);
     }
 
@@ -64,8 +70,9 @@ class BloqueioProgressivoService {
      * o contador do IP permanece, porque um login válido no meio de uma
      * varredura não deve absolver o endereço que a está conduzindo.
      */
-    void registrarSucesso(UUID tenantId, String login) {
+    void registrarSucesso(UUID tenantId, String login, String ip) {
         redis.delete(chaveConta(tenantId, login));
+        redis.delete(chavePar(tenantId, login, ip));
     }
 
     private boolean excedeu(String chave, int limite) {
@@ -79,6 +86,11 @@ class BloqueioProgressivoService {
             return;
         }
         redis.expire(chave, tentativas >= limite ? duracaoBloqueio(tentativas, limite) : JANELA);
+    }
+
+    private void incrementarObservacao(String chave) {
+        redis.opsForValue().increment(chave);
+        redis.expire(chave, JANELA);
     }
 
     private Duration duracaoBloqueio(long tentativas, int limite) {
@@ -103,11 +115,29 @@ class BloqueioProgressivoService {
         return PREFIXO_CONTA + tenantId + ":" + normalizar(login);
     }
 
+    private String chavePar(UUID tenantId, String login, String ip) {
+        return PREFIXO_PAR + tenantId + ":" + normalizar(login) + ":" + normalizarIp(ip);
+    }
+
     private String normalizar(String login) {
         return login == null ? "" : login.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     private String chaveIp(String ip) {
-        return PREFIXO_IP + ip;
+        return PREFIXO_IP + normalizarIp(ip);
+    }
+
+    private String normalizarIp(String ip) {
+        if (ip == null) {
+            return "desconhecido";
+        }
+        String normalized = ip.trim().toLowerCase(java.util.Locale.ROOT);
+        try {
+            // getRemoteAddr é numérico; a conversão colapsa representações
+            // equivalentes de IPv6 sem confiar em cabeçalhos do cliente.
+            return java.net.InetAddress.getByName(normalized).getHostAddress();
+        } catch (java.net.UnknownHostException invalid) {
+            return normalized;
+        }
     }
 }

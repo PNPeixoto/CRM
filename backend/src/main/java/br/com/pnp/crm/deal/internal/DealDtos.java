@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -15,9 +16,11 @@ final class DealDtos {
     private DealDtos() {
     }
 
+    @Schema(name = "DealFunilResponse")
     record FunilResponse(UUID id, String nome, boolean padrao, List<EtapaResponse> etapas) {
     }
 
+    @Schema(name = "DealEtapaResponse")
     record EtapaResponse(UUID id, String nome, int posicao, boolean ganho, boolean perda) {
     }
 

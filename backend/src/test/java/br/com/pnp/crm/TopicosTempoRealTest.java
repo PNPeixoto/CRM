@@ -37,6 +37,11 @@ class TopicosTempoRealTest {
     void tenantDaConversa() {
         assertThat(TopicosTempoReal.tenantDoDestino(TopicosTempoReal.conversa(TENANT, CONVERSA)))
                 .contains(TENANT);
+        assertThat(TopicosTempoReal.analisarDestino(
+                TopicosTempoReal.conversa(TENANT, CONVERSA)))
+                .get()
+                .extracting(TopicosTempoReal.Destino::conversationId)
+                .isEqualTo(CONVERSA);
     }
 
     @Test
@@ -55,6 +60,11 @@ class TopicosTempoRealTest {
             "/topic/tenant/",
             "/topic/tenant/nao-e-uuid",
             "/topic/tenant/nao-e-uuid/inbox",
+            "/topic/tenant/019fa91c-0f63-75f7-b4a0-1494c1304c42",
+            "/topic/tenant/019fa91c-0f63-75f7-b4a0-1494c1304c42/administracao",
+            "/topic/tenant/019fa91c-0f63-75f7-b4a0-1494c1304c42/inbox/extra",
+            "/topic/tenant/019fa91c-0f63-75f7-b4a0-1494c1304c42/conversa/nao-e-uuid",
+            "/topic/tenant/019fa91c-0f63-75f7-b4a0-1494c1304c42/conversa/019fa91c-0f66-7a68-8384-20e85b6c8f5a/extra",
             // Prefixo parecido, destino diferente: precisa falhar.
             "/topic/tenants/019fa91c-0f63-75f7-b4a0-1494c1304c42/inbox",
             "/topic/019fa91c-0f63-75f7-b4a0-1494c1304c42",

@@ -1,0 +1,39 @@
+# Produção não possui fallback de host, usuário ou segredo. Todos os valores
+# obrigatórios permanecem neste profile como placeholders sem default.
+spring:
+  datasource:
+    url: ${DB_URL}
+    # A aplicação nunca usa o papel de migration. Este usuário não pode ser
+    # SUPERUSER nem ter BYPASSRLS.
+    username: ${DB_RUNTIME_USER}
+    password: ${DB_RUNTIME_PASSWORD}
+
+  flyway:
+    out-of-order: false
+    clean-disabled: true
+    # Conexão administrativa separada. Ela só existe durante a migration; o
+    # pool entregue a JPA/JdbcTemplate continua usando o papel restrito acima.
+    url: ${DB_MIGRATION_URL:${DB_URL}}
+    user: ${DB_MIGRATION_USER}
+    password: ${DB_MIGRATION_PASSWORD}
+
+  data:
+    redis:
+      url: ${REDIS_URL}
+
+server:
+  # Usa o RemoteIpValve do Tomcat, que só aceita X-Forwarded-* dos endereços
+  # declarados. A aplicação não sobe em prod sem a allowlist do proxy.
+  forward-headers-strategy: native
+  tomcat:
+    redirect-context-root: false
+    remoteip:
+      internal-proxies: ${TRUSTED_PROXY_IP_REGEX}
+      remote-ip-header: X-Forwarded-For
+      protocol-header: X-Forwarded-Proto
+      protocol-header-https-value: https
+
+logging:
+  level:
+    root: INFO
+    br.com.pnp.crm: INFO

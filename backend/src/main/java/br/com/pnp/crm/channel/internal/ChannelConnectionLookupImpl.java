@@ -2,6 +2,7 @@ package br.com.pnp.crm.channel.internal;
 
 import br.com.pnp.crm.channel.api.ChannelConnectionLookup;
 import br.com.pnp.crm.channel.api.ConexaoDeCanal;
+import br.com.pnp.crm.shared.api.TenantContext;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,7 +50,8 @@ class ChannelConnectionLookupImpl implements ChannelConnectionLookup {
         if (channelConnectionId == null) {
             return Optional.empty();
         }
-        return repository.findByIdAndActiveTrueAndDeletedAtIsNull(channelConnectionId)
+        return repository.findByIdAndTenantIdAndActiveTrueAndDeletedAtIsNull(
+                        channelConnectionId, TenantContext.obrigatorio())
                 .map(entity -> new ConexaoDeCanal(
                         entity.getId(), entity.getTenantId(), entity.getKind(), entity.getName()));
     }

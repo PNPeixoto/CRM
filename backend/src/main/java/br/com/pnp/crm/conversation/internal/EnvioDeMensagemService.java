@@ -6,6 +6,7 @@ import br.com.pnp.crm.channel.api.ConexaoDeCanal;
 import br.com.pnp.crm.channel.api.EnvioDeMensagemException;
 import br.com.pnp.crm.channel.api.OutboundMessage;
 import br.com.pnp.crm.channel.api.TipoCanal;
+import br.com.pnp.crm.shared.api.TenantContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -61,7 +62,9 @@ class EnvioDeMensagemService {
      */
     @Transactional
     void entregar(UUID messageId) {
-        MessageEntity mensagem = mensagens.findById(messageId).orElse(null);
+        MessageEntity mensagem = mensagens
+                .findByIdAndTenantIdAndDeletedAtIsNull(messageId, TenantContext.obrigatorio())
+                .orElse(null);
         if (mensagem == null) {
             // Reservada e depois removida, ou o tenant do contexto não confere
             // com o da linha e o RLS a escondeu. Nos dois casos não há o que
@@ -107,7 +110,8 @@ class EnvioDeMensagemService {
      * envio seguinte já usa o valor certo.
      */
     private String destinatarioDe(MessageEntity mensagem) {
-        return mensagens.buscarExternalContactIdDaConversa(mensagem.getConversationId())
+        return mensagens.buscarExternalContactIdDaConversa(
+                        TenantContext.obrigatorio(), mensagem.getConversationId())
                 .orElseThrow(() -> new IllegalStateException(
                         "Mensagem sem conversa correspondente: " + mensagem.getId()));
     }

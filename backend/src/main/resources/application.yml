@@ -2,12 +2,11 @@ spring:
   application:
     name: crm
 
-  datasource:
-    # Sintaxe ${VAR:padrao}: usa a variável de ambiente quando existir.
-    # Em produção, nenhuma dessas terá valor padrão no arquivo.
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/crm}
-    username: ${DB_USER:crm}
-    password: ${DB_PASSWORD:crm_dev_local}   # TESTE — TROCAR ANTES DE PRODUÇÃO
+  jackson:
+    # DTOs são listas brancas. Campo desconhecido — inclusive tenantId — é
+    # rejeitado em vez de ignorado silenciosamente.
+    deserialization:
+      fail-on-unknown-properties: true
 
   jpa:
     hibernate:
@@ -29,10 +28,21 @@ spring:
     # exclusivamente pelo profile dev — ver application-dev.yml. Produção não
     # tem como carregá-lo por esquecimento, porque o caminho não está aqui.
     locations: classpath:db/migration
+    # Identificador confiável fornecido pelo deploy. É usado somente em
+    # migrations de GRANT/REVOKE; a aplicação continua conectando pelo
+    # datasource restrito, nunca pelo migrador.
+    placeholders:
+      runtime_role: ${DB_RUNTIME_USER:crm_runtime}
 
   data:
     redis:
-      url: ${REDIS_URL:redis://localhost:6379}
+      # Readiness precisa falhar rápido quando o cache fica indisponível; sem
+      # limites explícitos, o probe pode expirar no proxy antes de responder.
+      connect-timeout: 2s
+      timeout: 2s
+
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
 
 app:
   security:
@@ -46,10 +56,15 @@ app:
     # faria um único vazamento comprometer senhas, sessões e credenciais de
     # integração de uma vez.
     channel-secret-key: ${CHANNEL_SECRET_KEY}
+    # Chave distinta para segredos TOTP. Assim, a rotação de uma credencial de
+    # integração não invalida MFA e um vazamento não cruza domínios.
+    mfa-secret-key: ${MFA_SECRET_KEY}
     # HTTPS obrigatório fora de desenvolvimento: o cookie de refresh não pode
     # trafegar em texto puro, e o CSP não deve aceitar WebSocket sem TLS.
     cookie-secure: true
     websocket-exige-tls: true
+    password-reset-delivery-enabled: ${PASSWORD_RESET_DELIVERY_ENABLED:true}
+    password-reset-delivery-url: ${PASSWORD_RESET_DELIVERY_URL:}
   cors:
     # Vazio significa nenhuma origem permitida. Ausência de configuração
     # falha fechada.
@@ -76,8 +91,10 @@ app:
 
 server:
   port: 8080
-  # Faz a aplicação respeitar X-Forwarded-* quando houver proxy na frente.
-  forward-headers-strategy: framework
+  shutdown: graceful
+  # Falha segura: sem o profile prod, cabeçalhos de proxy são ignorados. O
+  # profile de produção habilita a estratégia nativa com allowlist de proxy.
+  forward-headers-strategy: none
 
 management:
   endpoints:
@@ -86,9 +103,25 @@ management:
         include: health
   endpoint:
     health:
+      show-details: never
       probes:
         enabled: true
+      group:
+        liveness:
+          include: livenessState
+        # O CRM não atende corretamente sem a fonte da verdade nem sem o
+        # componente usado por bloqueio/rate limit. Liveness continua local
+        # para não reiniciar todas as instâncias por falha de dependência.
+        readiness:
+          include: readinessState,db,redis
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    version: openapi_3_1
+  writer-with-order-by-keys: true
+  writer-with-default-pretty-printer: true
 
 logging:
   level:
-    br.com.pnp.crm: DEBUG
+    br.com.pnp.crm: INFO

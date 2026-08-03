@@ -62,6 +62,20 @@ class IsolamentoEntreTenantsTest {
     }
 
     @Test
+    @DisplayName("a aplicação testa RLS com usuário runtime restrito")
+    void conexaoNaoEhSuperusuarioNemIgnoraRls() {
+        Map<String, Object> role = jdbc.queryForMap("""
+                SELECT current_user AS usuario, rolsuper, rolbypassrls
+                  FROM pg_roles
+                 WHERE rolname = current_user
+                """);
+
+        assertThat(role.get("usuario")).isEqualTo("crm_runtime_test");
+        assertThat(role.get("rolsuper")).isEqualTo(false);
+        assertThat(role.get("rolbypassrls")).isEqualTo(false);
+    }
+
+    @Test
     @DisplayName("UPDATE sem filtro de tenant não alcança linha de outro tenant")
     void naoEditaDadoDeOutroTenant() {
         int linhasAfetadas = TenantContext.executarComo(tenantA,

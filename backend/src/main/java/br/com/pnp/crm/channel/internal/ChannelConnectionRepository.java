@@ -8,7 +8,8 @@ import java.util.UUID;
 
 interface ChannelConnectionRepository extends JpaRepository<ChannelConnectionEntity, UUID> {
 
-    Optional<ChannelConnectionEntity> findByIdAndActiveTrueAndDeletedAtIsNull(UUID id);
+    Optional<ChannelConnectionEntity> findByIdAndTenantIdAndActiveTrueAndDeletedAtIsNull(
+            UUID id, UUID tenantId);
 
     Optional<ChannelConnectionEntity> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
 

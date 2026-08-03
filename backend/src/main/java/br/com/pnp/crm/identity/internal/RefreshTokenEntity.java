@@ -30,6 +30,12 @@ class RefreshTokenEntity {
     @Column(name = "issued_at", nullable = false, insertable = false, updatable = false)
     private Instant issuedAt;
 
+    @Column(name = "session_started_at", nullable = false)
+    private Instant sessionStartedAt;
+
+    @Column(name = "mfa_verified", nullable = false)
+    private boolean mfaVerified;
+
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
@@ -62,7 +68,8 @@ class RefreshTokenEntity {
     }
 
     static RefreshTokenEntity novo(UUID tenantId, UUID userId, UUID familyId,
-                                   String tokenHash, Instant expiresAt, UUID criadoPor) {
+                                   String tokenHash, Instant expiresAt, Instant sessionStartedAt,
+                                   boolean mfaVerified, UUID criadoPor) {
         RefreshTokenEntity entity = new RefreshTokenEntity();
         entity.id = br.com.pnp.crm.shared.api.UuidV7.gerar();
         entity.tenantId = tenantId;
@@ -70,6 +77,8 @@ class RefreshTokenEntity {
         entity.familyId = familyId;
         entity.tokenHash = tokenHash;
         entity.expiresAt = expiresAt;
+        entity.sessionStartedAt = sessionStartedAt;
+        entity.mfaVerified = mfaVerified;
         entity.createdBy = criadoPor;
         entity.updatedBy = criadoPor;
         return entity;
@@ -95,6 +104,18 @@ class RefreshTokenEntity {
         return expiresAt;
     }
 
+    Instant getIssuedAt() {
+        return issuedAt;
+    }
+
+    Instant getSessionStartedAt() {
+        return sessionStartedAt;
+    }
+
+    boolean isMfaVerified() {
+        return mfaVerified;
+    }
+
     void marcarComoUsado() {
         this.usedAt = Instant.now();
     }
@@ -115,10 +136,13 @@ class RefreshTokenEntity {
      * rotação, {@code revokedAt} pega logout e revogação de família, e a
      * expiração pega o abandono.
      */
-    boolean estaValidoEm(Instant momento) {
+    boolean estaValidoEm(Instant momento, java.time.Duration inactivity,
+                         java.time.Duration absoluteValidity) {
         return usedAt == null
                 && revokedAt == null
-                && expiresAt.isAfter(momento);
+                && expiresAt.isAfter(momento)
+                && issuedAt.plus(inactivity).isAfter(momento)
+                && sessionStartedAt.plus(absoluteValidity).isAfter(momento);
     }
 
     boolean jaFoiUsado() {

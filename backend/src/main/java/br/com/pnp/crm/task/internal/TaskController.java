@@ -1,5 +1,10 @@
 package br.com.pnp.crm.task.internal;
 
+import br.com.pnp.crm.contact.api.ContactLookup;
+import br.com.pnp.crm.deal.api.DealLookup;
+import br.com.pnp.crm.identity.api.UsuarioLookup;
+import br.com.pnp.crm.organization.api.Autorizacao;
+import br.com.pnp.crm.organization.api.Permissao;
 import br.com.pnp.crm.shared.api.RecursoNaoEncontradoException;
 import br.com.pnp.crm.shared.api.TenantContext;
 import jakarta.validation.Valid;
@@ -28,9 +33,18 @@ import java.util.UUID;
 class TaskController {
 
     private final TaskRepository repository;
+    private final ContactLookup contacts;
+    private final DealLookup deals;
+    private final UsuarioLookup users;
+    private final Autorizacao autorizacao;
 
-    TaskController(TaskRepository repository) {
+    TaskController(TaskRepository repository, ContactLookup contacts,
+                   DealLookup deals, UsuarioLookup users, Autorizacao autorizacao) {
         this.repository = repository;
+        this.contacts = contacts;
+        this.deals = deals;
+        this.users = users;
+        this.autorizacao = autorizacao;
     }
 
     @GetMapping
@@ -38,17 +52,29 @@ class TaskController {
     ResponseEntity<List<TarefaResponse>> listar(
             @RequestParam(defaultValue = "false") boolean apenasAbertas) {
         return ResponseEntity.ok(
-                repository.listar(TenantContext.obrigatorio(), apenasAbertas).stream()
-                        .map(TaskController::paraResposta).toList());
+                repository.listar(TenantContext.obrigatorio(),
+                                filtroDeResponsavel(Permissao.TASKS_READ), apenasAbertas)
+                        .stream().map(TaskController::paraResposta).toList());
+    }
+
+    /** Ver a explicação equivalente em {@code ContactController}. */
+    private UUID filtroDeResponsavel(Permissao permissao) {
+        return autorizacao.alcanceDe(permissao) == Autorizacao.Alcance.PROPRIO
+                ? autorizacao.usuarioCorrente()
+                : null;
     }
 
     @PostMapping
     @Transactional
     ResponseEntity<TarefaResponse> criar(@Valid @RequestBody TarefaRequest requisicao,
                                          @AuthenticationPrincipal Jwt jwt) {
+        autorizacao.exigir(Permissao.TASKS_WRITE);
         UUID autorId = UUID.fromString(jwt.getSubject());
         TaskEntity tarefa = TaskEntity.nova(TenantContext.obrigatorio(), autorId);
         aplicar(tarefa, requisicao, autorId);
+        // Sob alcance próprio não se cria tarefa para outra pessoa: seria
+        // criar hoje o que não se poderia ler amanhã.
+        autorizacao.exigirSobreRegistro(Permissao.TASKS_WRITE, tarefa.getAssignedUserId());
         return ResponseEntity.ok(paraResposta(repository.save(tarefa)));
     }
 
@@ -57,8 +83,13 @@ class TaskController {
     ResponseEntity<TarefaResponse> atualizar(@PathVariable UUID id,
                                              @Valid @RequestBody TarefaRequest requisicao,
                                              @AuthenticationPrincipal Jwt jwt) {
+        autorizacao.exigir(Permissao.TASKS_WRITE);
         TaskEntity tarefa = carregar(id);
+        autorizacao.exigirSobreRegistro(Permissao.TASKS_WRITE, tarefa.getAssignedUserId());
         aplicar(tarefa, requisicao, UUID.fromString(jwt.getSubject()));
+        // Revalida depois: impede transferir a tarefa para fora do próprio
+        // alcance na mesma chamada que a edita.
+        autorizacao.exigirSobreRegistro(Permissao.TASKS_WRITE, tarefa.getAssignedUserId());
         return ResponseEntity.ok(paraResposta(tarefa));
     }
 
@@ -67,7 +98,9 @@ class TaskController {
     @Transactional
     ResponseEntity<TarefaResponse> alternarConclusao(@PathVariable UUID id,
                                                      @AuthenticationPrincipal Jwt jwt) {
+        autorizacao.exigir(Permissao.TASKS_WRITE);
         TaskEntity tarefa = carregar(id);
+        autorizacao.exigirSobreRegistro(Permissao.TASKS_WRITE, tarefa.getAssignedUserId());
         tarefa.alternarConclusao(UUID.fromString(jwt.getSubject()));
         return ResponseEntity.ok(paraResposta(tarefa));
     }
@@ -75,7 +108,10 @@ class TaskController {
     @DeleteMapping("/{id}")
     @Transactional
     ResponseEntity<Void> excluir(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
-        carregar(id).excluir(UUID.fromString(jwt.getSubject()));
+        autorizacao.exigir(Permissao.TASKS_WRITE);
+        TaskEntity tarefa = carregar(id);
+        autorizacao.exigirSobreRegistro(Permissao.TASKS_WRITE, tarefa.getAssignedUserId());
+        tarefa.excluir(UUID.fromString(jwt.getSubject()));
         return ResponseEntity.noContent().build();
     }
 
@@ -85,8 +121,29 @@ class TaskController {
     }
 
     private void aplicar(TaskEntity t, TarefaRequest r, UUID autorId) {
+        UUID tenantId = TenantContext.obrigatorio();
+        UUID responsavelId = autorizacao.responsavelPadrao(
+                Permissao.TASKS_WRITE, r.responsavelId());
+        autorizacao.exigirSobreRegistro(Permissao.TASKS_WRITE, responsavelId);
+        if (responsavelId != null && !users.existsActive(tenantId, responsavelId)) {
+            throw new RecursoNaoEncontradoException("Responsável");
+        }
+        if (r.contatoId() != null) {
+            ContactLookup.ContactReference contato = contacts.findReference(tenantId, r.contatoId())
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Contato"));
+            autorizacao.exigirSobreRegistro(
+                    Permissao.CONTACTS_READ, contato.ownerUserId());
+        }
+        if (r.oportunidadeId() != null) {
+            DealLookup.DealReference oportunidade = deals.findReference(
+                            tenantId, r.oportunidadeId())
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Oportunidade"));
+            autorizacao.exigirSobreRegistro(
+                    Permissao.DEALS_READ, oportunidade.ownerUserId());
+        }
         t.aplicar(r.titulo(), r.descricao(), r.vencimentoEm(),
-                r.responsavelId(), r.contatoId(), r.oportunidadeId(), autorId);
+                responsavelId,
+                r.contatoId(), r.oportunidadeId(), autorId);
     }
 
     private static TarefaResponse paraResposta(TaskEntity t) {

@@ -1,5 +1,6 @@
 package br.com.pnp.crm;
 
+import br.com.pnp.crm.shared.api.TenantContext;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,6 +12,10 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -39,10 +44,13 @@ class RefreshTokenRotacaoTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    private java.util.UUID tenantId;
+
     @BeforeEach
     void prepararUsuario() {
         cenario.limpar();
-        cenario.criarUsuario(cenario.criarTenant("alpha", "Alpha"), "peixoto", "12345");
+        tenantId = cenario.criarTenant("alpha", "Alpha");
+        cenario.criarUsuario(tenantId, "peixoto", "12345");
     }
 
     @AfterEach
@@ -76,13 +84,12 @@ class RefreshTokenRotacaoTest {
         mockMvc.perform(post("/api/auth/refresh").cookie(new Cookie(COOKIE, legitimo)))
                 .andExpect(status().isUnauthorized());
 
-        Long revogados = jdbc.queryForObject(
-                "SELECT count(*) FROM refresh_token WHERE revoked_at IS NOT NULL", Long.class);
-        Long total = jdbc.queryForObject("SELECT count(*) FROM refresh_token", Long.class);
+        Long revogados = TenantContext.executarComo(tenantId, () -> jdbc.queryForObject(
+                "SELECT count(*) FROM refresh_token WHERE revoked_at IS NOT NULL", Long.class));
+        Long total = TenantContext.executarComo(tenantId,
+                () -> jdbc.queryForObject("SELECT count(*) FROM refresh_token", Long.class));
 
-        // Consultas sem tenant no contexto enxergariam zero por causa do RLS.
-        // Aqui elas passam porque o TRUNCATE/contagem roda como dono em DDL —
-        // a asserção que importa é a comparação entre os dois números.
+        // A contagem usa o mesmo runtime restrito e o contexto do tenant.
         assertThat(revogados).isEqualTo(total);
     }
 
@@ -98,6 +105,32 @@ class RefreshTokenRotacaoTest {
     @DisplayName("sem cookie de refresh a resposta é 401, não 500")
     void semCookie() throws Exception {
         mockMvc.perform(post("/api/auth/refresh")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("duas rotações concorrentes permitem somente uma resposta válida")
+    void apenasUmaRotacaoConcorrenteVence() throws Exception {
+        String refresh = fazerLoginEObterRefresh();
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var request = (java.util.concurrent.Callable<Integer>) () -> {
+                ready.countDown();
+                start.await();
+                return mockMvc.perform(post("/api/auth/refresh")
+                                .cookie(new Cookie(COOKIE, refresh)))
+                        .andReturn().getResponse().getStatus();
+            };
+
+            var first = executor.submit(request);
+            var second = executor.submit(request);
+            ready.await();
+            start.countDown();
+
+            assertThat(List.of(first.get(), second.get()))
+                    .containsExactlyInAnyOrder(200, 401);
+        }
     }
 
     private String fazerLoginEObterRefresh() throws Exception {

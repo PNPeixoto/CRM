@@ -2,6 +2,7 @@ package br.com.pnp.crm.identity.internal;
 
 import br.com.pnp.crm.identity.api.UsuarioAutenticado;
 import br.com.pnp.crm.shared.api.SessaoExpiradaException;
+import br.com.pnp.crm.shared.api.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 
 @RestController
@@ -34,11 +36,13 @@ class AuthController {
     private static final String CAMINHO_COOKIE = "/api/auth";
 
     private final AutenticacaoService autenticacao;
+    private final PasswordResetService passwordReset;
     private final boolean cookieSecure;
 
-    AuthController(AutenticacaoService autenticacao,
+    AuthController(AutenticacaoService autenticacao, PasswordResetService passwordReset,
                    @Value("${app.security.cookie-secure:true}") boolean cookieSecure) {
         this.autenticacao = autenticacao;
+        this.passwordReset = passwordReset;
         this.cookieSecure = cookieSecure;
     }
 
@@ -46,7 +50,8 @@ class AuthController {
     ResponseEntity<AuthDtos.SessaoResponse> login(@Valid @RequestBody AuthDtos.LoginRequest requisicao,
                                                   HttpServletRequest http) {
         AutenticacaoService.SessaoAberta sessao = autenticacao.entrar(
-                requisicao.empresa(), requisicao.login(), requisicao.senha(), ipDaRequisicao(http));
+                requisicao.empresa(), requisicao.login(), requisicao.senha(),
+                requisicao.codigoMfa(), ipDaRequisicao(http));
         return respostaComCookie(sessao);
     }
 
@@ -61,10 +66,65 @@ class AuthController {
 
     @PostMapping("/logout")
     ResponseEntity<Void> logout(@AuthenticationPrincipal Jwt jwt) {
-        autenticacao.sair(tenantDoToken(jwt), UUID.fromString(jwt.getSubject()));
+        autenticacao.sair(tenantDoToken(jwt), UUID.fromString(jwt.getSubject()),
+                UUID.fromString(jwt.getClaimAsString(AccessTokenService.CLAIM_SESSION)));
         // O cookie é sobrescrito com validade zero. Sem isto o navegador
         // continuaria enviando um refresh já revogado a cada chamada, o que
         // funciona mas polui o log com falhas de sessão que não são incidente.
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, cookieRefresh("", Duration.ZERO).toString())
+                .build();
+    }
+
+    @PostMapping("/sessions/revoke-all")
+    ResponseEntity<Void> revokeAll(@AuthenticationPrincipal Jwt jwt) {
+        autenticacao.sairDeTodosOsDispositivos(
+                tenantDoToken(jwt), UUID.fromString(jwt.getSubject()));
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, cookieRefresh("", Duration.ZERO).toString())
+                .build();
+    }
+
+    @PostMapping("/mfa/enrollment")
+    ResponseEntity<AuthDtos.MfaEnrollmentResponse> startMfaEnrollment(
+            @Valid @RequestBody AuthDtos.LoginRequest request, HttpServletRequest http) {
+        MfaService.Enrollment enrollment = autenticacao.iniciarCadastroMfa(
+                request.empresa(), request.login(), request.senha(), request.codigoMfa(),
+                ipDaRequisicao(http));
+        return ResponseEntity.ok(new AuthDtos.MfaEnrollmentResponse(
+                enrollment.challenge(), enrollment.secret(), enrollment.otpauthUri(),
+                enrollment.expiresInSeconds()));
+    }
+
+    @PostMapping("/mfa/activation")
+    ResponseEntity<AuthDtos.MfaActivationResponse> activateMfa(
+            @Valid @RequestBody AuthDtos.MfaActivationRequest request) {
+        AutenticacaoService.CadastroMfaAtivado activated =
+                autenticacao.ativarCadastroMfa(request.desafio(), request.codigo());
+        ResponseCookie cookie = cookieFor(activated.sessao().refreshToken());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(new AuthDtos.MfaActivationResponse(
+                        sessionBody(activated.sessao()), activated.codigosRecuperacao()));
+    }
+
+    @PostMapping("/password-reset/request")
+    ResponseEntity<Void> requestPasswordReset(
+            @Valid @RequestBody AuthDtos.PasswordResetRequest request) {
+        passwordReset.request(request.empresa(), request.identificador());
+        // Sempre 202 e corpo vazio, exista ou não empresa/usuário.
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/password-reset/confirm")
+    ResponseEntity<Void> confirmPasswordReset(
+            @Valid @RequestBody AuthDtos.PasswordResetConfirmation request) {
+        UUID tenantId = passwordReset.resolveTenant(request.codigo())
+                .orElseThrow(InvalidPasswordResetException::new);
+        TenantContext.executarComo(tenantId, () -> {
+            passwordReset.confirm(tenantId, request.codigo(), request.novaSenha());
+            return null;
+        });
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, cookieRefresh("", Duration.ZERO).toString())
                 .build();
@@ -84,18 +144,29 @@ class AuthController {
     private ResponseEntity<AuthDtos.SessaoResponse> respostaComCookie(
             AutenticacaoService.SessaoAberta sessao) {
         ResponseCookie cookie = cookieRefresh(
-                sessao.refreshToken().valor(), RefreshTokenService.VALIDADE);
+                sessao.refreshToken().valor(), cookieValidity(sessao.refreshToken().expiraEm()));
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(new AuthDtos.SessaoResponse(
-                        sessao.accessToken(),
-                        AccessTokenService.VALIDADE.toSeconds(),
-                        new AuthDtos.UsuarioResponse(
-                                sessao.usuario().id(),
-                                sessao.usuario().tenantId(),
-                                sessao.usuario().login(),
-                                sessao.usuario().nomeCompleto())));
+                .body(sessionBody(sessao));
+    }
+
+    private AuthDtos.SessaoResponse sessionBody(AutenticacaoService.SessaoAberta sessao) {
+        return new AuthDtos.SessaoResponse(
+                sessao.accessToken(), AccessTokenService.VALIDADE.toSeconds(),
+                new AuthDtos.UsuarioResponse(
+                        sessao.usuario().id(), sessao.usuario().tenantId(),
+                        sessao.usuario().login(), sessao.usuario().nomeCompleto()),
+                sessao.mfaVerified());
+    }
+
+    private ResponseCookie cookieFor(RefreshTokenService.TokenEmitido token) {
+        return cookieRefresh(token.valor(), cookieValidity(token.expiraEm()));
+    }
+
+    private Duration cookieValidity(Instant expiresAt) {
+        Duration remaining = Duration.between(Instant.now(), expiresAt);
+        return remaining.isNegative() ? Duration.ZERO : remaining;
     }
 
     /**

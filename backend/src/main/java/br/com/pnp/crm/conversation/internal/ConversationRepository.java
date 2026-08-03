@@ -9,8 +9,9 @@ import java.util.UUID;
 
 interface ConversationRepository extends JpaRepository<ConversationEntity, UUID> {
 
-    Optional<ConversationEntity> findByChannelConnectionIdAndExternalContactIdAndStatusNotAndDeletedAtIsNull(
-            UUID channelConnectionId, String externalContactId, StatusConversa status);
+    Optional<ConversationEntity>
+    findByTenantIdAndChannelConnectionIdAndExternalContactIdAndStatusNotAndDeletedAtIsNull(
+            UUID tenantId, UUID channelConnectionId, String externalContactId, StatusConversa status);
 
     Optional<ConversationEntity> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
 

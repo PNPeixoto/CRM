@@ -1,6 +1,7 @@
 package br.com.pnp.crm.identity.internal;
 
 import br.com.pnp.crm.shared.api.SessaoExpiradaException;
+import br.com.pnp.crm.shared.api.TenantContext;
 import br.com.pnp.crm.shared.api.UuidV7;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
@@ -8,43 +9,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Refresh token rotativo com detecção de reuso por família.
- *
- * <p><b>O problema que a família resolve:</b> um refresh token roubado é
- * indistinguível do legítimo — os dois são a mesma string. Rotacionar a cada
- * uso não impede o roubo, mas cria um sintoma observável: o token antigo passa
- * a ser inválido, e se alguém o apresentar, existem duas cópias em circulação.
- * Nesse momento não há como saber qual das duas é a vítima, e é por isso que a
- * resposta correta é derrubar a família inteira e obrigar os dois a fazer
- * login. Deixar passar significa manter o atacante dentro.
- */
+/** Refresh token rotativo com família, reuso e limites de sessão. */
 @Service
 class RefreshTokenService {
 
     private static final Logger log = LoggerFactory.getLogger(RefreshTokenService.class);
 
     static final Duration VALIDADE = Duration.ofDays(14);
-
-    // 256 bits. O valor não é adivinhável nem enumerável, e é isso que
-    // sustenta a decisão de guardá-lo como SHA-256 simples em vez de Argon2:
-    // não existe dicionário para 2^256.
+    static final Duration INATIVIDADE_MAXIMA = Duration.ofHours(1);
+    static final Duration VALIDADE_ABSOLUTA = Duration.ofHours(24);
     private static final int TAMANHO_SEGREDO_BYTES = 32;
-
-    private static final SecureRandom RANDOM = new SecureRandom();
-    private static final Base64.Encoder BASE64 = Base64.getUrlEncoder().withoutPadding();
 
     private final RefreshTokenRepository repository;
     private final EntityManager entityManager;
@@ -54,102 +34,77 @@ class RefreshTokenService {
         this.entityManager = entityManager;
     }
 
-    /**
-     * Descobre o tenant de um refresh token antes de haver contexto.
-     *
-     * <p>Precisa rodar antes de qualquer coisa: sem tenant definido, o RLS
-     * esconde a própria linha que precisamos ler. Ver o comentário da função
-     * {@code resolve_tenant_id_por_refresh_hash} na migration V1.
-     */
     @Transactional(readOnly = true)
     Optional<UUID> resolverTenant(String valorApresentado) {
-        return entityManager
+        List<UUID> encontrados = entityManager
                 .createNativeQuery("SELECT resolve_tenant_id_por_refresh_hash(:hash)", UUID.class)
-                .setParameter("hash", hashDe(valorApresentado))
-                .getResultStream()
-                .findFirst()
-                .map(UUID.class::cast);
+                .setParameter("hash", SegredosAleatorios.sha256(valorApresentado))
+                .getResultList();
+        return encontrados.stream().filter(java.util.Objects::nonNull).findFirst();
     }
 
-    /**
-     * Cria a primeira sessão. A família nasce aqui e acompanha todas as
-     * renovações seguintes.
-     */
     @Transactional
-    TokenEmitido abrirSessao(UUID tenantId, UUID usuarioId) {
-        return emitir(tenantId, usuarioId, UuidV7.gerar());
+    TokenEmitido abrirSessao(UUID tenantId, UUID usuarioId, boolean mfaVerified) {
+        Instant startedAt = Instant.now();
+        return emitir(tenantId, usuarioId, UuidV7.gerar(), startedAt, mfaVerified);
     }
 
-    /**
-     * Troca um refresh token válido por um novo, na mesma família.
-     *
-     * @throws SessaoExpiradaException se o token não existe, expirou, foi
-     *                                 revogado — ou já foi usado, caso em que
-     *                                 a família inteira é revogada antes de
-     *                                 lançar
-     */
-    @Transactional
+    @Transactional(noRollbackFor = SessaoExpiradaException.class)
     RotacaoResultado rotacionar(String valorApresentado) {
-        RefreshTokenEntity token = repository.findByTokenHash(hashDe(valorApresentado))
+        UUID tenantId = TenantContext.obrigatorio();
+        RefreshTokenEntity token = repository
+                .findByTenantIdAndTokenHashForUpdate(
+                        tenantId, SegredosAleatorios.sha256(valorApresentado))
                 .orElseThrow(SessaoExpiradaException::new);
 
         if (token.jaFoiUsado()) {
-            revogarFamilia(token.getFamilyId(), "reuso de refresh token");
-            // O log registra o evento sem o valor do token e sem o conteúdo do
-            // cookie. O id da família é suficiente para investigar.
+            revogarFamilia(tenantId, token.getFamilyId(), "reuso de refresh token");
             log.warn("Reuso de refresh token detectado. Família revogada. familyId={} tenantId={}",
                     token.getFamilyId(), token.getTenantId());
             throw new SessaoExpiradaException();
         }
 
-        if (!token.estaValidoEm(Instant.now())) {
+        Instant now = Instant.now();
+        if (!token.estaValidoEm(now, INATIVIDADE_MAXIMA, VALIDADE_ABSOLUTA)) {
+            revogarFamilia(tenantId, token.getFamilyId(), "sessao expirada");
             throw new SessaoExpiradaException();
         }
 
         token.marcarComoUsado();
-        TokenEmitido novo = emitir(token.getTenantId(), token.getUserId(), token.getFamilyId());
-        return new RotacaoResultado(token.getUserId(), novo);
+        TokenEmitido novo = emitir(token.getTenantId(), token.getUserId(), token.getFamilyId(),
+                token.getSessionStartedAt(), token.isMfaVerified());
+        return new RotacaoResultado(token.getUserId(), novo, token.isMfaVerified());
     }
 
     @Transactional
-    void revogarFamilia(UUID familyId, String motivo) {
-        List<RefreshTokenEntity> familia = repository.findByFamilyId(familyId);
-        familia.forEach(token -> token.revogar(motivo));
+    void revogarFamilia(UUID tenantId, UUID familyId, String motivo) {
+        repository.findByTenantIdAndFamilyId(tenantId, familyId)
+                .forEach(token -> token.revogar(motivo));
     }
 
     @Transactional
-    void encerrarSessoesDoUsuario(UUID usuarioId, String motivo) {
-        repository.revogarTodosDoUsuario(usuarioId, Instant.now(), motivo);
+    void encerrarSessoesDoUsuario(UUID tenantId, UUID usuarioId, String motivo) {
+        repository.revogarTodosDoUsuario(tenantId, usuarioId, Instant.now(), motivo);
     }
 
-    private TokenEmitido emitir(UUID tenantId, UUID usuarioId, UUID familyId) {
-        byte[] segredo = new byte[TAMANHO_SEGREDO_BYTES];
-        RANDOM.nextBytes(segredo);
-        String valor = BASE64.encodeToString(segredo);
+    private TokenEmitido emitir(UUID tenantId, UUID usuarioId, UUID familyId,
+                                Instant sessionStartedAt, boolean mfaVerified) {
+        String valor = SegredosAleatorios.gerarUrlSeguro(TAMANHO_SEGREDO_BYTES);
+        Instant rollingLimit = Instant.now().plus(VALIDADE);
+        Instant absoluteLimit = sessionStartedAt.plus(VALIDADE_ABSOLUTA);
+        Instant expiresAt = rollingLimit.isBefore(absoluteLimit) ? rollingLimit : absoluteLimit;
 
         RefreshTokenEntity entity = RefreshTokenEntity.novo(
-                tenantId, usuarioId, familyId, hashDe(valor),
-                Instant.now().plus(VALIDADE), usuarioId);
+                tenantId, usuarioId, familyId, SegredosAleatorios.sha256(valor),
+                expiresAt, sessionStartedAt, mfaVerified, usuarioId);
         repository.save(entity);
-
-        // O valor em claro sai daqui uma única vez, direto para o cookie. Não
-        // é gravado, não é logado e não pode ser recuperado depois.
-        return new TokenEmitido(valor, entity.getExpiresAt());
+        // O valor claro existe somente até ser escrito no cookie HttpOnly.
+        return new TokenEmitido(valor, expiresAt, familyId, mfaVerified);
     }
 
-    private static String hashDe(String valor) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(valor.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            // SHA-256 é obrigatório em toda JVM; se faltar, o ambiente está quebrado.
-            throw new IllegalStateException("SHA-256 indisponível nesta JVM", e);
-        }
+    record TokenEmitido(String valor, Instant expiraEm, UUID familyId, boolean mfaVerified) {
     }
 
-    record TokenEmitido(String valor, Instant expiraEm) {
-    }
-
-    record RotacaoResultado(UUID usuarioId, TokenEmitido token) {
+    record RotacaoResultado(UUID usuarioId, TokenEmitido token, boolean mfaVerified) {
     }
 }

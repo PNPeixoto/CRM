@@ -8,7 +8,8 @@ import java.util.UUID;
 
 interface PipelineStageRepository extends JpaRepository<PipelineStageEntity, UUID> {
 
-    List<PipelineStageEntity> findByPipelineIdAndDeletedAtIsNullOrderByPosition(UUID pipelineId);
+    List<PipelineStageEntity> findByTenantIdAndPipelineIdAndDeletedAtIsNullOrderByPosition(
+            UUID tenantId, UUID pipelineId);
 
     Optional<PipelineStageEntity> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
 }

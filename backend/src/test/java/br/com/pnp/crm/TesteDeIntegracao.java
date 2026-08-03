@@ -4,6 +4,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.junit.jupiter.api.Tag;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -23,6 +24,7 @@ import java.lang.annotation.Target;
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
+@Tag("integracao")
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 @ActiveProfiles("test")
@@ -31,14 +33,18 @@ import java.lang.annotation.Target;
         "app.security.pepper=pepper-de-teste",
         "app.security.jwt-signing-key=chave-de-teste-com-mais-de-32-bytes-ok",
         "app.security.cookie-secure=false",
-        "app.cors.allowed-origins=http://localhost:5173",
+        "spring.flyway.user=crm_migrator_test",
+        "spring.flyway.password=migrator-test-password",
+        "app.cors.allowed-origins=http://localhost:5174",
         // O worker de envio fica desligado: rodando, ele consumiria a fila
         // enquanto o teste ainda monta o cenário, e a falha seria
         // intermitente. Quem testar o worker o invoca diretamente.
         "app.fila-de-saida.habilitada=false",
         "app.entrada-de-webhook.habilitada=false",
         // 32 bytes em base64, exigidos pelo AES-256 do cofre de credenciais.
-        "app.security.channel-secret-key=dGVzdGUtY2hhbm5lbC1rZXktMzItYnl0ZXMtb2shISE="
+        "app.security.channel-secret-key=dGVzdGUtY2hhbm5lbC1rZXktMzItYnl0ZXMtb2shISE=",
+        "app.security.mfa-secret-key=dGVzdC1tZmEta2V5LXNlcGFyYXRlLTMyLWJ5dGVzISE=",
+        "app.security.password-reset-delivery-enabled=false"
 })
 public @interface TesteDeIntegracao {
 }

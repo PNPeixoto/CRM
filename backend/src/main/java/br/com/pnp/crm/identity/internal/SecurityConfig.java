@@ -34,6 +34,11 @@ class SecurityConfig {
     private static final String[] ENDPOINTS_PUBLICOS = {
             "/api/auth/login",
             "/api/auth/refresh",
+            "/api/auth/mfa/enrollment",
+            "/api/auth/mfa/activation",
+            "/api/auth/password-reset/request",
+            "/api/auth/password-reset/confirm",
+            "/v3/api-docs/**",
             "/actuator/health/**",
             "/error"
     };
@@ -93,6 +98,9 @@ class SecurityConfig {
                         // e não carrega cookie de sessão como credencial — a
                         // credencial dele é o token no frame CONNECT.
                         .ignoringRequestMatchers("/api/auth/login", "/api/auth/refresh",
+                                "/api/auth/mfa/enrollment", "/api/auth/mfa/activation",
+                                "/api/auth/password-reset/request",
+                                "/api/auth/password-reset/confirm",
                                 ENDPOINT_WEBSOCKET, ENDPOINT_WEBHOOKS))
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp.policyDirectives(politicaCsp()))

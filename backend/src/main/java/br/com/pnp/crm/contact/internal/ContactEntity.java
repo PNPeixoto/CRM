@@ -3,6 +3,8 @@ package br.com.pnp.crm.contact.internal;
 import br.com.pnp.crm.shared.api.UuidV7;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -21,6 +23,10 @@ class ContactEntity {
 
     @Column(nullable = false)
     private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "contact_kind", nullable = false)
+    private ContactKind kind;
 
     private String email;
     private String phone;
@@ -55,13 +61,15 @@ class ContactEntity {
         ContactEntity entity = new ContactEntity();
         entity.id = UuidV7.gerar();
         entity.tenantId = tenantId;
+        entity.kind = ContactKind.PERSON;
         entity.createdBy = autorId;
         entity.updatedBy = autorId;
         return entity;
     }
 
-    void aplicar(String name, String email, String phone, String companyName,
+    void aplicar(ContactKind kind, String name, String email, String phone, String companyName,
                  String notes, UUID ownerUserId, UUID autorId) {
+        this.kind = kind == null ? ContactKind.PERSON : kind;
         this.name = name;
         // Normaliza para vazio→null: string em branco no banco vira um valor
         // que parece preenchido em toda consulta e não é.
@@ -89,6 +97,10 @@ class ContactEntity {
 
     String getName() {
         return name;
+    }
+
+    ContactKind getKind() {
+        return kind;
     }
 
     String getEmail() {

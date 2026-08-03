@@ -7,6 +7,6 @@ import java.util.UUID;
 
 interface ChannelCredentialRepository extends JpaRepository<ChannelCredentialEntity, UUID> {
 
-    Optional<ChannelCredentialEntity> findByChannelConnectionIdAndKindAndDeletedAtIsNull(
-            UUID channelConnectionId, TipoCredencial kind);
+    Optional<ChannelCredentialEntity> findByTenantIdAndChannelConnectionIdAndKindAndDeletedAtIsNull(
+            UUID tenantId, UUID channelConnectionId, TipoCredencial kind);
 }

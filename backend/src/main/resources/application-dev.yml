@@ -1,10 +1,41 @@
 # Profile de DESENVOLVIMENTO. Nada aqui vale em produção.
 spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/crm}
+    username: ${DB_RUNTIME_USER:crm_runtime}
+    # TESTE — credencial descartável do Compose local.
+    password: ${DB_RUNTIME_PASSWORD:crm_runtime_dev_local}
+
   flyway:
     # A pasta db/dev entra apenas aqui. É por isso que o seed não tem como
     # chegar a produção: não é disciplina, é configuração — produção carrega
     # somente o que está em application.yml.
     locations: classpath:db/migration,classpath:db/dev
+    url: ${DB_MIGRATION_URL:${DB_URL:jdbc:postgresql://localhost:5432/crm}}
+    user: ${DB_MIGRATION_USER:crm_migrator}
+    # TESTE — credencial descartável do Compose local.
+    password: ${DB_MIGRATION_PASSWORD:crm_migrator_dev_local}
+
+    # SÓ EM DEV, e por causa do seed.
+    #
+    # O seed é V900 para nunca colidir com a numeração da estrutura. O efeito
+    # colateral apareceu na primeira execução real: com V900 já aplicada,
+    # qualquer migration estrutural nova (V6, V7…) tem versão MENOR que a
+    # última do histórico, e o Flyway recusa com "Detected resolved migration
+    # not applied to database".
+    #
+    # Em produção isto NÃO deve existir. Lá o seed não é carregado, então as
+    # migrations sempre entram em ordem crescente — e `out-of-order` ligado
+    # esconderia justamente o erro que ele denuncia: alguém aplicando uma
+    # migration antiga depois de uma nova, o que torna o schema dependente da
+    # ordem em que cada ambiente foi atualizado.
+    out-of-order: true
+
+  data:
+    redis:
+      # 6380 evita depender do Memurai/Redis já instalado na 6379 e deixa o
+      # ambiente do projeto autocontido no Compose.
+      url: ${REDIS_URL:redis://localhost:6380}
 
 app:
   security:
@@ -17,12 +48,24 @@ app:
     jwt-signing-key: ${JWT_SIGNING_KEY:chave-de-desenvolvimento-nao-use-em-producao}
     # TESTE — TROCAR ANTES DE PRODUÇÃO. 32 bytes em base64 (AES-256).
     channel-secret-key: ${CHANNEL_SECRET_KEY:ZGV2LWNoYW5uZWwta2V5LXRyb2Nhci1lbS1wcm9kISE=}
+    # TESTE — chave separada, também com 32 bytes decodificados.
+    mfa-secret-key: ${MFA_SECRET_KEY:ZGV2LW1mYS1zZWNyZXQta2V5LTMyLWJ5dGVzLW9rISE=}
+    # Desenvolvimento não possui provedor de e-mail; nenhum token é logado.
+    password-reset-delivery-enabled: false
     # false porque o desenvolvimento roda em http://localhost: com Secure=true
     # o navegador descarta o cookie e o refresh nunca funcionaria localmente.
     cookie-secure: false
     # Libera ws: além de wss: no CSP, pelo mesmo motivo.
     websocket-exige-tls: false
   cors:
-    # Origem do Vite. Em produção o frontend é servido pela mesma origem,
-    # atrás do proxy reverso, e esta lista fica vazia.
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+    # Origem do Vite definida em frontend/vite.config.ts. Mesmo com o proxy,
+    # o navegador envia Origin e o backend precisa validar essa origem. Em
+    # produção o frontend é servido pela mesma origem e esta lista fica vazia.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5174}
+
+server:
+  forward-headers-strategy: none
+
+logging:
+  level:
+    br.com.pnp.crm: DEBUG

@@ -3,6 +3,7 @@ package br.com.pnp.crm.identity.internal;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -36,7 +37,10 @@ final class AuthDtos {
 
             @NotBlank(message = "Informe a senha.")
             @Size(max = 200)
-            String senha) {
+            String senha,
+
+            @Size(max = 64)
+            String codigoMfa) {
     }
 
     /**
@@ -48,7 +52,8 @@ final class AuthDtos {
     record SessaoResponse(
             String accessToken,
             long expiraEmSegundos,
-            UsuarioResponse usuario) {
+            UsuarioResponse usuario,
+            boolean mfaVerificado) {
     }
 
     /**
@@ -59,5 +64,30 @@ final class AuthDtos {
      * destino pedido com o tenant do token verificado.
      */
     record UsuarioResponse(UUID id, UUID tenantId, String login, String nomeCompleto) {
+    }
+
+    record MfaEnrollmentResponse(String desafio, String segredo,
+                                 String otpauthUri, long expiraEmSegundos) {
+    }
+
+    record MfaActivationRequest(
+            @NotBlank @Size(max = 100) String desafio,
+            @NotBlank @Size(max = 64) String codigo) {
+    }
+
+    record MfaActivationResponse(SessaoResponse sessao, List<String> codigosRecuperacao) {
+        MfaActivationResponse {
+            codigosRecuperacao = List.copyOf(codigosRecuperacao);
+        }
+    }
+
+    record PasswordResetRequest(
+            @NotBlank @Size(max = 50) String empresa,
+            @NotBlank @Size(max = 254) String identificador) {
+    }
+
+    record PasswordResetConfirmation(
+            @NotBlank @Size(max = 100) String codigo,
+            @NotBlank @Size(max = PasswordPolicy.MAXIMUM_LENGTH) String novaSenha) {
     }
 }
