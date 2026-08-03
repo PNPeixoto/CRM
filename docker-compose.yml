@@ -1,14 +1,17 @@
-# Ambiente de DESENVOLVIMENTO apenas.
+# Única composição de DESENVOLVIMENTO. Produção usa artefato versionado e
+# configuração externa; este arquivo nunca é promovido como deploy.
+name: crm-pnp
+
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: crm-postgres
     environment:
       POSTGRES_DB: crm
-      POSTGRES_USER: crm
+      # Papel administrativo, usado somente pelo Flyway.
+      POSTGRES_USER: crm_migrator
       # TESTE — TROCAR ANTES DE PRODUÇÃO.
       # Em produção vem de variável de ambiente, nunca de arquivo versionado.
-      POSTGRES_PASSWORD: crm_dev_local
+      POSTGRES_PASSWORD: crm_migrator_dev_local
     ports:
       # 127.0.0.1 é proposital: o Docker publica em 0.0.0.0 por padrão e
       # ignora o firewall do sistema. Sem isso, seu banco fica exposto na
@@ -16,22 +19,69 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init-runtime-user.sql:/docker-entrypoint-initdb.d/10-runtime-user.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U crm -d crm"]
+      test: ["CMD-SHELL", "pg_isready -U crm_migrator -d crm"]
       interval: 5s
       timeout: 3s
       retries: 10
 
   redis:
     image: redis:7-alpine
-    container_name: crm-redis
     ports:
-      - "127.0.0.1:6379:6379"
+      # A 6379 desta máquina já pode pertencer ao Memurai. O projeto usa 6380
+      # no host e 6379 apenas dentro da rede do Compose.
+      - "127.0.0.1:6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
+
+  app:
+    image: crm-pnp-backend:${APP_IMAGE_TAG:-0.0.1-dev}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-0.0.1-dev}
+        VCS_REF: ${VCS_REF:-working-tree}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/crm
+      DB_RUNTIME_USER: crm_runtime
+      # TESTE — credencial descartável, exclusiva desta composição local.
+      DB_RUNTIME_PASSWORD: crm_runtime_dev_local
+      DB_MIGRATION_URL: jdbc:postgresql://postgres:5432/crm
+      DB_MIGRATION_USER: crm_migrator
+      # TESTE — credencial descartável, exclusiva desta composição local.
+      DB_MIGRATION_PASSWORD: crm_migrator_dev_local
+      REDIS_URL: redis://redis:6379
+      CORS_ALLOWED_ORIGINS: http://localhost:5174
+    ports:
+      - "127.0.0.1:8080:8080"
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 768m
+    cpus: 1.0
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "2", "-O", "/dev/null", "http://127.0.0.1:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      start_period: 45s
+      retries: 6
 
 volumes:
   postgres_data:

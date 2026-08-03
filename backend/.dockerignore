@@ -1,0 +1,13 @@
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+target
+*.iml
+.env
+.env.*
+*.pem
+*.p12
+*.jks
+HELP.md

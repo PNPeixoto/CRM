@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  contrato-e-testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Verificar backend e snapshot OpenAPI
+        working-directory: backend
+        run: ./mvnw test
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Instalar frontend
+        working-directory: frontend
+        run: npm ci --legacy-peer-deps
+      - name: Reprovar contrato TypeScript desatualizado
+        working-directory: frontend
+        run: npm run api:check
+      - name: Verificar frontend
+        working-directory: frontend
+        run: npm run lint && npm test && npm run build
