@@ -70,10 +70,19 @@ jobs:
         working-directory: frontend
         run: npm audit --json | node ../.github/security/verificar-dependencias.mjs
 
-      # Só roda em pull request: compara a árvore de dependências contra a base
-      # e reprova o que a mudança introduz de novo.
+      # Compara a árvore de dependências contra a base do PR e reprova o que a
+      # mudança introduz de novo.
+      #
+      # A condição de visibilidade não é otimização: em repositório PRIVADO
+      # esta ação exige GitHub Advanced Security, que é pago. Sem a condição, o
+      # passo falharia em toda execução — e um passo que sempre falha é
+      # desligado por alguém em duas semanas, junto com o resto do job.
+      #
+      # Enquanto o repositório for privado sem GHAS, a cobertura de dependência
+      # do backend fica com o Dependabot (alertas de segurança, gratuitos em
+      # repositório privado) — ver SEC-017.
       - name: Revisar dependências introduzidas pelo PR
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.repository.private == false
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high

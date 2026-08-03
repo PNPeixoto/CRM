@@ -14,7 +14,7 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 |---|---|---|---|
 | Crítico | 0 | 0 | 0 |
 | Alto | 0 | 1 | 1 |
-| Médio | 6 | 1 | 0 |
+| Médio | 7 | 1 | 0 |
 | Baixo | 5 | 0 | 2 |
 
 ---
@@ -245,3 +245,27 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
   inferência e não observação.
 - **Correção mínima:** enviar os commits e conferir a execução.
 - **Responsável:** PNPeixoto · **Prazo:** antes do próximo prompt
+
+### `SEC-017` — Dependências do backend não são varridas pelo CI
+
+- **Capítulo:** V13 · **Severidade:** média
+- **Descoberto em:** 2026-08-03, ao conferir o CI depois do push.
+- **Situação:** o job `seguranca` cobre o frontend por `npm audit` mais o
+  verificador de exceções. A cobertura do backend dependia do
+  `dependency-review-action`, que **exige GitHub Advanced Security em
+  repositório privado** — e este repositório é privado. O passo ficou
+  condicionado a repositório público para não falhar em toda execução; um
+  passo que sempre falha é desligado por alguém em duas semanas, junto com o
+  resto do job.
+- **Consequência concreta:** a CVE-2026-59889 do `jackson-databind`, corrigida
+  no Prompt 07, foi encontrada por `docker scout` **local**. Nada no CI a teria
+  encontrado. A próxima passa despercebida.
+- **Controles compensatórios hoje:** alertas do Dependabot, gratuitos em
+  repositório privado, mas que **precisam estar habilitados nas configurações
+  do repositório** — é ajuste de interface, não de código, e não dá para
+  verificar daqui; e varredura local de imagem, que depende de alguém lembrar.
+- **Correção mínima:** varredura de dependência Maven que funcione em
+  repositório privado, executada no CI. Alternativas: `docker scout cves` com
+  credencial no pipeline, OWASP dependency-check com chave da NVD, ou tornar o
+  repositório público quando isso for aceitável.
+- **Responsável:** PNPeixoto · **Prazo:** Prompt 08

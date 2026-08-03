@@ -59,12 +59,11 @@ backlog de segurança.
   chave e contrato de idempotência explícitos.
 - CI verifica backend, snapshot OpenAPI, geração TypeScript sem diff, lint,
   testes e build do frontend.
-- Job de segurança no CI: gitleaks no histórico completo, auditoria de
-  dependência e revisão em PR. A exceção exige responsável, prazo e fundamento,
-  e o gate **reprova quando o prazo vence**. Dependabot acompanha maven, npm,
-  github-actions e docker.
-- Baseline ASVS 5.0.0 nível 2, threat models por fluxo e backlog priorizado em
-  `contexto/seguranca/`.
+- Job de segurança no CI: gitleaks no histórico completo e auditoria de
+  dependência do frontend, com exceção nomeada que exige responsável, prazo e
+  fundamento — o gate **reprova quando o prazo vence**. Dependabot acompanha
+  maven, npm, github-actions e docker.
+- Baseline ASVS 5.0.0 nível 2, threat models e backlog em `contexto/seguranca/`.
 - CSP no documento da SPA, verificada no navegador em modo `enforce`; sem
   `eval`, `innerHTML` nem HTML arbitrário, com teste de contrato que reprova a
   regressão. Cadeia de build fixada e source map de produção não publicado.
@@ -117,11 +116,13 @@ backlog de segurança.
 
 ## Próximo passo
 
-1. Enviar os commits e conferir a execução do job `seguranca` no CI, que nunca
-   rodou — `SEC-016`.
-2. Executar `backend:08`, com `SEC-001`, `SEC-003`, `SEC-006`, `SEC-012` e
-   `SEC-015` endereçados a ele.
-3. Seguir para `backend:09` e `frontend:F5`.
+1. Conferir no GitHub a execução do job `seguranca` — enviado em 2026-08-03,
+   resultado não observável daqui porque o repositório é privado.
+2. Habilitar alertas do Dependabot nas configurações do repositório: hoje é o
+   único controle de dependência do backend — `SEC-017`.
+3. Executar `backend:08`, com `SEC-001`, `SEC-003`, `SEC-006`, `SEC-012`,
+   `SEC-015` e `SEC-017` endereçados a ele.
+4. Seguir para `backend:09` e `frontend:F5`.
 
 ## Riscos restantes
 
@@ -140,11 +141,10 @@ backlog de segurança.
   OpenAPI público, ausência de limite de taxa e de tamanho de corpo fora do
   login, deriva de schema não detectada, inscrição WebSocket que sobrevive à
   revogação, e falha de infraestrutura que se apresenta como falha de teste.
-- Herdados de autenticação: blocklist inicial, reset dependente de provedor
-  externo, TOTP sem resistência a phishing, e janela de até 15 min entre
-  revogar o refresh e o access token expirar.
+- Herdados de autenticação: blocklist inicial, reset por provedor externo,
+  TOTP sem resistência a phishing, e janela de até 15 min na revogação.
 - As duas altas do `npm audit` são de RSC no `react-router`, que este frontend
   não usa. A exceção expira em 2026-11-30 e o gate reprova quando vencer.
 - O broker STOMP em memória ainda impede escala horizontal.
-- Exportação e job não existem como superfície; a revalidação exigida pelo
-  Prompt 06 é herdada por `Autorizacao` e comprovada no Prompt 21.
+- Exportação e job não existem; a revalidação exigida pelo Prompt 06 é herdada
+  por `Autorizacao` e comprovada no Prompt 21.

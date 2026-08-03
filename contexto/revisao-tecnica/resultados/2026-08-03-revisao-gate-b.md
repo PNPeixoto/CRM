@@ -175,15 +175,40 @@ preservação de consulta e âncora.
   pessoal — mas isso é inferência, não observação.
 - **Correção mínima:** enviar os commits e conferir a execução do workflow.
 
+> **Encaminhado em 2026-08-03, com resultado parcial.** Os dez commits foram
+> enviados. Duas verificações e um achado:
+>
+> - **Licença do gitleaks: confirmada na fonte oficial**, não mais inferida.
+>   É exigida apenas para repositório de organização; conta pessoal não precisa,
+>   inclusive em repositório privado.
+> - **A execução do workflow permanece não observada.** O repositório é privado
+>   e a API responde 404 sem credencial. Conferir o resultado é do responsável
+>   humano — não peço nem uso token para isso.
+> - **Achado novo, `SEC-017`:** ao conferir o CI, apareceu que
+>   `actions/dependency-review-action` **exige GitHub Advanced Security em
+>   repositório privado**. O passo falharia em toda execução. Foi condicionado a
+>   repositório público, e a cobertura de dependência do backend ficou
+>   descoberta no CI.
+>
+> Isto valida o próprio achado: um controle verificado só localmente não é um
+> controle. Bastou o primeiro contato com o ambiente real para revelar um passo
+> que não funcionaria ali.
+
 ---
 
 ## Veredito
 
 **Gate B — APROVADO.**
 
-Os oito critérios são atendidos. Duas ressalvas ficam registradas e nenhuma
-delas bloqueia: `SEC-015` é baixa e estrutural; `SEC-016` é de operação e se
-resolve com um push.
+Os oito critérios são atendidos. As ressalvas ficam registradas e nenhuma
+bloqueia: `SEC-015` é baixa e estrutural; `SEC-016` era de operação e foi
+encaminhada com o push; `SEC-017` surgiu desse push e é média, mas não desfaz
+nenhum critério — a varredura de dependência do **frontend** segue no gate, e a
+do backend passa a depender do Dependabot enquanto o repositório for privado.
+
+Se `SEC-017` não for tratada até o Prompt 08, ela deixa de ser aceitável: a
+CVE do `jackson-databind` que este mesmo gate corrigiu foi encontrada por
+varredura local, e a próxima passaria despercebida.
 
 A lacuna dos guards foi encontrada **por esta revisão** e fechada antes do
 veredito, o que é o comportamento certo — mas também mostra o limite de revisar
