@@ -14,7 +14,7 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 |---|---|---|---|
 | Crítico | 0 | 0 | 0 |
 | Alto | 0 | 1 | 1 |
-| Médio | 7 | 1 | 0 |
+| Médio | 8 | 1 | 0 |
 | Baixo | 5 | 0 | 2 |
 
 ---
@@ -269,3 +269,25 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
   credencial no pipeline, OWASP dependency-check com chave da NVD, ou tornar o
   repositório público quando isso for aceitável.
 - **Responsável:** PNPeixoto · **Prazo:** Prompt 08
+
+### `SEC-018` — Não existe interface de cadastro de MFA, e isso impede todo login administrativo
+
+- **Capítulo:** V6 · **Severidade:** média (alta como impedimento operacional)
+- **Descoberto em:** 2026-08-03, ao investigar um login que não funcionava.
+- **Situação:** MFA é obrigatório para `OWNER`, `ADMIN` e `SUPERADMIN`. O
+  backend responde 422 `MFA_CADASTRO_NECESSARIO` no login desses perfis, e o
+  frontend **não tem nenhuma tela** de cadastro ou de informe do código. O
+  resultado é que nenhum administrador consegue entrar pela interface — o
+  usuário de desenvolvimento `peixoto` inclusive.
+- **O que agravava:** a tela de entrada colapsava toda falha em "Empresa,
+  login ou senha inválidos", inclusive esta. A pessoa via uma acusação falsa e
+  repetia uma senha que já estava certa. **Corrigido**: códigos que só
+  alcançam quem já provou a senha passaram a ter mensagem própria, e o resto
+  continua uniforme.
+- **Correção:** telas de cadastro e de verificação do segundo fator,
+  consumindo `POST /api/auth/mfa/enrollment` e `POST /api/auth/mfa/activation`,
+  que já existem e estão testados no backend.
+- **Contorno hoje:** entrar com um usuário não administrativo, ou cadastrar o
+  MFA pela API.
+- **Responsável:** PNPeixoto · **Prazo:** antes de qualquer piloto; é
+  trabalho de trilha de frontend, não de correção pontual.

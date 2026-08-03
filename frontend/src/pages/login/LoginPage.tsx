@@ -4,6 +4,7 @@ import { AlertaErro } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ApiError } from '@/lib/api';
 import { useAuth } from '@/shared/auth/AuthContext';
 import { destinoInternoSeguro } from '@/shared/auth/destinoSeguro';
 
@@ -16,6 +17,28 @@ import { destinoInternoSeguro } from '@/shared/auth/destinoSeguro';
  * um 404 de forma diferente de um 401.
  */
 const MENSAGEM_FALHA = 'Empresa, login ou senha inválidos.';
+
+/**
+ * Resultados que **não** são falha de credencial e não podem usar a mensagem
+ * uniforme acima.
+ *
+ * A uniformidade existe para não contar a quem está de fora se a empresa, o
+ * login ou a senha é que estavam errados. Estes códigos só alcançam quem já
+ * provou a senha correta — ou seja, não revelam nada que o interlocutor ainda
+ * não soubesse — e descrevem uma ação a tomar.
+ *
+ * Escondê-los atrás de "senha inválida" transforma um pedido de segundo fator
+ * em uma acusação falsa, e deixa a pessoa tentando de novo uma senha que já
+ * estava certa.
+ */
+const MENSAGEM_POR_CODIGO: Readonly<Record<string, string>> = {
+  MFA_CADASTRO_NECESSARIO:
+    'Sua senha está correta. Este perfil exige verificação em duas etapas, '
+    + 'que ainda não foi cadastrada. Conclua o cadastro do segundo fator para entrar.',
+  MFA_NECESSARIO: 'Informe o código de verificação em duas etapas.',
+  MFA_INVALIDO: 'Código de verificação inválido ou expirado.',
+  MFA_CADASTRO_INVALIDO: 'O cadastro do segundo fator expirou. Comece de novo.',
+};
 
 interface EstadoDeOrigem {
   readonly de?: string;
@@ -49,12 +72,15 @@ export function LoginPage() {
     try {
       await entrar(empresa.trim(), login.trim(), senha);
       navegar(destino, { replace: true });
-    } catch {
-      // O detalhe fica no log do servidor, com id de correlação. Aqui não há
-      // o que diferenciar: credencial errada, conta bloqueada e empresa
-      // inexistente precisam ser indistinguíveis para quem está do lado de
-      // fora tentando descobrir o que existe.
-      setErro(MENSAGEM_FALHA);
+    } catch (falha) {
+      // Credencial errada, conta bloqueada e empresa inexistente permanecem
+      // indistinguíveis: quem está do lado de fora não pode descobrir o que
+      // existe. O detalhe fica no log do servidor, com id de correlação.
+      //
+      // O que passa por aqui e NÃO é falha de credencial recebe a própria
+      // mensagem — ver MENSAGEM_POR_CODIGO.
+      const codigo = falha instanceof ApiError ? falha.codigo : null;
+      setErro((codigo && MENSAGEM_POR_CODIGO[codigo]) ?? MENSAGEM_FALHA);
     } finally {
       setEnviando(false);
     }
