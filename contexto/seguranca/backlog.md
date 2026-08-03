@@ -14,8 +14,8 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 |---|---|---|---|
 | Crítico | 0 | 0 | 0 |
 | Alto | 0 | 1 | 1 |
-| Médio | 5 | 1 | 0 |
-| Baixo | 4 | 0 | 2 |
+| Médio | 6 | 1 | 0 |
+| Baixo | 5 | 0 | 2 |
 
 ---
 
@@ -220,3 +220,28 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 | `AUDIT-001` | Trilha de auditoria não existe; é P0 do produto | Gate E | 17 |
 | `AUTZ-002` (resíduo) | Frontend não consome `/organizacao/contextos` nem `/organizacao/permissoes`; seletor de unidade alimentado por lista fabricada | Gate C | trilha frontend |
 | ADR-0008 | Escopo por unidade depende de `unit_id` nas tabelas de domínio | — | migration futura |
+
+---
+
+## Acrescentados pela revisão do Gate B, 2026-08-03
+
+### `SEC-015` — Mass assignment garantido por configuração verificada em um só profile
+
+- **Capítulo:** V2 · **Severidade:** baixa
+- **Situação:** a proteção é `fail-on-unknown-properties: true`, global, mais
+  um DTO por caso de uso. Existe **um** teste que a exercita, sob o profile
+  `test`. Desligar a propriedade em outro profile não seria detectado.
+- **Correção mínima:** teste que leia a propriedade efetiva do profile de
+  produção, ou um caso de rejeição em endpoint de domínio além do atual.
+- **Responsável:** PNPeixoto · **Prazo:** Prompt 08
+
+### `SEC-016` — O gate de segurança do CI nunca executou
+
+- **Capítulo:** V13 · **Severidade:** média para a operação
+- **Situação:** o job `seguranca` foi verificado passo a passo na máquina, e o
+  workflow nunca rodou no GitHub Actions — os commits são locais.
+- **Risco concreto:** `gitleaks/gitleaks-action@v2` exige licença em
+  repositório de organização. Este é pessoal, onde é gratuito, mas isso é
+  inferência e não observação.
+- **Correção mínima:** enviar os commits e conferir a execução.
+- **Responsável:** PNPeixoto · **Prazo:** antes do próximo prompt

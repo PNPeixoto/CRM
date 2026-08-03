@@ -1,16 +1,17 @@
 # Estado atual
 
 > Reescrito ao fim de cada sessão. Máximo 150 linhas.
-> Última atualização: 2026-08-03 15:05 (America/Montevideo)
+> Última atualização: 2026-08-03 15:50 (America/Montevideo)
 
 ## Onde parei
 
 Os Prompts backend 00–07 e frontend F0–F4 estão concluídos. Os Gates A e B
-estão **fechados**.
+estão **fechados**; a revisão integrada do Gate B foi executada em 2026-08-03
+e está em `contexto/revisao-tecnica/resultados/`.
 
-O backend está na migration V11 com 112 testes verdes; o frontend tem 86.
-Próximo passo é a revisão integrada do Gate B e, em seguida, `backend:08` —
-que já tem quatro itens endereçados a ele no backlog de segurança.
+O backend está na migration V11 com 112 testes verdes; o frontend tem 89.
+Próximo passo é `backend:08`, que já tem seis itens endereçados a ele no
+backlog de segurança.
 
 ## Implementado
 
@@ -93,7 +94,7 @@ que já tem quatro itens endereçados a ele no backlog de segurança.
 - Flyway limpo até V11, caminho de atualização e os 14 artefatos do conjunto de
   migrations + seeds `dev` verificados.
 - Benchmark Argon2id local: média de 103 ms, cinco amostras após aquecimento.
-- Frontend: 86 testes em 18 arquivos, todos verdes.
+- Frontend: 89 testes em 19 arquivos, todos verdes.
 - `npm run api:check` passou em 2026-08-01; build de produção reexecutado em
   2026-08-03, sem script inline e sem source map.
 - Lint frontend sem erros; permanecem três avisos conhecidos de Fast Refresh.
@@ -116,9 +117,10 @@ que já tem quatro itens endereçados a ele no backlog de segurança.
 
 ## Próximo passo
 
-1. Revisão integrada do Gate B, consolidando backend 05–07 e frontend F4A/F4.
-2. Executar `backend:08`, que já tem quatro itens endereçados no backlog de
-   segurança: `SEC-001`, `SEC-003`, `SEC-006` e `SEC-012`.
+1. Enviar os commits e conferir a execução do job `seguranca` no CI, que nunca
+   rodou — `SEC-016`.
+2. Executar `backend:08`, com `SEC-001`, `SEC-003`, `SEC-006`, `SEC-012` e
+   `SEC-015` endereçados a ele.
 3. Seguir para `backend:09` e `frontend:F5`.
 
 ## Riscos restantes
@@ -129,22 +131,20 @@ que já tem quatro itens endereçados a ele no backlog de segurança.
 - O seletor de contexto do frontend segue alimentado por lista fabricada no
   cliente; `/api/organizacao/contextos` e `/api/organizacao/permissoes` ainda não
   têm consumidor.
-- `frame-ancestors` é ignorada pelo navegador quando vem em `<meta>`. Ela exige
-  cabeçalho do servidor de estáticos, que não existe no repositório: hoje a
-  proteção contra clickjacking do documento depende de configuração externa não
-  versionada.
+- `frame-ancestors` é ignorada em `<meta>` e exige cabeçalho do servidor de
+  estáticos, que não existe no repositório: a proteção contra clickjacking do
+  documento depende hoje de configuração externa não versionada.
 - Auditoria — classificada P0 pelo próprio produto — não existe (AUDIT-001);
   bloqueia o Gate E.
-- Cinco riscos médios abertos em `contexto/seguranca/backlog.md`: contrato
+- Seis riscos médios abertos em `contexto/seguranca/backlog.md`: contrato
   OpenAPI público, ausência de limite de taxa e de tamanho de corpo fora do
   login, deriva de schema não detectada, inscrição WebSocket que sobrevive à
   revogação, e falha de infraestrutura que se apresenta como falha de teste.
-- Herdados de autenticação: blocklist de senha inicial, entrega de reset
-  dependente de provedor externo, TOTP sem resistência a phishing, e janela de
-  até 15 minutos entre revogar o refresh e o access token expirar.
-- As duas vulnerabilidades altas do `npm audit` são de RSC no `react-router`,
-  que este frontend não usa. Exceção nomeada expira em 2026-11-30 e o gate
-  reprova quando vencer.
+- Herdados de autenticação: blocklist inicial, reset dependente de provedor
+  externo, TOTP sem resistência a phishing, e janela de até 15 min entre
+  revogar o refresh e o access token expirar.
+- As duas altas do `npm audit` são de RSC no `react-router`, que este frontend
+  não usa. A exceção expira em 2026-11-30 e o gate reprova quando vencer.
 - O broker STOMP em memória ainda impede escala horizontal.
 - Exportação e job não existem como superfície; a revalidação exigida pelo
   Prompt 06 é herdada por `Autorizacao` e comprovada no Prompt 21.
