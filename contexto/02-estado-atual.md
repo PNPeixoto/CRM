@@ -111,9 +111,11 @@ executáveis: `backend:07` e `frontend:F4A`; F4 depende de F4A.
 
 ## Riscos restantes
 
-- **O compose em execução não corresponde ao código-fonte**: a imagem é de V8 e
-  o código está em V11. Teste manual contra `localhost:8080` exercita build
-  velha (ENV-001).
+- O compose pode voltar a divergir do código: a imagem é escolhida por
+  `APP_IMAGE_TAG`, e uma tag antiga que fique no ambiente sobe uma build velha
+  sem nenhum aviso. Foi assim que ENV-001 aconteceu. Enquanto não existir
+  verificação de readiness comparando a versão de schema esperada com a
+  aplicada, a defesa é operacional: subir com `--build` ou com tag do commit.
 - Alcance por unidade não decide sobre registro de domínio: nenhuma tabela de
   domínio declara unidade. Falha fechada por decisão registrada em ADR-0008; a
   saída é migration aditiva com regra de backfill.

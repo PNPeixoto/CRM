@@ -18,10 +18,10 @@
 > resolvido, AUTZ-002 parcialmente e GOV-001 resolvido; a suíte passou de 82
 > para 112 testes, todos verdes.
 >
-> **Piloto controlado** deixa de estar bloqueado por ausência de autorização e
-> por rastreabilidade, e passa a depender apenas de ENV-001 — operacional, ainda
-> não tocado. Auditoria (AUDIT-001) segue inexistente, então **produção — não
-> apto** não muda.
+> ENV-001 também foi resolvido: a pilha foi reconstruída no commit `a603534` e
+> serve o contrato versionado. **Piloto controlado** deixa de estar bloqueado
+> pelos três — autorização, rastreabilidade e ambiente. Auditoria (AUDIT-001)
+> segue inexistente, então **produção — não apto** não muda.
 >
 > Uma revisão corretiva em 2026-08-03 encontrou oito lacunas na primeira
 > implementação do Prompt 06, três delas de exposição real: recursos coletivos
@@ -249,6 +249,14 @@ propriedades de teste aparecem apenas por nome.
 > nasce junto com a migration prevista no ADR-0008.
 
 ### `[P1] ENV-001 — O ambiente de desenvolvimento em execução não corresponde ao código-fonte`
+
+> **Resolvido em 2026-08-03.** A imagem foi reconstruída no commit `a603534` e
+> a pilha recriada. Flyway chegou a V11, as tabelas organizacionais e de MFA
+> existem, e o seed traz `ATTENDANT`/`ATTENDANT_SHARED`. A prova de que a pilha
+> roda o código atual é o contrato servido: o `/v3/api-docs` do contêiner é
+> idêntico ao snapshot versionado, exceto por `servers[0].url`, que reflete o
+> host da requisição. Permanece a recomendação de readiness comparando schema
+> esperado e aplicado — sem ela, a divergência volta em silêncio.
 
 - **Tipo:** operação / evidência
 - **Certeza:** confirmado
