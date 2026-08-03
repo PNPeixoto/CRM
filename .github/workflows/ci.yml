@@ -33,3 +33,47 @@ jobs:
       - name: Verificar frontend
         working-directory: frontend
         run: npm run lint && npm test && npm run build
+
+  # Segurança de cadeia de suprimentos. Job separado de propósito: um achado
+  # aqui precisa ser legível como "o que reprovou foi segurança", e não sumir
+  # no meio do log de testes.
+  seguranca:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks precisa do histórico: segredo removido no commit seguinte
+          # continua no histórico e continua vazado.
+          fetch-depth: 0
+
+      - name: Procurar segredo versionado
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar frontend
+        working-directory: frontend
+        run: npm ci --legacy-peer-deps
+
+      # `npm audit` sozinho reprovaria por vulnerabilidade que não alcança esta
+      # aplicação, e o hábito de contornar com `|| true` desliga o controle
+      # inteiro. O verificador exige exceção nomeada, com responsável e prazo,
+      # e reprova quando o prazo vence.
+      - name: Auditar dependências do frontend
+        working-directory: frontend
+        run: npm audit --json | node ../.github/security/verificar-dependencias.mjs
+
+      # Só roda em pull request: compara a árvore de dependências contra a base
+      # e reprova o que a mudança introduz de novo.
+      - name: Revisar dependências introduzidas pelo PR
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

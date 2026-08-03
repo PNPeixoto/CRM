@@ -1,17 +1,19 @@
 # Estado atual
 
 > Reescrito ao fim de cada sessão. Máximo 150 linhas.
-> Última atualização: 2026-08-03 08:40 (America/Montevideo)
+> Última atualização: 2026-08-03 12:15 (America/Montevideo)
 
 ## Onde parei
 
-Os Prompts backend 00–06 e frontend F0–F3 estão concluídos. O Gate A está
-fechado. O Gate B **continua aberto**: a parte de autorização foi suprida pelo
-Prompt 06, e faltam o baseline ASVS/threat model do Prompt 07 e as provas
-frontend F4A/F4.
+Os Prompts backend 00–07 e frontend F0–F3 estão concluídos. O Gate A está
+fechado. O Gate B está **aprovado do lado backend** e **aberto no conjunto**:
+faltam as provas de frontend F4A e F4. Autorização, sessão e supply chain de
+backend estão cobertas; segurança de navegador é a metade que falta.
 
-O backend está na migration V11 e a suíte tem 112 testes verdes. Próximos
-executáveis: `backend:07` e `frontend:F4A`; F4 depende de F4A.
+O backend está na migration V11 e a suíte tem 112 testes verdes. Próximo
+executável: `frontend:F4A`; F4 depende dele. `backend:08` fica para depois da
+revisão do Gate B, e já tem quatro itens endereçados a ele no backlog de
+segurança.
 
 ## Implementado
 
@@ -59,6 +61,13 @@ executáveis: `backend:07` e `frontend:F4A`; F4 depende de F4A.
   chave e contrato de idempotência explícitos.
 - CI verifica a suíte backend, snapshot OpenAPI, geração TypeScript sem diff,
   lint, testes e build frontend.
+- Job de segurança no CI: gitleaks sobre o histórico completo, auditoria de
+  dependência com exceção nomeada e revisão de dependência em PR. A exceção
+  exige responsável, prazo e fundamento, e o gate **reprova quando o prazo
+  vence** — aceite sem prazo vira permissão permanente.
+- Dependabot acompanha maven, npm, github-actions e docker.
+- Baseline ASVS 5.0.0 nível 2, threat models por fluxo e backlog priorizado em
+  `contexto/seguranca/`.
 
 ## Migrations atuais
 
@@ -75,7 +84,7 @@ executáveis: `backend:07` e `frontend:F4A`; F4 depende de F4A.
 
 ## Verificado nesta máquina
 
-- Baseline `bb22187`, branch `main`, Windows/JDK 25.0.4 e Docker Desktop 29.6.2.
+- Baseline `a603534` + árvore desta sessão, branch `main`, Windows/JDK 25.0.4 e Docker Desktop 29.6.2.
 - Backend: 112 testes, 0 falhas, 0 erros, 0 ignorados; PostgreSQL/Redis reais com
   runtime restrito `crm_runtime_test`.
 - Flyway limpo até V11, caminho de atualização e os 14 artefatos do conjunto de
@@ -90,7 +99,7 @@ executáveis: `backend:07` e `frontend:F4A`; F4 depende de F4A.
 
 - `contexto/prompts/manifest.yaml` v3 é a trilha backend canônica.
 - `contexto/prompts/frontend/manifest.yaml` v4 é a trilha frontend companheira.
-- Prompts 00–06 e F0–F3 estão marcados como `completed`; a revisão corretiva do
+- Prompts 00–07 e F0–F3 estão marcados como `completed`; a revisão corretiva do
   Prompt 06 está registrada na sessão de 2026-08-03.
 - ADRs individuais registram banco, modelo organizacional, autenticação e o
   alcance de autorização (ADR-0008).
@@ -104,31 +113,33 @@ executáveis: `backend:07` e `frontend:F4A`; F4 depende de F4A.
 
 ## Próximo passo
 
-1. Executar `backend:07` para baseline ASVS e threat model.
-2. Em paralelo de trilha, executar `frontend:F4A` para segurança do navegador e
-   supply chain; depois `frontend:F4` para sessão/refresh na UX.
-3. Fechar o Gate B somente após 07 e as evidências frontend associadas.
+1. Executar `frontend:F4A` para segurança do navegador e supply chain; depois
+   `frontend:F4` para sessão/refresh na UX.
+2. Revisão integrada do Gate B, consolidando backend 05–07 e frontend F4A/F4.
+3. Executar `backend:08`, que já tem quatro itens endereçados no backlog de
+   segurança: `SEC-001`, `SEC-003`, `SEC-006` e `SEC-012`.
 
 ## Riscos restantes
 
-- O compose pode voltar a divergir do código: a imagem é escolhida por
-  `APP_IMAGE_TAG`, e uma tag antiga que fique no ambiente sobe uma build velha
-  sem nenhum aviso. Foi assim que ENV-001 aconteceu. Enquanto não existir
-  verificação de readiness comparando a versão de schema esperada com a
-  aplicada, a defesa é operacional: subir com `--build` ou com tag do commit.
 - Alcance por unidade não decide sobre registro de domínio: nenhuma tabela de
   domínio declara unidade. Falha fechada por decisão registrada em ADR-0008; a
   saída é migration aditiva com regra de backfill.
 - O seletor de contexto do frontend segue alimentado por lista fabricada no
   cliente; `/api/organizacao/contextos` e `/api/organizacao/permissoes` ainda não
   têm consumidor.
-- Auditoria — classificada P0 pelo próprio produto — não existe (AUDIT-001).
+- Auditoria — classificada P0 pelo próprio produto — não existe (AUDIT-001);
+  bloqueia o Gate E.
+- Cinco riscos médios abertos em `contexto/seguranca/backlog.md`: contrato
+  OpenAPI público, ausência de limite de taxa e de tamanho de corpo fora do
+  login, deriva de schema não detectada, inscrição WebSocket que sobrevive à
+  revogação, e falha de infraestrutura que se apresenta como falha de teste.
 - A blocklist de senha é inicial; precisa de fonte mantida antes da produção pública.
 - Entrega de reset exige URL HTTPS/provedor configurado externamente em produção.
 - TOTP não é resistente a phishing; passkeys/WebAuthn seguem como evolução.
 - Revogar refresh não invalida access token já emitido; janela máxima é 15 minutos.
-- O `npm audit` registra duas vulnerabilidades altas; correção potencialmente
-  incompatível pertence ao F4A e não foi aplicada automaticamente.
+- As duas vulnerabilidades altas do `npm audit` são de RSC no `react-router` e
+  não alcançam este frontend, que usa só `BrowserRouter`. Exceção nomeada com
+  prazo em 2026-11-30; o gate reprova quando vencer.
 - O broker STOMP em memória ainda impede escala horizontal.
 - Exportação e job não existem como superfície; a revalidação que o Prompt 06
   exige para eles é herdada por `Autorizacao` quando forem criados, e o Prompt 21

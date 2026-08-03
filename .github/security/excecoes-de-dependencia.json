@@ -1,0 +1,31 @@
+{
+  "$comentario": [
+    "Exceções de vulnerabilidade aceitas conscientemente. Cada entrada precisa",
+    "de responsável, prazo e fundamento — exceção informal não é aceite.",
+    "O verificador REPROVA quando o prazo vence, de modo que um risco aceito",
+    "não pode apodrecer em silêncio: ou é corrigido, ou é reavaliado e tem o",
+    "prazo renovado por decisão explícita, que fica no histórico do git."
+  ],
+  "excecoes": [
+    {
+      "id": "GHSA-qwww-vcr4-c8h2",
+      "pacote": "react-router / react-router-dom",
+      "severidade": "high",
+      "expira_em": "2026-11-30",
+      "responsavel": "PNPeixoto",
+      "fundamento": [
+        "O aviso oficial declara que a falha só afeta quem usa as APIs RSC",
+        "instáveis. Este frontend usa exclusivamente BrowserRouter, em modo",
+        "declarativo — nenhum código importa API de RSC ou de framework mode.",
+        "A correção upstream é a 8.3.0, uma major: aplicá-la é migração de",
+        "roteador, não atualização de segurança, e trocar um risco que não nos",
+        "alcança por uma migração ampla é piorar o risco real.",
+        "Reavaliar quando a trilha de frontend chegar ao F4A, que já trata",
+        "supply chain, ou antes se o projeto adotar RSC — nesse dia a exceção",
+        "deixa de valer imediatamente."
+      ],
+      "fonte": "https://github.com/advisories/GHSA-qwww-vcr4-c8h2",
+      "verificado_em": "2026-08-03"
+    }
+  ]
+}

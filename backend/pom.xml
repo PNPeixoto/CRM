@@ -32,6 +32,14 @@
 		<!-- Override temporário do BOM do Spring Boot: 42.7.11 é afetado pela
 		     CVE-2026-54291; 42.7.12 contém a correção upstream. -->
 		<postgresql.version>42.7.12</postgresql.version>
+		<!-- Override do BOM do Spring Boot. O Jackson desserializa todo corpo
+		     de requisição, então uma falha aqui está no caminho de entrada de
+		     100% da API. 3.1.4 e 2.21.4 são afetados pela CVE-2026-59889
+		     (Incorrect Authorization, CVSS 6.5, integridade alta); a linha 2
+		     acumula ainda CVE-2026-54515 e GHSA-mhm7-754m-9p8w. As correções
+		     upstream são 3.1.5 e 2.21.5, ambas de patch. -->
+		<jackson-bom.version>3.1.5</jackson-bom.version>
+		<jackson-2-bom.version>2.21.5</jackson-2-bom.version>
 		<!-- O BOM do Spring Boot não gerencia o BouncyCastle. Sem versão fixa
 		     aqui, o build não resolve a dependência. -->
 		<bouncycastle.version>1.85</bouncycastle.version>

@@ -1,0 +1,31 @@
+# Configuração do gitleaks.
+#
+# Mantém todas as regras padrão e acrescenta uma exceção estreita. A tentação
+# aqui é silenciar o diretório de testes inteiro; isso seria um erro, porque
+# arquivo de teste é exatamente onde credencial real costuma ser colada "só
+# para ver se funciona" e depois esquecida.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+Chaves fixas do harness de teste de integração. Não são segredos: os valores \
+decodificam para 'teste-channel-key-32-bytes-ok!!!' e \
+'test-mfa-key-separate-32-bytes!!', existem apenas para satisfazer a exigência \
+de 32 bytes do AES-256, e o ambiente de teste sobe em contêiner descartável \
+sem dado real. A exceção casa o VALOR literal, não o caminho: qualquer outro \
+segredo no mesmo arquivo continua reprovando.
+"""
+
+regexes = [
+  '''dGVzdGUtY2hhbm5lbC1rZXktMzItYnl0ZXMtb2shISE=''',
+  '''dGVzdC1tZmEta2V5LXNlcGFyYXRlLTMyLWJ5dGVzISE=''',
+]
+
+paths = [
+  '''backend/src/test/java/br/com/pnp/crm/TesteDeIntegracao\.java''',
+]
+
+# Ambos precisam casar: valor conhecido E arquivo conhecido.
+regexTarget = "match"

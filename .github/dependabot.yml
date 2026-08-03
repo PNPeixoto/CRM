@@ -1,0 +1,30 @@
+# Atualização automática de dependências.
+#
+# Existe porque o gate de CI reprova vulnerabilidade alta sem exceção: sem uma
+# fonte de atualizações, a única saída restante seria escrever exceções, e o
+# gate viraria um gerador de desculpas.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # A ação de terceiro executa com acesso ao repositório; uma versão antiga
+  # comprometida é caminho direto para o pipeline.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
