@@ -21,30 +21,63 @@ atual — está em [`contexto/`](contexto/). **Comece por
 
 - **JDK 25** — o `pom.xml` fixa `java.version=25`; JDK menor falha com
   `release version 25 not supported`
-- **Docker** — Postgres e Redis de desenvolvimento, e os testes de integração
-  (Testcontainers)
+- **Docker** — imagem da aplicação, Postgres e Redis de desenvolvimento, além
+  dos testes de integração (Testcontainers)
 - **Node 20+**
 
 > **No Linux (Nobara/Fedora), siga o [`SETUP-LINUX.md`](SETUP-LINUX.md)** —
 > guia completo do zero, com as pegadinhas do dnf5, SELinux e Testcontainers
 > já resolvidas.
+>
+> **No Windows, siga o [`SETUP-WINDOWS.md`](SETUP-WINDOWS.md)** — inclui Docker
+> Desktop, PowerShell e a correção de AF_UNIX do JDK.
 
 ## Subir o ambiente
 
+O Compose é exclusivamente de desenvolvimento e sobe backend, PostgreSQL 17 e
+Redis 7. A aplicação usa uma imagem versionável; `latest` não faz parte do
+fluxo.
+
 ```bash
-docker compose up -d
+APP_IMAGE_TAG=0.0.1-dev APP_VERSION=0.0.1-dev VCS_REF=working-tree \
+  docker compose up --build -d
+docker compose ps
 ```
 
-Postgres em `127.0.0.1:5432` e Redis em `127.0.0.1:6379`. As portas são
-publicadas só em loopback de propósito: o Docker publica em `0.0.0.0` por
-padrão e ignora o firewall do sistema.
+No PowerShell, defina as três variáveis com `$env:NOME='valor'` antes do
+`docker compose up --build -d`.
 
-## Backend
+Backend em `127.0.0.1:8080`, Postgres em `127.0.0.1:5432` e Redis em
+`127.0.0.1:6380`. As portas são publicadas só em loopback de propósito. O
+serviço `app` só inicia depois dos health checks do banco e do cache, roda sem
+root e com filesystem somente leitura. Confira:
+
+```bash
+curl -fsS http://localhost:8080/actuator/health/liveness
+curl -fsS http://localhost:8080/actuator/health/readiness
+```
+
+O Postgres de desenvolvimento usa dois papéis:
+
+- `crm_migrator`: administrativo, usado somente pelo Flyway;
+- `crm_runtime`: usado pela aplicação, sem `SUPERUSER` e sem `BYPASSRLS`.
+
+O script em `infra/postgres/init-runtime-user.sql` cria o runtime apenas na
+inicialização de um volume novo. Um volume criado pela configuração antiga
+precisa ser migrado manualmente ou recriado depois de preservar qualquer dado
+necessário; mudar `POSTGRES_USER` não altera um cluster já inicializado.
+
+## Backend local, sem conteinerizar a aplicação
+
+Suba apenas as dependências e execute o Maven no host:
+
+```bash
+docker compose up -d postgres redis
+```
 
 O profile `dev` é obrigatório em desenvolvimento — é ele que carrega o seed de
-`db/dev` e fornece os valores de `APP_PEPPER` e `JWT_SIGNING_KEY`. Sem profile,
-a aplicação **não sobe**, e isso é intencional: não existe valor padrão de
-segredo em `application.yml`.
+`db/dev`, aponta para Redis em `127.0.0.1:6380` e fornece credenciais
+descartáveis. Os valores reais de produção não possuem fallback.
 
 ```bash
 cd backend && ./mvnw spring-boot:run "-Dspring-boot.run.profiles=dev"
@@ -56,8 +89,7 @@ cd backend && ./mvnw spring-boot:run "-Dspring-boot.run.profiles=dev"
 > `Unknown lifecycle phase`, que não diz nada sobre a causa. Em bash as aspas
 > são inofensivas, então o comando acima funciona nos dois.
 
-Alternativa que evita a tokenização de vez, e é a mesma forma usada em
-produção:
+Alternativa que evita a tokenização de vez:
 
 ```bash
 SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
@@ -68,6 +100,10 @@ Testes (exigem Docker):
 ```bash
 cd backend && ./mvnw test
 ```
+
+Os testes de isolamento confirmam `current_user`, `rolsuper=false` e
+`rolbypassrls=false`; um teste conectado como superusuário não é evidência de
+que RLS funciona.
 
 ## Frontend
 
@@ -80,14 +116,28 @@ Sobe em `http://localhost:5174`, com proxy de `/api` para
 tudo na mesma origem, o que permite o cookie de refresh usar
 `SameSite=Strict` em vez de afrouxar CORS só para desenvolver.
 
+Validação do frontend:
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+No primeiro acesso autenticado, `/api/empresa/apresentacao` informa se o
+segmento já foi escolhido. A tela `/primeiro-acesso` persiste apenas o segmento
+em `/api/empresa/perfil-inicial`; menu, ordem das rotas e funil inicial passam a
+usar o mesmo preset sem exigir novo login. Isso é apresentação, nunca
+autorização — o backend continua protegendo cada endpoint.
+
 ## Usuário de desenvolvimento
 
 O seed cria dois tenants para tornar visível qualquer vazamento de isolamento.
 
 | Empresa | Login |
 |---|---|
-| `pnp` | `peixoto` |
-| `acme` | `peixoto` |
+| `pnp` (`GENERAL_SERVICES`) | `peixoto` |
+| `acme` (`CONFECTIONERY`) | `peixoto` |
 
 Empresa e login são **insensíveis a maiúsculas** — "PNP" e "Peixoto" também
 entram. Espaços nas pontas são descartados.
@@ -100,8 +150,9 @@ efeito pretendido dele.
 ## Variáveis de ambiente
 
 `.env.example` lista apenas os **nomes**. Valor real nunca entra no
-repositório. Em produção, `APP_PEPPER` e `JWT_SIGNING_KEY` não têm padrão e a
-aplicação recusa subir sem eles.
+repositório. Em produção, conexões, credenciais, `APP_PEPPER`,
+`JWT_SIGNING_KEY` e a lista de proxies confiáveis não têm padrão; o profile
+`prod` recusa subir se faltar configuração obrigatória.
 
 > `APP_PEPPER` **não é rotacionável**: trocá-lo invalida todas as senhas de
 > uma vez e exige redefinição por todos os usuários. Perder o valor de
@@ -120,8 +171,19 @@ JDK_JAVA_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\Users\<usuario>\javatmp
 
 **Não é necessário em Linux nem macOS** — inclusive no Claude Code web.
 
+## Imagem e produção
+
+A imagem multi-stage usa somente o JRE e as camadas da aplicação no estágio
+final, executa com UID/GID `10001` e inclui readiness como health check. O
+Compose deste repositório não é um manifesto de produção: banco e cache devem
+ficar em rede privada e somente o proxy conhecido pode enviar
+`X-Forwarded-*`. Build, promoção e rollback por tag imutável estão descritos em
+[`infra/docker/README.md`](infra/docker/README.md).
+
 ## Estado
 
-Fase 1 (autenticação) escrita e compilando; testes de integração ainda não
-executados. Ver [`contexto/02-estado-atual.md`](contexto/02-estado-atual.md)
-para o detalhe e o próximo passo.
+Autenticação, conversa/canais, CRM básico, apresentação por segmento e o
+ambiente Docker de desenvolvimento estão implementados. A suíte PostgreSQL
+continua dependente de Docker/Testcontainers. Ver
+[`contexto/02-estado-atual.md`](contexto/02-estado-atual.md) para resultados e
+riscos atuais.

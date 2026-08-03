@@ -168,17 +168,21 @@ docker run --rm hello-world
 
 ---
 
-## 6. Subir Postgres e Redis
+## 6. Subir o ambiente Docker
 
 ```bash
 cd ~/crm-pnp
-docker compose up -d
-docker compose ps      # os dois precisam aparecer como healthy
+export APP_IMAGE_TAG=0.0.1-dev
+export APP_VERSION=0.0.1-dev
+export VCS_REF="$(git rev-parse --short HEAD)"
+docker compose up --build -d
+docker compose ps      # app, postgres e redis precisam aparecer healthy
 ```
 
-Sobe `postgres:17-alpine` na 5432 e `redis:7-alpine` na 6379, publicados
-**apenas em `127.0.0.1`**. Isso é proposital: o Docker publica em `0.0.0.0` por
-padrão e passa por cima do firewall do sistema.
+Sobe a imagem versionada do backend na 8080, `postgres:17-alpine` na 5432 e
+`redis:7-alpine` na 6380 do host. Tudo é publicado **apenas em `127.0.0.1`**.
+A aplicação espera banco e cache ficarem saudáveis, roda como usuário 10001 e
+usa filesystem somente leitura.
 
 ### SELinux e firewalld
 
@@ -194,7 +198,9 @@ deste projeto, a sugestão está errada — investigue a causa.
 Conferir que o banco responde:
 
 ```bash
-docker compose exec postgres psql -U crm -d crm -c '\l'
+docker compose exec postgres psql -U crm_migrator -d crm -c '\l'
+curl -fsS http://localhost:8080/actuator/health/liveness
+curl -fsS http://localhost:8080/actuator/health/readiness
 ```
 
 ---
@@ -205,8 +211,10 @@ Para **desenvolvimento**, não é preciso configurar nada: o profile `dev`
 fornece os valores em `application-dev.yml`, todos marcados
 `TESTE — TROCAR ANTES DE PRODUÇÃO`.
 
-Fora do profile `dev`, a aplicação **recusa subir** sem `APP_PEPPER` e
-`JWT_SIGNING_KEY` — não há valor padrão, de propósito.
+No profile `prod`, a aplicação **recusa subir** sem conexões, credenciais,
+`APP_PEPPER`, `JWT_SIGNING_KEY` e `TRUSTED_PROXY_IP_REGEX` — não há valor
+padrão, de propósito. O Compose deste repositório é somente de desenvolvimento;
+consulte `infra/docker/README.md` para promoção e rollback por tag.
 
 Para gerar segredos reais quando chegar a hora:
 
@@ -224,9 +232,8 @@ openssl rand -base64 48       # APP_PEPPER
 
 ## 8. Rodar os testes — o passo mais importante
 
-Este é o motivo de todo o resto. Cinco tabelas, sete políticas de RLS e quatro
-funções `SECURITY DEFINER` foram escritas e **nunca executadas contra um
-Postgres**. É aqui que isso muda.
+Os testes usam PostgreSQL 17 e Redis reais em containers efêmeros e validam as
+migrations, o isolamento e o comportamento da aplicação.
 
 ```bash
 cd ~/crm-pnp/backend
@@ -253,11 +260,13 @@ editáveis — isso deixa de valer no primeiro `flyway migrate` real.
 
 ---
 
-## 9. Rodar a aplicação
+## 9. Rodar fora do container (opcional)
 
 ### Backend
 
 ```bash
+cd ~/crm-pnp
+docker compose up -d postgres redis
 cd ~/crm-pnp/backend
 SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 ```
@@ -332,8 +341,9 @@ Com Docker rootless, exporte:
 export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
 ```
 
-**Porta 5432 já em uso**
-Existe um Postgres do sistema rodando:
+**Porta 5432 ou 6380 já em uso**
+Existe um serviço local ocupando a porta. Identifique-o antes de decidir se
+deve pará-lo. Para PostgreSQL do sistema:
 ```bash
 sudo systemctl stop postgresql
 ```
@@ -373,5 +383,5 @@ se quer validar é o RLS, não o runtime de container.
 
 ## Próximo passo depois disso tudo
 
-Ver `contexto/02-estado-atual.md`. Resumo: rodar `./mvnw test`, validar login e
-inbox ponta a ponta, e só então começar a Fase 3 (Telegram).
+Ver `contexto/02-estado-atual.md` e executar o próximo prompt liberado no
+manifesto canônico.
