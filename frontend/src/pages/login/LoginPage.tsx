@@ -81,7 +81,7 @@ export function LoginPage() {
           </p>
 
           <form className="mt-8 space-y-4" onSubmit={aoEnviar} noValidate>
-            {erro && <AlertaErro>{erro}</AlertaErro>}
+            {erro && <AlertaErro id="erro-login">{erro}</AlertaErro>}
 
             <div className="space-y-1.5">
               <Label htmlFor="empresa">Empresa</Label>
@@ -95,6 +95,7 @@ export function LoginPage() {
                 spellCheck={false}
                 required
                 aria-invalid={erro !== null}
+                aria-describedby={erro ? 'erro-login' : undefined}
                 disabled={enviando}
               />
             </div>
@@ -113,6 +114,7 @@ export function LoginPage() {
                 spellCheck={false}
                 required
                 aria-invalid={erro !== null}
+                aria-describedby={erro ? 'erro-login' : undefined}
                 disabled={enviando}
               />
             </div>
@@ -128,6 +130,7 @@ export function LoginPage() {
                 autoComplete="current-password"
                 required
                 aria-invalid={erro !== null}
+                aria-describedby={erro ? 'erro-login' : undefined}
                 disabled={enviando}
               />
             </div>

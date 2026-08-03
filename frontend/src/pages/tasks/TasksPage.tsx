@@ -56,6 +56,7 @@ export function TasksPage() {
           <Carregando />
         ) : tarefas.length === 0 ? (
           <Vazio
+            tipo={apenasAbertas ? 'sem-resultados' : 'vazio-inicial'}
             titulo={apenasAbertas ? 'Nenhuma tarefa em aberto' : 'Nenhuma tarefa'}
             descricao="Crie uma tarefa para acompanhar um follow-up ou um compromisso."
           />

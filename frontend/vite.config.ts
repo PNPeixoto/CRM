@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -24,6 +25,26 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+    },
+  },
+
+  test: {
+    environment: 'jsdom',
+    environmentOptions: {
+      jsdom: { url: 'http://localhost/' },
+    },
+    setupFiles: ['./src/test/setup.ts'],
+    allowOnly: false,
+    clearMocks: true,
+    restoreMocks: true,
+    unstubEnvs: true,
+    unstubGlobals: true,
+    testTimeout: 5000,
+    hookTimeout: 10000,
+    expect: { requireAssertions: true },
+    sequence: {
+      hooks: 'list',
+      setupFiles: 'list',
     },
   },
 });

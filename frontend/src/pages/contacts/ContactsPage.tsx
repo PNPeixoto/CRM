@@ -82,6 +82,7 @@ export function ContactsPage() {
           <Carregando />
         ) : contatos.length === 0 ? (
           <Vazio
+            tipo={busca ? 'sem-resultados' : 'vazio-inicial'}
             titulo={busca ? 'Nenhum contato encontrado' : 'Nenhum contato ainda'}
             descricao={
               busca

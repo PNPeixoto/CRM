@@ -1,4 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { EstadoDeConteudo } from '@/components/ui/content-state';
 import { useAuth } from './AuthContext';
 
 /**
@@ -17,13 +18,8 @@ export function RotaProtegida() {
     // Redirecionar antes de a verificação terminar jogaria para o login todo
     // usuário com sessão válida, a cada F5.
     return (
-      <div
-        className="flex min-h-dvh items-center justify-center text-sm"
-        style={{ color: 'var(--text-muted)' }}
-        role="status"
-        aria-live="polite"
-      >
-        Carregando…
+      <div className="mx-auto flex min-h-dvh max-w-2xl items-center px-6">
+        <EstadoDeConteudo tipo="carregando" titulo="Verificando sessão…" className="w-full" />
       </div>
     );
   }

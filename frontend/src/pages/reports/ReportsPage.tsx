@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { relatoriosApi } from '@/shared/crm/api';
 import type { VisaoGeral } from '@/shared/crm/tipos';
 import { formatarMoeda, formatarNumero } from '@/shared/formato';
+import { EstadoDeConteudo } from '@/components/ui/content-state';
 import { Cartao, Carregando, Pagina } from '@/shared/components/Pagina';
 
 export function ReportsPage() {
@@ -27,9 +28,11 @@ export function ReportsPage() {
   if (!dados) {
     return (
       <Pagina titulo="Relatórios">
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Não foi possível carregar os dados.
-        </p>
+        <EstadoDeConteudo
+          tipo="erro"
+          titulo="Não foi possível carregar os dados"
+          descricao="Atualize a página para tentar novamente."
+        />
       </Pagina>
     );
   }

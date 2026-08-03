@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { relatoriosApi } from '@/shared/crm/api';
 import type { VisaoGeral } from '@/shared/crm/tipos';
 import { formatarMoeda, formatarNumero } from '@/shared/formato';
+import { EstadoDeConteudo } from '@/components/ui/content-state';
 import { Cartao, Carregando, Pagina } from '@/shared/components/Pagina';
 
 export function DashboardPage() {
@@ -22,9 +23,11 @@ export function DashboardPage() {
       {carregando ? (
         <Carregando />
       ) : !dados ? (
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Não foi possível carregar os indicadores.
-        </p>
+        <EstadoDeConteudo
+          tipo="erro"
+          titulo="Não foi possível carregar os indicadores"
+          descricao="Atualize a página para tentar novamente."
+        />
       ) : (
         <div className="space-y-6">
           {/* Atendimento primeiro: é o que tem urgência. Faturamento não muda

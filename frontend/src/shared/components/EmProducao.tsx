@@ -14,7 +14,7 @@ export function EmProducao({ titulo, descricao }: EmProducaoProps) {
         Em produção
       </span>
       <h1 className="text-xl font-semibold">{titulo}</h1>
-      <p className="max-w-md text-sm text-muted">
+      <p className="max-w-md text-sm text-[var(--text-muted)]">
         {descricao ?? 'Este módulo ainda está em desenvolvimento e será liberado em breve.'}
       </p>
     </div>

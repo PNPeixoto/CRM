@@ -1,8 +1,7 @@
 /**
- * Espelha os DTOs do backend. Escrito à mão até existir o client gerado por
- * OpenAPI, previsto em `00-projeto.md`.
- *
- * Valores monetários são **centavos, inteiros** — ver `shared/formato.ts`.
+ * Modelos da apresentação. DTOs de transporte vêm do OpenAPI gerado e são
+ * convertidos em `shared/crm/api.ts`; as telas não interpretam envelopes HTTP.
+ * Valores monetários são centavos inteiros — ver `shared/formato.ts`.
  */
 
 export interface Contato {

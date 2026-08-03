@@ -1,66 +1,87 @@
-import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react';
+import { Suspense, useMemo } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { EstadoDeConteudo } from '@/components/ui/content-state';
 import { ROTAS } from './routes';
 import { AppLayout } from '@/shared/layouts/AppLayout';
 import { LoginPage } from '@/pages/login';
-import { AuthProvider } from '@/shared/auth/AuthContext';
+import { OnboardingPage } from '@/pages/onboarding';
+import { AuthProvider, useAuth } from '@/shared/auth/AuthContext';
 import { RotaProtegida } from '@/shared/auth/RotaProtegida';
-
-/**
- * Mapa explícito rota -> página.
- * Proposital: um id sem página correspondente quebra o build, não a produção.
- */
-const PAGINAS: Record<string, LazyExoticComponent<ComponentType>> = {
-  dashboard: lazy(() => import('@/pages/dashboard').then((m) => ({ default: m.DashboardPage }))),
-  inbox: lazy(() => import('@/pages/inbox').then((m) => ({ default: m.InboxPage }))),
-  contacts: lazy(() => import('@/pages/contacts').then((m) => ({ default: m.ContactsPage }))),
-  deals: lazy(() => import('@/pages/deals').then((m) => ({ default: m.DealsPage }))),
-  pipelines: lazy(() => import('@/pages/pipelines').then((m) => ({ default: m.PipelinesPage }))),
-  tasks: lazy(() => import('@/pages/tasks').then((m) => ({ default: m.TasksPage }))),
-  calendar: lazy(() => import('@/pages/calendar').then((m) => ({ default: m.CalendarPage }))),
-  bookings: lazy(() => import('@/pages/bookings').then((m) => ({ default: m.BookingsPage }))),
-  assets: lazy(() => import('@/pages/assets').then((m) => ({ default: m.AssetsPage }))),
-  units: lazy(() => import('@/pages/units').then((m) => ({ default: m.UnitsPage }))),
-  teams: lazy(() => import('@/pages/teams').then((m) => ({ default: m.TeamsPage }))),
-  automations: lazy(() => import('@/pages/automations').then((m) => ({ default: m.AutomationsPage }))),
-  integrations: lazy(() => import('@/pages/integrations').then((m) => ({ default: m.IntegrationsPage }))),
-  campaigns: lazy(() => import('@/pages/campaigns').then((m) => ({ default: m.CampaignsPage }))),
-  reports: lazy(() => import('@/pages/reports').then((m) => ({ default: m.ReportsPage }))),
-  audit: lazy(() => import('@/pages/audit').then((m) => ({ default: m.AuditPage }))),
-  settings: lazy(() => import('@/pages/settings').then((m) => ({ default: m.SettingsPage }))),
-};
+import { RotaComAcesso } from '@/shared/auth/RotaComAcesso';
+import { PaginaNaoEncontrada, PaginaSemPermissao } from '@/shared/components/PaginaDeStatus';
+import { TenantPresentationProvider, useTenantPresentation } from '@/shared/tenant/TenantPresentationContext';
+import { TenantOnboardingGuard } from '@/shared/tenant/TenantOnboardingGuard';
+import { caminhoInicialSeguro, resolveNavigation } from '@/shared/tenant/resolveNavigation';
 
 export function AppRouter() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Suspense fallback={<div className="p-6 text-sm">Carregando…</div>}>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            {/*
-              Toda rota da aplicação nasce dentro da RotaProtegida. Deixar a
-              proteção para ser adicionada rota a rota garante que uma página
-              nova entre desprotegida — e ninguém percebe, porque ela funciona.
-            */}
-            <Route element={<RotaProtegida />}>
-              <Route element={<AppLayout />}>
-                {ROTAS.map(({ id, caminho }) => {
-                  const Pagina = PAGINAS[id];
-                  return <Route key={id} path={caminho} element={<Pagina />} />;
-                })}
-                {/*
-                  Rota legada, fora de ROTAS de propósito: existe só para não
-                  quebrar link salvo de quando /oportunidades era uma página
-                  própria. Não deve aparecer na navegação.
-                */}
-                <Route path="/oportunidades" element={<PAGINAS.deals />} />
-              </Route>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Route>
-          </Routes>
-        </Suspense>
+        <TenantPresentationProvider>
+          <Suspense
+            fallback={
+              <div className="p-[var(--space-page)]">
+                <EstadoDeConteudo tipo="carregando" titulo="Carregando módulo…" />
+              </div>
+            }
+          >
+            <ApplicationRoutes />
+          </Suspense>
+        </TenantPresentationProvider>
       </AuthProvider>
     </BrowserRouter>
+  );
+}
+
+function ApplicationRoutes() {
+  const { usuario } = useAuth();
+  const { apresentacao } = useTenantPresentation();
+  const navigation = useMemo(
+    () => resolveNavigation(ROTAS, apresentacao),
+    [apresentacao],
+  );
+  const safePath = caminhoInicialSeguro(navigation);
+  const contextosAutorizados = usuario
+    ? [{ id: usuario.tenantId, rotulo: 'Empresa atual' }]
+    : [];
+
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={<RotaProtegida />}>
+        <Route element={<TenantOnboardingGuard safePath={safePath} />}>
+          <Route path="/primeiro-acesso" element={<OnboardingPage />} />
+          <Route
+            element={
+              <AppLayout
+                navigation={navigation}
+                contextosAutorizados={contextosAutorizados}
+                contextoAtivoId={usuario?.tenantId ?? ''}
+              />
+            }
+          >
+            {navigation.map((rota) => {
+              const { id, caminho } = rota;
+              const Page = rota.componente;
+              return (
+                <Route
+                  key={id}
+                  path={caminho}
+                  element={
+                    <RotaComAcesso rota={rota}>
+                      <Page />
+                    </RotaComAcesso>
+                  }
+                />
+              );
+            })}
+            <Route path="/oportunidades" element={<Navigate to="/funis" replace />} />
+            <Route path="/acesso-negado" element={<PaginaSemPermissao />} />
+            <Route path="*" element={<PaginaNaoEncontrada />} />
+          </Route>
+          <Route path="/" element={<Navigate to={safePath} replace />} />
+        </Route>
+      </Route>
+    </Routes>
   );
 }

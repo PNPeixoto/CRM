@@ -1,4 +1,9 @@
 import type { ReactNode } from 'react';
+import {
+  EstadoDeConteudo,
+  type TipoDeEstadoDeConteudo,
+} from '@/components/ui/content-state';
+import { cn } from '@/lib/utils';
 
 /**
  * Casca comum das páginas de conteúdo: cabeçalho fixo e corpo rolável.
@@ -21,13 +26,12 @@ export function Pagina({
   return (
     <div className="flex h-full flex-col">
       <header
-        className="flex shrink-0 items-center justify-between gap-4 border-b px-6 py-3"
-        style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--surface-raised)' }}
+        className="flex shrink-0 items-center justify-between gap-4 border-b border-[var(--border-subtle)] bg-[var(--surface-raised)] px-[var(--space-page)] py-3"
       >
         <div className="min-w-0">
           <h1 className="truncate text-base font-semibold">{titulo}</h1>
           {descricao && (
-            <p className="truncate text-sm" style={{ color: 'var(--text-muted)' }}>
+            <p className="truncate text-sm text-[var(--text-muted)]">
               {descricao}
             </p>
           )}
@@ -37,38 +41,34 @@ export function Pagina({
 
       {/* min-h-0 é obrigatório num filho flex com overflow: sem ele a rolagem
           escapa para a página inteira. */}
-      <div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-[var(--space-page)]">{children}</div>
     </div>
   );
 }
 
-export function Vazio({ titulo, descricao }: { readonly titulo: string; readonly descricao: string }) {
-  return (
-    <div
-      className="rounded-[var(--radius-surface)] border border-dashed p-10 text-center"
-      style={{ borderColor: 'var(--border-strong)' }}
-    >
-      <p className="text-sm font-medium">{titulo}</p>
-      <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-        {descricao}
-      </p>
-    </div>
-  );
+export function Vazio({
+  titulo,
+  descricao,
+  tipo = 'vazio-inicial',
+}: {
+  readonly titulo: string;
+  readonly descricao: string;
+  readonly tipo?: Extract<TipoDeEstadoDeConteudo, 'vazio-inicial' | 'sem-resultados'>;
+}) {
+  return <EstadoDeConteudo tipo={tipo} titulo={titulo} descricao={descricao} />;
 }
 
-export function Carregando() {
-  return (
-    <p className="text-sm" style={{ color: 'var(--text-muted)' }} role="status">
-      Carregando…
-    </p>
-  );
+export function Carregando({ rotulo = 'Carregando…' }: { readonly rotulo?: string }) {
+  return <EstadoDeConteudo tipo="carregando" titulo={rotulo} />;
 }
 
 export function Cartao({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
   return (
     <div
-      className={`rounded-[var(--radius-surface)] border p-4 ${className ?? ''}`}
-      style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--surface-raised)' }}
+      className={cn(
+        'rounded-[var(--radius-surface)] border border-[var(--border-subtle)] bg-[var(--surface-raised)] p-4',
+        className,
+      )}
     >
       {children}
     </div>

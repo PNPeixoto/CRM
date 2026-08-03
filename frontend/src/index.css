@@ -1,121 +1,141 @@
 @import "tailwindcss";
 
-/*
- * Design tokens.
- *
- * Regra que governa este arquivo: token nomeado por PAPEL, nunca por valor.
- * `--surface-raised` e não `--gray-50`; `--text-muted` e não `--gray-500`.
- * Nome por valor é uma mentira esperando para acontecer — no dia em que o
- * modo escuro entrar, `--gray-50` vai valer quase preto.
- *
- * Consequência prática: nenhum hex literal em componente. Cor que não existe
- * como token vira token antes de ser usada.
- *
- * O padrão é CLARO com shell de navegação escuro. O par escuro de cada cor
- * nasce junto, mesmo sem seletor de tema — definir depois significaria
- * reescrever a paleta inteira em vez de trocar um bloco.
- */
-
 @theme {
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
+/*
+ * Primitivas privadas de paleta. Só este bloco conhece cores literais.
+ * Componentes e páginas consomem os tokens semânticos definidos abaixo.
+ */
 :root {
-  /* Superfícies */
-  --surface-base: #f6f6fa;
-  --surface-raised: #ffffff;
-  --surface-sunken: #ecedf3;
-  /* Shell de navegação: escuro nos dois temas, é a assinatura visual */
-  --surface-shell: #15121f;
-  --surface-shell-hover: #221d31;
+  --palette-neutral-0: #ffffff;
+  --palette-neutral-25: #f6f6fa;
+  --palette-neutral-50: #f2f1f7;
+  --palette-neutral-100: #ecedf3;
+  --palette-neutral-150: #e8e6f0;
+  --palette-neutral-200: #e2e2ea;
+  --palette-neutral-300: #c9c9d6;
+  --palette-neutral-400: #a3a0b3;
+  --palette-neutral-450: #9a95ad;
+  --palette-neutral-500: #8e8e9f;
+  --palette-neutral-600: #5b5b6b;
+  --palette-neutral-650: #706c84;
+  --palette-neutral-700: #3d3a4e;
+  --palette-neutral-800: #2b2938;
+  --palette-neutral-850: #221d31;
+  --palette-neutral-900: #1b1926;
+  --palette-neutral-925: #17171f;
+  --palette-neutral-950: #15121f;
+  --palette-neutral-975: #12111a;
+  --palette-neutral-1000: #0d0c14;
 
-  /* Texto */
-  --text-strong: #17171f;
-  --text-muted: #5b5b6b;
-  --text-on-brand: #ffffff;
-  --text-on-shell: #e8e6f0;
-  --text-on-shell-muted: #9a95ad;
+  --palette-indigo-50: #ede9fb;
+  --palette-indigo-250: #b0a0f8;
+  --palette-indigo-300: #9b85f5;
+  --palette-indigo-700: #4b2ed4;
+  --palette-indigo-800: #3f26b5;
+  --palette-indigo-950: #241f3d;
 
-  /* Bordas */
-  --border-subtle: #e2e2ea;
-  --border-strong: #c9c9d6;
+  --palette-green-50: #dcfce7;
+  --palette-green-300: #4ade80;
+  --palette-green-700: #15803d;
+  --palette-green-950: #14301f;
 
-  /* Marca — 7,95:1 sobre branco (WCAG AAA) */
-  --brand: #4b2ed4;
-  --brand-hover: #3f26b5;
-  --brand-soft: #ede9fb;
+  --palette-red-50: #fee2e2;
+  --palette-red-300: #f87171;
+  --palette-red-700: #b91c1c;
+  --palette-red-950: #3a1616;
 
-  /*
-   * Cores semânticas. Toda uma nasce com par claro/escuro definido.
-   * Status nunca depende só de cor: a UI acompanha com ícone ou texto,
-   * porque ~8% dos homens têm alguma deficiência de percepção de cor.
-   */
-  --success: #15803d;
-  --success-soft: #dcfce7;
-  --danger: #b91c1c;
-  --danger-soft: #fee2e2;
-  --warning: #a16207;
-  --warning-soft: #fef3c7;
-  --info: #1d4ed8;
-  --info-soft: #dbeafe;
+  --palette-amber-50: #fef3c7;
+  --palette-amber-300: #fbbf24;
+  --palette-amber-800: #92400e;
+  --palette-amber-950: #3a2c0a;
 
-  /* Foco visível — exigência de acessibilidade, não enfeite */
-  --focus-ring: #4b2ed4;
+  --palette-blue-50: #dbeafe;
+  --palette-blue-300: #60a5fa;
+  --palette-blue-700: #1d4ed8;
+  --palette-blue-950: #14243f;
+
+  /* Tokens semânticos públicos — tema claro. */
+  --surface-base: var(--palette-neutral-25);
+  --surface-raised: var(--palette-neutral-0);
+  --surface-sunken: var(--palette-neutral-100);
+  --surface-shell: var(--palette-neutral-950);
+  --surface-shell-hover: var(--palette-neutral-850);
+
+  --text-strong: var(--palette-neutral-925);
+  --text-muted: var(--palette-neutral-600);
+  --text-on-brand: var(--palette-neutral-0);
+  --text-on-shell: var(--palette-neutral-150);
+  --text-on-shell-muted: var(--palette-neutral-450);
+
+  --border-subtle: var(--palette-neutral-200);
+  --border-strong: var(--palette-neutral-300);
+  --border-control: var(--palette-neutral-500);
+
+  --brand: var(--palette-indigo-700);
+  --brand-hover: var(--palette-indigo-800);
+  --brand-soft: var(--palette-indigo-50);
+
+  --success: var(--palette-green-700);
+  --success-soft: var(--palette-green-50);
+  --danger: var(--palette-red-700);
+  --danger-soft: var(--palette-red-50);
+  --warning: var(--palette-amber-800);
+  --warning-soft: var(--palette-amber-50);
+  --info: var(--palette-blue-700);
+  --info-soft: var(--palette-blue-50);
+
+  --focus-ring: var(--brand);
 
   --radius-control: 0.5rem;
   --radius-surface: 0.75rem;
+  --control-height: 2.5rem;
+  --control-height-compact: 2rem;
+  --space-page: 1.5rem;
+
+  color-scheme: light;
 }
 
 /*
- * Paleta escura definida desde já, mas NÃO ativada por
- * `prefers-color-scheme`. A decisão de 2026-07-27 é explícita: claro é o
- * padrão e o seletor de tema é entregue depois do P0. Seguir a preferência
- * do sistema entregaria o tema escuro agora, sem o usuário ter pedido e sem
- * o seletor existir para ele voltar atrás.
- *
- * Ativa só com `data-theme="dark"` no elemento raiz. Quando o seletor for
- * construído, ele passa a escrever esse atributo — e nada aqui muda.
- *
- * `#4b2ed4` puro dá 2,32:1 sobre `#15121f` e reprova AA. Por isso a marca no
- * escuro é uma variante clareada, e não a mesma cor.
- */
-/*
- * Fora de @layer de propósito: o bloco `:root` do tema claro também está
- * fora de camada, e regra sem camada sempre vence regra em camada,
- * independentemente de especificidade. Dentro de `@layer base` este bloco
- * seria ignorado — e o seletor de tema, quando existisse, não funcionaria.
+ * O escuro já possui mapeamento completo, mas continua sem ativação automática
+ * ou seletor. Ele só renderiza quando um consumidor escreve data-theme="dark".
  */
 :root[data-theme="dark"] {
-    --surface-base: #12111a;
-    --surface-raised: #1b1926;
-    --surface-sunken: #0d0c14;
-    --surface-shell: #0d0c14;
-    --surface-shell-hover: #1b1926;
+  --surface-base: var(--palette-neutral-975);
+  --surface-raised: var(--palette-neutral-900);
+  --surface-sunken: var(--palette-neutral-1000);
+  --surface-shell: var(--palette-neutral-1000);
+  --surface-shell-hover: var(--palette-neutral-900);
 
-    --text-strong: #f2f1f7;
-    --text-muted: #a3a0b3;
-    --text-on-shell: #e8e6f0;
-    --text-on-shell-muted: #9a95ad;
+  --text-strong: var(--palette-neutral-50);
+  --text-muted: var(--palette-neutral-400);
+  --text-on-brand: var(--palette-neutral-975);
+  --text-on-shell: var(--palette-neutral-150);
+  --text-on-shell-muted: var(--palette-neutral-450);
 
-    --border-subtle: #2b2938;
-    --border-strong: #3d3a4e;
+  --border-subtle: var(--palette-neutral-800);
+  --border-strong: var(--palette-neutral-700);
+  --border-control: var(--palette-neutral-650);
 
-    --brand: #9b85f5;
-    --brand-hover: #b0a0f8;
-    --brand-soft: #241f3d;
-    --text-on-brand: #12111a;
+  --brand: var(--palette-indigo-300);
+  --brand-hover: var(--palette-indigo-250);
+  --brand-soft: var(--palette-indigo-950);
 
-    --success: #4ade80;
-    --success-soft: #14301f;
-    --danger: #f87171;
-    --danger-soft: #3a1616;
-    --warning: #fbbf24;
-    --warning-soft: #3a2c0a;
-    --info: #60a5fa;
-    --info-soft: #14243f;
+  --success: var(--palette-green-300);
+  --success-soft: var(--palette-green-950);
+  --danger: var(--palette-red-300);
+  --danger-soft: var(--palette-red-950);
+  --warning: var(--palette-amber-300);
+  --warning-soft: var(--palette-amber-950);
+  --info: var(--palette-blue-300);
+  --info-soft: var(--palette-blue-950);
 
-    --focus-ring: #9b85f5;
+  --focus-ring: var(--brand);
+
+  color-scheme: dark;
 }
 
 @layer base {
@@ -130,13 +150,20 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /*
-   * Foco visível global. O `:focus-visible` mostra o anel para navegação por
-   * teclado sem poluir o clique de mouse. Remover contorno de foco sem
-   * substituto torna o produto inutilizável por teclado.
-   */
   :focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
+  }
+}
+
+/* Movimento é informativo, nunca obrigatório para compreender o estado. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

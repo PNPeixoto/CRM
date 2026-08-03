@@ -3,6 +3,7 @@ import { AlertaErro } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { funilApi } from '@/shared/crm/api';
 import type { Etapa, Funil, Oportunidade } from '@/shared/crm/tipos';
 import { formatarMoeda, paraCentavos } from '@/shared/formato';
@@ -65,13 +66,7 @@ export function PipelinesPage() {
       acoes={
         <>
           {funis.length > 1 && (
-            <select
-              className="h-10 rounded-[var(--radius-control)] border px-2 text-sm"
-              style={{
-                borderColor: 'var(--border-subtle)',
-                backgroundColor: 'var(--surface-raised)',
-                color: 'var(--text-strong)',
-              }}
+            <Select
               value={funilAtivo?.id ?? ''}
               onChange={(e) => setFunilAtivo(funis.find((f) => f.id === e.target.value) ?? null)}
               aria-label="Selecionar funil"
@@ -81,7 +76,7 @@ export function PipelinesPage() {
                   {funil.nome}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
           <Button onClick={() => setFormAberto((aberto) => !aberto)} disabled={!funilAtivo}>
             {formAberto ? 'Cancelar' : 'Nova oportunidade'}
@@ -186,14 +181,10 @@ function Coluna({
             <label className="sr-only" htmlFor={`mover-${oportunidade.id}`}>
               Mover {oportunidade.titulo} para outra etapa
             </label>
-            <select
+            <Select
               id={`mover-${oportunidade.id}`}
-              className="mt-2 w-full rounded-[var(--radius-control)] border px-1.5 py-1 text-xs"
-              style={{
-                borderColor: 'var(--border-subtle)',
-                backgroundColor: 'var(--surface-raised)',
-                color: 'var(--text-strong)',
-              }}
+              tamanho="compacto"
+              className="mt-2 w-full"
               value={oportunidade.etapaId}
               onChange={(e) => aoMover(oportunidade.id, e.target.value)}
             >
@@ -202,7 +193,7 @@ function Coluna({
                   {destino.nome}
                 </option>
               ))}
-            </select>
+            </Select>
           </article>
         ))}
       </div>
@@ -264,14 +255,9 @@ function FormularioDeOportunidade({
 
       <div className="space-y-1.5">
         <Label htmlFor="etapa">Etapa</Label>
-        <select
+        <Select
           id="etapa"
-          className="h-10 w-full rounded-[var(--radius-control)] border px-2 text-sm"
-          style={{
-            borderColor: 'var(--border-subtle)',
-            backgroundColor: 'var(--surface-raised)',
-            color: 'var(--text-strong)',
-          }}
+          className="w-full"
           value={etapaId}
           onChange={(e) => setEtapaId(e.target.value)}
         >
@@ -280,7 +266,7 @@ function FormularioDeOportunidade({
               {etapa.nome}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       <div className="sm:col-span-3">

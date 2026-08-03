@@ -3,6 +3,7 @@ import { AlertaErro } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { canaisApi } from '@/shared/crm/api';
 import type { Canal, TipoCanal } from '@/shared/crm/tipos';
 import { Cartao, Carregando, Pagina, Vazio } from '@/shared/components/Pagina';
@@ -194,14 +195,9 @@ function FormularioDeCanal({
     >
       <div className="space-y-1.5">
         <Label htmlFor="tipo">Tipo</Label>
-        <select
+        <Select
           id="tipo"
-          className="h-10 w-full rounded-[var(--radius-control)] border px-2 text-sm"
-          style={{
-            borderColor: 'var(--border-subtle)',
-            backgroundColor: 'var(--surface-raised)',
-            color: 'var(--text-strong)',
-          }}
+          className="w-full"
           value={tipo}
           onChange={(e) => setTipo(e.target.value as TipoCanal)}
         >
@@ -210,7 +206,7 @@ function FormularioDeCanal({
               {ROTULO_TIPO[t]}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       <div className="space-y-1.5">

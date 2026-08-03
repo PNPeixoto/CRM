@@ -6,7 +6,7 @@ export function Input({ className, type, ...props }: ComponentProps<'input'>) {
     <input
       type={type}
       className={cn(
-        'flex h-10 w-full rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-strong)]',
+        'flex h-[var(--control-height)] w-full rounded-[var(--radius-control)] border border-[var(--border-control)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-strong)]',
         'placeholder:text-[var(--text-muted)]',
         'disabled:cursor-not-allowed disabled:opacity-50',
         // Sinaliza erro pelo aria-invalid, e não por uma prop própria: assim a

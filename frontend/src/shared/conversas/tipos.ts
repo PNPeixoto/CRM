@@ -1,11 +1,7 @@
 /**
- * Espelha os DTOs de `conversation/internal/ConversationDtos.java`.
- *
- * <p>Escrito à mão por enquanto. O `00-projeto.md` prevê OpenAPI como contrato
- * com client TypeScript gerado — quando isso existir, este arquivo é
- * substituído pelo gerado. Até lá, uma divergência entre backend e frontend só
- * aparece em tempo de execução, e é por isso que o REST é a fonte da verdade:
- * um campo renomeado quebra a tela, não corrompe dado.
+ * Modelos usados pela apresentação. O adaptador REST converte os DTOs do
+ * OpenAPI gerado para esta forma e falha de modo seguro quando o contrato não
+ * contém um campo obrigatório.
  */
 
 export type StatusConversa = 'OPEN' | 'PENDING' | 'CLOSED';

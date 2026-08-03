@@ -13,19 +13,19 @@ import { cn } from '@/lib/utils';
  * `<button>`, que é HTML inválido e quebra a navegação por teclado.
  */
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
         primary: 'bg-[var(--brand)] text-[var(--text-on-brand)] hover:bg-[var(--brand-hover)]',
         secundario:
-          'bg-[var(--surface-raised)] text-[var(--text-strong)] border border-[var(--border-subtle)] hover:bg-[var(--surface-sunken)]',
+          'border border-[var(--border-control)] bg-[var(--surface-raised)] text-[var(--text-strong)] hover:bg-[var(--surface-sunken)]',
         fantasma: 'text-[var(--text-strong)] hover:bg-[var(--surface-sunken)]',
         destrutivo: 'bg-[var(--danger)] text-[var(--text-on-brand)] hover:opacity-90',
       },
       size: {
         // 40px de altura: acima do mínimo de área de toque que o WCAG pede.
-        padrao: 'h-10 px-4 py-2',
+        padrao: 'h-[var(--control-height)] px-4 py-2',
         pequeno: 'h-9 px-3',
         grande: 'h-11 px-6',
         icone: 'h-10 w-10',
@@ -45,8 +45,9 @@ type ButtonProps = ComponentProps<'button'> &
 
 export function Button({ className, variant, size, asChild = false, ...props }: ButtonProps) {
   const Componente = asChild ? Slot : 'button';
+  const propriedades = asChild ? props : { type: 'button' as const, ...props };
   return (
-    <Componente className={cn(buttonVariants({ variant, size, className }))} {...props} />
+    <Componente className={cn(buttonVariants({ variant, size, className }))} {...propriedades} />
   );
 }
 
