@@ -7,6 +7,8 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Instant;
+import org.springframework.data.domain.Pageable;
 
 interface MessageRepository extends JpaRepository<MessageEntity, UUID> {
 
@@ -21,8 +23,37 @@ interface MessageRepository extends JpaRepository<MessageEntity, UUID> {
     Optional<MessageEntity> findByTenantIdAndChannelConnectionIdAndExternalId(
             UUID tenantId, UUID channelConnectionId, String externalId);
 
-    List<MessageEntity> findByTenantIdAndConversationIdAndDeletedAtIsNullOrderByCreatedAtAsc(
-            UUID tenantId, UUID conversationId);
+    Optional<MessageEntity> findByTenantIdAndConversationIdAndIdempotencyKey(
+            UUID tenantId, UUID conversationId, String idempotencyKey);
+
+    /**
+     * Serializa somente operações com a mesma chave. O índice único continua
+     * sendo a última defesa; o advisory lock fecha a corrida entre consultar e
+     * inserir sem bloquear envios independentes.
+     */
+    @Query(value = "SELECT 1 FROM pg_advisory_xact_lock(:lockId)", nativeQuery = true)
+    int bloquearIdempotencia(@Param("lockId") long lockId);
+
+    /**
+     * Página keyset em ordem reversa. O serviço inverte o lote para manter o
+     * contrato cronológico já consumido pela interface.
+     */
+    @Query("""
+            SELECT m FROM MessageEntity m
+             WHERE m.tenantId = :tenantId
+               AND m.conversationId = :conversationId
+               AND m.deletedAt IS NULL
+               AND (:cursorCriadoEm IS NULL
+                    OR m.createdAt < :cursorCriadoEm
+                    OR (m.createdAt = :cursorCriadoEm AND m.id < :cursorId))
+             ORDER BY m.createdAt DESC, m.id DESC
+            """)
+    List<MessageEntity> buscarPaginaDoHistorico(
+            @Param("tenantId") UUID tenantId,
+            @Param("conversationId") UUID conversationId,
+            @Param("cursorCriadoEm") Instant cursorCriadoEm,
+            @Param("cursorId") UUID cursorId,
+            Pageable pageable);
 
     /**
      * Devolve só a coluna necessária, e não a conversa inteira. Carregar a

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROTAS } from '@/app/routes';
 import { resolveNavigation } from './resolveNavigation';
 import { TenantPresentationProvider, useTenantPresentation } from './TenantPresentationContext';
-import { obterApresentacao, salvarPerfilInicial } from './api';
+import { obterApresentacao, obterPermissoes, salvarPerfilInicial } from './api';
 import type { ApresentacaoDoTenant } from './tipos';
 
 const { authenticatedUser } = vi.hoisted(() => ({ authenticatedUser: { id: 'user-1' } }));
@@ -14,6 +14,7 @@ vi.mock('@/shared/auth/AuthContext', () => ({
 
 vi.mock('./api', () => ({
   obterApresentacao: vi.fn(),
+  obterPermissoes: vi.fn(),
   salvarPerfilInicial: vi.fn(),
 }));
 
@@ -51,6 +52,7 @@ describe('TenantPresentationProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(obterApresentacao).mockResolvedValue(general);
+    vi.mocked(obterPermissoes).mockResolvedValue({ 'contacts.read': 'OWN' });
     vi.mocked(salvarPerfilInicial).mockResolvedValue(confectionery);
   });
 

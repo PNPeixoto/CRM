@@ -6,6 +6,9 @@ export type SegmentoDeNegocio =
 
 export type GrupoDeNavegacao = 'operacao' | 'gestao' | 'plataforma';
 
+export type EscopoDePermissao = 'TENANT' | 'OWN' | 'UNIT' | 'TEAM' | 'NETWORK';
+export type PermissoesDoUsuario = Readonly<Record<string, EscopoDePermissao>>;
+
 export interface ItemDeApresentacao {
   readonly routeId: string;
   readonly rotulo: string;

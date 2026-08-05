@@ -61,6 +61,10 @@ describe('smoke acessível da aplicação', () => {
           funilPadrao: { nome: 'Funil', etapas: [] },
         },
       },
+      {
+        caminho: '/api/organizacao/permissoes',
+        json: { 'contacts.read': 'OWN' },
+      },
     ]);
     const { container } = render(<AppRouter />);
 
@@ -70,5 +74,48 @@ describe('smoke acessível da aplicação', () => {
     expect(screen.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible();
     http.verificarTudoConsumido();
     await esperarSemViolacoesAcessiveis(container);
+  });
+
+  it('blocks a known route before calling an API without permission', async () => {
+    window.history.replaceState(null, '', '/dashboard');
+    const http = instalarHttpMock([
+      {
+        metodo: 'POST',
+        caminho: '/api/auth/refresh',
+        json: { accessToken: 'token-sintetico' },
+      },
+      {
+        caminho: '/api/auth/me',
+        json: {
+          id: 'usuario-sintetico',
+          tenantId: 'tenant-sintetico',
+          login: 'atendente',
+          nomeCompleto: 'Atendente Sintetico',
+        },
+      },
+      {
+        caminho: '/api/empresa/apresentacao',
+        json: {
+          segmento: 'GENERAL_SERVICES',
+          versaoPreset: 1,
+          onboardingConcluido: true,
+          navegacao: [],
+          funilPadrao: { nome: 'Funil', etapas: [] },
+        },
+      },
+      {
+        caminho: '/api/organizacao/permissoes',
+        json: {
+          'contacts.read': 'OWN',
+          'conversations.read': 'TENANT',
+        },
+      },
+    ]);
+
+    render(<AppRouter />);
+
+    expect(await screen.findByRole('heading', { name: /Acesso.*permitido/i })).toBeVisible();
+    expect(http.chamadas.some(({ caminho }) => caminho === '/api/relatorios/visao-geral')).toBe(false);
+    http.verificarTudoConsumido();
   });
 });

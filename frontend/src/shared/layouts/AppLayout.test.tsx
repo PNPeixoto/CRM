@@ -25,6 +25,8 @@ describe('AppLayout', () => {
       usuario,
       carregando: false,
       entrar: vi.fn(),
+      iniciarCadastroMfa: vi.fn(),
+      ativarMfa: vi.fn(),
       sair: vi.fn(),
     });
   });

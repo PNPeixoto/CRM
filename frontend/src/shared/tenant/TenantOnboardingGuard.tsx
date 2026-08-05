@@ -3,9 +3,22 @@ import { EstadoDeConteudo } from '@/components/ui/content-state';
 import { useTenantPresentation } from './TenantPresentationContext';
 
 export function TenantOnboardingGuard({ safePath }: { readonly safePath: string }) {
-  const { apresentacao, carregando } = useTenantPresentation();
+  const { apresentacao, carregando, erroAoCarregar } = useTenantPresentation();
   const location = useLocation();
   const isOnboarding = location.pathname === '/primeiro-acesso';
+
+  if (erroAoCarregar) {
+    return (
+      <div className="mx-auto flex min-h-dvh max-w-2xl items-center px-6">
+        <EstadoDeConteudo
+          tipo="erro"
+          titulo="Não foi possível carregar seu acesso"
+          descricao="Atualize a página para tentar novamente."
+          className="w-full"
+        />
+      </div>
+    );
+  }
 
   if (carregando || !apresentacao) {
     return (

@@ -13,9 +13,9 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 | Severidade | Abertos | Resolvidos nesta execução | Aceitos com prazo |
 |---|---|---|---|
 | Crítico | 0 | 0 | 0 |
-| Alto | 0 | 1 | 1 |
-| Médio | 8 | 1 | 0 |
-| Baixo | 5 | 0 | 2 |
+| Alto | 0 | 2 | 1 |
+| Médio | 2 | 7 | 0 |
+| Baixo | 4 | 1 | 2 |
 
 ---
 
@@ -50,6 +50,32 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 - **Evidência:** 12 casos em `destinoSeguro.test.ts`, incluindo uma
   propriedade que exige que **toda** entrada resulte em destino da mesma
   origem.
+
+### `SEC-018` — Login administrativo sem interface de MFA — **RESOLVIDO**
+
+- **Severidade:** média (alta como impedimento operacional)
+- **Causa:** `OWNER`, `ADMIN` e `SUPERADMIN` exigiam MFA, mas a tela de login
+  não consumia os endpoints de cadastro e ativação já existentes. As contas
+  continuavam ativas e com o hash original; o erro parecia mudança no banco.
+- **Correção:** primeiro login administrativo inicia o cadastro, mostra a
+  chave somente em memória, ativa o TOTP e exibe uma única vez os códigos de
+  recuperação. Login posterior aceita TOTP ou recovery code.
+- **Evidência:** `LoginPage.test.tsx` cobre cadastro, ativação, códigos de
+  recuperação e segundo login; suíte frontend com 93 testes e build verde.
+
+### `SEC-019` — Falha do scanner npm podia parecer auditoria limpa — **RESOLVIDO**
+
+- **Severidade:** alta
+- **Causa:** em erro de registry, `npm audit --json` devolve um objeto com
+  `error`, sem relatório. O verificador tratava a ausência de vulnerabilidades
+  como zero e imprimia aprovação.
+- **Correção:** o verificador exige `auditReportVersion`, totais e ausência de
+  `error`; qualquer saída incompleta falha fechado. Três testes Node cobrem
+  relatório limpo, erro de transporte e JSON vazio, e rodam no CI antes do
+  audit real.
+- **Evidência:** `node --test .github/security/verificar-dependencias.test.mjs`
+  com 3/3 casos verdes; auditoria real voltou a reconhecer as duas altas sob a
+  exceção nomeada e vigente.
 
 ---
 
@@ -98,9 +124,9 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 ---
 
 
-## Abertos — médio
+## Médio — resolvidos no Prompt 08 e remanescentes
 
-### `SEC-001` — Contrato OpenAPI público em produção
+### `SEC-001` — Contrato OpenAPI público em produção — **RESOLVIDO**
 
 - **Capítulo:** V4 · **Severidade:** média
 - **Situação:** `/v3/api-docs/**` está em `ENDPOINTS_PUBLICOS`, em todos os
@@ -112,8 +138,12 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
   autenticação. O snapshot versionado continua alimentando o frontend, então
   fechar em produção não quebra a geração de tipos.
 - **Responsável:** PNPeixoto · **Prazo:** Prompt 08
+- **Correção aplicada:** `application-prod.yml` desabilita API docs e Swagger
+  UI; o snapshot versionado continua disponível no build.
+- **Evidência:** `ProductionConfigurationTest` lê a composição efetiva dos
+  profiles base + produção.
 
-### `SEC-003` — Sem limite de taxa e de tamanho fora do login
+### `SEC-003` — Sem limite de taxa e de tamanho fora do login — **RESOLVIDO**
 
 - **Capítulo:** V2, V4 · **Severidade:** média
 - **Situação:** o bloqueio progressivo cobre login. Nenhum outro endpoint tem
@@ -124,8 +154,12 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 - **Correção mínima:** teto de tamanho de corpo no servidor e limite por
   origem nas rotas públicas e no webhook.
 - **Responsável:** PNPeixoto · **Prazo:** Prompt 08
+- **Correção aplicada:** `HttpProtectionFilter` limita todo corpo a 1 MiB,
+  inclusive chunked, e aplica janela por origem nas rotas públicas e webhook.
+- **Evidência:** `HttpProtectionFilterTest` cobre 413 nos dois transportes e
+  429 com `Retry-After`.
 
-### `SEC-006` — Nada detecta deriva entre schema esperado e aplicado
+### `SEC-006` — Nada detecta deriva entre schema esperado e aplicado — **RESOLVIDO**
 
 - **Capítulo:** V13 · **Severidade:** média
 - **Situação:** foi exatamente o ENV-001: a pilha rodou 37 horas com imagem de
@@ -137,8 +171,12 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 - **Responsável:** PNPeixoto · **Prazo:** Prompt 22, ou Prompt 08 se antes
 - **Observação:** hoje a defesa é operacional — subir com `--build` ou com tag
   do commit. Defesa operacional é a que falha primeiro.
+- **Correção aplicada:** `schemaVersion` participa do readiness e compara a
+  versão estrutural esperada pela imagem à aplicada no banco, nos dois sentidos.
+- **Evidência:** `SchemaVersionHealthIndicatorTest` e readiness `UP` observado
+  contra o banco local em V13.
 
-### `SEC-011` — Inscrição WebSocket já ativa sobrevive à revogação
+### `SEC-011` — Inscrição WebSocket já ativa sobrevive à revogação — **ABERTO**
 
 - **Capítulo:** V7, V8 · **Severidade:** média
 - **Situação:** a permissão é revalidada a cada SUBSCRIBE, o que fecha a janela
@@ -153,7 +191,7 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 - **Nota:** o caminho HTTP **não** tem esse problema — ali a negação vale na
   requisição seguinte.
 
-### `SEC-012` — Falha de infraestrutura se apresenta como falha de teste
+### `SEC-012` — Falha de infraestrutura se apresenta como falha de teste — **RESOLVIDO**
 
 - **Capítulo:** V13 · **Severidade:** média para a operação, nula para o produto
 - **Situação:** com o Docker parado, a suíte reporta dezenas de erros de teste
@@ -164,7 +202,9 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 - **Correção mínima:** verificação prévia do runtime de contêiner que falhe com
   uma mensagem única e clara antes de a suíte começar.
 - **Responsável:** PNPeixoto · **Prazo:** Prompt 08
-- **Origem:** já era `TEST-001` da revisão integrada; segue aberto.
+- **Correção aplicada:** listener de pré-voo consulta o runtime uma vez antes
+  da suíte completa e falha com instrução única; `-Pgate-rapido` fica isento.
+- **Evidência:** o gate completo iniciou pelo preflight e executou 123 testes.
 
 ---
 
@@ -218,14 +258,14 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 | Id | Descrição | Bloqueia | Prompt |
 |---|---|---|---|
 | `AUDIT-001` | Trilha de auditoria não existe; é P0 do produto | Gate E | 17 |
-| `AUTZ-002` (resíduo) | Frontend não consome `/organizacao/contextos` nem `/organizacao/permissoes`; seletor de unidade alimentado por lista fabricada | Gate C | trilha frontend |
+| `AUTZ-002` (resíduo) | Permissões já dirigem menu e guardas; `/organizacao/contextos` segue sem consumidor e o seletor usa lista fabricada | Gate C | trilha frontend |
 | ADR-0008 | Escopo por unidade depende de `unit_id` nas tabelas de domínio | — | migration futura |
 
 ---
 
 ## Acrescentados pela revisão do Gate B, 2026-08-03
 
-### `SEC-015` — Mass assignment garantido por configuração verificada em um só profile
+### `SEC-015` — Mass assignment garantido por configuração verificada em um só profile — **RESOLVIDO**
 
 - **Capítulo:** V2 · **Severidade:** baixa
 - **Situação:** a proteção é `fail-on-unknown-properties: true`, global, mais
@@ -234,8 +274,11 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 - **Correção mínima:** teste que leia a propriedade efetiva do profile de
   produção, ou um caso de rejeição em endpoint de domínio além do atual.
 - **Responsável:** PNPeixoto · **Prazo:** Prompt 08
+- **Correção aplicada:** o profile efetivo de produção é testado, além de um
+  segundo endpoint rejeitar campo desconhecido em integração.
+- **Evidência:** `ProductionConfigurationTest` e `ContratosTransversaisTest`.
 
-### `SEC-016` — O gate de segurança do CI nunca executou
+### `SEC-016` — O gate de segurança do CI nunca executou — **ABERTO**
 
 - **Capítulo:** V13 · **Severidade:** média para a operação
 - **Situação:** o job `seguranca` foi verificado passo a passo na máquina, e o
@@ -246,7 +289,7 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 - **Correção mínima:** enviar os commits e conferir a execução.
 - **Responsável:** PNPeixoto · **Prazo:** antes do próximo prompt
 
-### `SEC-017` — Dependências do backend não são varridas pelo CI
+### `SEC-017` — Dependências do backend não são varridas pelo CI — **RESOLVIDO**
 
 - **Capítulo:** V13 · **Severidade:** média
 - **Descoberto em:** 2026-08-03, ao conferir o CI depois do push.
@@ -269,25 +312,8 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
   credencial no pipeline, OWASP dependency-check com chave da NVD, ou tornar o
   repositório público quando isso for aceitável.
 - **Responsável:** PNPeixoto · **Prazo:** Prompt 08
-
-### `SEC-018` — Não existe interface de cadastro de MFA, e isso impede todo login administrativo
-
-- **Capítulo:** V6 · **Severidade:** média (alta como impedimento operacional)
-- **Descoberto em:** 2026-08-03, ao investigar um login que não funcionava.
-- **Situação:** MFA é obrigatório para `OWNER`, `ADMIN` e `SUPERADMIN`. O
-  backend responde 422 `MFA_CADASTRO_NECESSARIO` no login desses perfis, e o
-  frontend **não tem nenhuma tela** de cadastro ou de informe do código. O
-  resultado é que nenhum administrador consegue entrar pela interface — o
-  usuário de desenvolvimento `peixoto` inclusive.
-- **O que agravava:** a tela de entrada colapsava toda falha em "Empresa,
-  login ou senha inválidos", inclusive esta. A pessoa via uma acusação falsa e
-  repetia uma senha que já estava certa. **Corrigido**: códigos que só
-  alcançam quem já provou a senha passaram a ter mensagem própria, e o resto
-  continua uniforme.
-- **Correção:** telas de cadastro e de verificação do segundo fator,
-  consumindo `POST /api/auth/mfa/enrollment` e `POST /api/auth/mfa/activation`,
-  que já existem e estão testados no backend.
-- **Contorno hoje:** entrar com um usuário não administrativo, ou cadastrar o
-  MFA pela API.
-- **Responsável:** PNPeixoto · **Prazo:** antes de qualquer piloto; é
-  trabalho de trilha de frontend, não de correção pontual.
+- **Correção aplicada:** o job constrói a imagem final e executa Trivy para
+  vulnerabilidades altas/críticas, com `exit-code: 1`, sem GHAS ou chave
+  externa. A action v0.36.0 está fixada pelo SHA completo.
+- **Evidência:** definição versionada em `.github/workflows/ci.yml`; a primeira
+  execução externa continua sendo o `SEC-016`.

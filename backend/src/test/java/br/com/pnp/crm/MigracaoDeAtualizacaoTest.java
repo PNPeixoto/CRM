@@ -27,9 +27,9 @@ class MigracaoDeAtualizacaoTest {
             assertThat(ateV8.migrate().migrationsExecuted).isEqualTo(8);
 
             Flyway atual = configuracao(postgres).load();
-            assertThat(atual.migrate().migrationsExecuted).isEqualTo(3);
+            assertThat(atual.migrate().migrationsExecuted).isEqualTo(5);
             atual.validate();
-            assertThat(atual.info().current().getVersion().getVersion()).isEqualTo("11");
+            assertThat(atual.info().current().getVersion().getVersion()).isEqualTo("13");
         }
     }
 
@@ -54,13 +54,24 @@ class MigracaoDeAtualizacaoTest {
             try (var connection = DriverManager.getConnection(
                     postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
                  var statement = connection.prepareStatement("""
-                         SELECT count(*)
-                           FROM app_role
-                          WHERE code = 'ATTENDANT_SHARED'
+                         SELECT count(*) FILTER (WHERE s.scope_type = 'TENANT'),
+                                count(*) FILTER (WHERE s.scope_type = 'OWN')
+                           FROM tenant t
+                           JOIN app_user u ON u.tenant_id = t.id
+                           JOIN organization_membership m
+                             ON m.tenant_id = t.id AND m.user_id = u.id
+                           JOIN membership_scope s
+                             ON s.tenant_id = t.id AND s.membership_id = m.id
+                           JOIN role_permission p
+                             ON p.tenant_id = t.id AND p.role_id = s.role_id
+                          WHERE t.slug = 'pnp'
+                            AND u.login = 'atendente'
+                            AND p.permission_code IN ('deals.read', 'deals.write')
                          """)) {
                 try (var result = statement.executeQuery()) {
                     result.next();
-                    assertThat(result.getLong(1)).isOne();
+                    assertThat(result.getLong(1)).isEqualTo(2);
+                    assertThat(result.getLong(2)).isZero();
                 }
             }
         }

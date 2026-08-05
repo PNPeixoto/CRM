@@ -4,6 +4,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -45,4 +47,12 @@ interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
                                                    @Param("identificador") String identificador);
 
     Optional<AppUserEntity> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
+
+    @Query("""
+            SELECT u FROM AppUserEntity u
+             WHERE u.tenantId = :tenantId
+               AND u.id IN :ids
+            """)
+    List<AppUserEntity> buscarPorIds(@Param("tenantId") UUID tenantId,
+                                     @Param("ids") Collection<UUID> ids);
 }

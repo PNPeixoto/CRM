@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -83,10 +84,19 @@ class DealController {
         funis.findByIdAndTenantIdAndDeletedAtIsNull(funilId, TenantContext.obrigatorio())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Funil"));
 
-        return ResponseEntity.ok(
-                oportunidades.listarDoFunil(TenantContext.obrigatorio(), funilId,
-                                responsavelId)
-                        .stream().map(DealController::paraResposta).toList());
+        List<DealEntity> negocios = oportunidades.listarDoFunil(
+                TenantContext.obrigatorio(), funilId, responsavelId);
+        Map<UUID, UsuarioLookup.UsuarioReference> responsaveis = users.findKnown(
+                TenantContext.obrigatorio(), negocios.stream()
+                        .map(DealEntity::getOwnerUserId)
+                        .filter(java.util.Objects::nonNull)
+                        .distinct()
+                        .toList());
+
+        return ResponseEntity.ok(negocios.stream()
+                .map(negocio -> paraResposta(
+                        negocio, responsaveis.get(negocio.getOwnerUserId())))
+                .toList());
     }
 
     /** Ver a explicação equivalente em {@code ContactController}. */
@@ -201,10 +211,22 @@ class DealController {
                 autorId);
     }
 
-    private static DealDtos.OportunidadeResponse paraResposta(DealEntity d) {
+    private DealDtos.OportunidadeResponse paraResposta(DealEntity d) {
+        UsuarioLookup.UsuarioReference responsavel = d.getOwnerUserId() == null
+                ? null
+                : users.findKnown(TenantContext.obrigatorio(), List.of(d.getOwnerUserId()))
+                        .get(d.getOwnerUserId());
+        return paraResposta(d, responsavel);
+    }
+
+    private static DealDtos.OportunidadeResponse paraResposta(
+            DealEntity d, UsuarioLookup.UsuarioReference responsavel) {
         return new DealDtos.OportunidadeResponse(
                 d.getId(), d.getPipelineId(), d.getStageId(), d.getContactId(), d.getTitle(),
                 d.getValueCents(), d.getStatus().name(), d.getExpectedCloseDate(),
-                d.getLostReason(), d.getOwnerUserId(), d.getCreatedAt());
+                d.getLostReason(), d.getOwnerUserId(),
+                responsavel == null ? null : responsavel.login(),
+                responsavel == null ? null : responsavel.nomeCompleto(),
+                d.getCreatedAt());
     }
 }

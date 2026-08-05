@@ -134,10 +134,11 @@ autorização — o backend continua protegendo cada endpoint.
 
 O seed cria dois tenants para tornar visível qualquer vazamento de isolamento.
 
-| Empresa | Login |
-|---|---|
-| `pnp` (`GENERAL_SERVICES`) | `peixoto` |
-| `acme` (`CONFECTIONERY`) | `peixoto` |
+| Empresa | Login | Perfil |
+|---|---|---|
+| `pnp` (`GENERAL_SERVICES`) | `peixoto` | `OWNER`, exige MFA |
+| `acme` (`CONFECTIONERY`) | `peixoto` | `OWNER`, exige MFA |
+| `pnp` | `atendente` | contatos/tarefas próprios; funil/caixa compartilhados; sem MFA obrigatório |
 
 Empresa e login são **insensíveis a maiúsculas** — "PNP" e "Peixoto" também
 entram. Espaços nas pontas são descartados.
@@ -146,6 +147,13 @@ A senha não está escrita em nenhum arquivo do repositório, por regra do
 projeto. Os hashes são Argon2id com o pepper de desenvolvimento definido em
 `application-dev.yml` — **trocar o pepper invalida esses hashes**, que é o
 efeito pretendido dele.
+
+No primeiro login de `peixoto`, a senha correta abre o cadastro da verificação
+em duas etapas. Adicione a chave mostrada a um aplicativo autenticador, informe
+o código de seis dígitos e guarde os códigos de recuperação exibidos uma única
+vez. Nos acessos seguintes, a tela pede o TOTP ou um desses códigos. A conta
+`atendente` permite testar o fluxo não administrativo com a mesma senha de
+desenvolvimento já distribuída.
 
 ## Variáveis de ambiente
 

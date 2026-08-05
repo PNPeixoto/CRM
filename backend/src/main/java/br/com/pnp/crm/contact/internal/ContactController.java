@@ -4,6 +4,7 @@ import br.com.pnp.crm.identity.api.UsuarioLookup;
 import br.com.pnp.crm.organization.api.Autorizacao;
 import br.com.pnp.crm.organization.api.Permissao;
 import br.com.pnp.crm.shared.api.RecursoNaoEncontradoException;
+import br.com.pnp.crm.shared.api.RequisicaoInvalidaException;
 import br.com.pnp.crm.shared.api.TenantContext;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -46,15 +48,29 @@ class ContactController {
     ResponseEntity<List<ContactDtos.ContatoResponse>> listar(
             @RequestParam(required = false) String busca,
             @RequestParam(defaultValue = "0") int pagina,
-            @RequestParam(defaultValue = "50") int tamanho) {
+            @RequestParam(defaultValue = "50") int tamanho,
+            @RequestParam(defaultValue = "nome") String ordenarPor) {
+
+        validarConsulta(busca, pagina, tamanho, ordenarPor);
 
         var page = repository.buscar(
                 TenantContext.obrigatorio(),
                 filtroDeResponsavel(Permissao.CONTACTS_READ),
                 busca == null || busca.isBlank() ? null : busca.trim(),
-                PageRequest.of(Math.max(pagina, 0), Math.min(Math.max(tamanho, 1), TAMANHO_MAXIMO_PAGINA)));
+                PageRequest.of(pagina, tamanho));
 
-        return ResponseEntity.ok(page.map(ContactController::paraResposta).getContent());
+        List<ContactEntity> contatos = page.getContent();
+        Map<UUID, UsuarioLookup.UsuarioReference> responsaveis = users.findKnown(
+                TenantContext.obrigatorio(), contatos.stream()
+                        .map(ContactEntity::getOwnerUserId)
+                        .filter(java.util.Objects::nonNull)
+                        .distinct()
+                        .toList());
+
+        return ResponseEntity.ok(contatos.stream()
+                .map(contato -> paraResposta(
+                        contato, responsaveis.get(contato.getOwnerUserId())))
+                .toList());
     }
 
     @GetMapping("/{id}")
@@ -130,6 +146,19 @@ class ContactController {
                 : null;
     }
 
+    private static void validarConsulta(String busca, int pagina, int tamanho, String ordenarPor) {
+        if (pagina < 0 || tamanho < 1 || tamanho > TAMANHO_MAXIMO_PAGINA) {
+            throw new RequisicaoInvalidaException(
+                    "Página e tamanho devem respeitar os limites do servidor.");
+        }
+        if (!"nome".equals(ordenarPor)) {
+            throw new RequisicaoInvalidaException("Ordenação não permitida.");
+        }
+        if (busca != null && busca.length() > 100) {
+            throw new RequisicaoInvalidaException("Filtro de busca longo demais.");
+        }
+    }
+
     private void aplicar(ContactEntity contato, ContactDtos.ContatoRequest r, UUID autorId) {
         UUID responsavelId = autorizacao.responsavelPadrao(
                 Permissao.CONTACTS_WRITE, r.responsavelId());
@@ -146,9 +175,21 @@ class ContactController {
                 autorId);
     }
 
-    private static ContactDtos.ContatoResponse paraResposta(ContactEntity c) {
+    private ContactDtos.ContatoResponse paraResposta(ContactEntity c) {
+        UsuarioLookup.UsuarioReference responsavel = c.getOwnerUserId() == null
+                ? null
+                : users.findKnown(TenantContext.obrigatorio(), List.of(c.getOwnerUserId()))
+                        .get(c.getOwnerUserId());
+        return paraResposta(c, responsavel);
+    }
+
+    private static ContactDtos.ContatoResponse paraResposta(
+            ContactEntity c, UsuarioLookup.UsuarioReference responsavel) {
         return new ContactDtos.ContatoResponse(
                 c.getId(), c.getKind(), c.getName(), c.getEmail(), c.getPhone(), c.getCompanyName(),
-                c.getNotes(), c.getOwnerUserId(), c.getCreatedAt());
+                c.getNotes(), c.getOwnerUserId(),
+                responsavel == null ? null : responsavel.login(),
+                responsavel == null ? null : responsavel.nomeCompleto(),
+                c.getCreatedAt());
     }
 }

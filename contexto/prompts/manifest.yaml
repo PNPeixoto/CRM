@@ -25,7 +25,7 @@ prompts:
   - {id: "05", name: autenticacao-sessao, file: "05-autenticacao-sessao.md", phase: core_security, prerequisites: ["03", "04"], gate: B, status: completed}
   - {id: "06", name: autorizacao-multitenancy, file: "06-autorizacao-multitenancy.md", phase: core_security, prerequisites: ["04", "05"], gate: B, status: completed}
   - {id: "07", name: baseline-asvs-threat-model, file: "07-baseline-asvs-threat-model.md", phase: core_security, prerequisites: ["05", "06"], gate: B, status: completed}
-  - {id: "08", name: correcoes-transversais, file: "08-correcoes-transversais.md", phase: usable_product, prerequisites: ["07"], gate: C, status: ready}
+  - {id: "08", name: correcoes-transversais, file: "08-correcoes-transversais.md", phase: usable_product, prerequisites: ["07"], gate: C, status: completed}
   - {id: "09", name: design-system-casca, file: "09-design-system-casca.md", phase: usable_product, prerequisites: ["08"], gate: C, status: ready}
   - {id: "10", name: vertical-slices, file: "10-vertical-slices.md", phase: usable_product, prerequisites: ["08", "09"], gate: C, status: ready}
   - {id: "11", name: onboarding-segmentos, file: "11-onboarding-segmentos.md", phase: usable_product, prerequisites: ["06", "09", "10"], gate: C, status: ready}

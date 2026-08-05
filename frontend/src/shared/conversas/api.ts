@@ -37,5 +37,9 @@ export const conversasApi = {
   mensagens: async (conversaId: string): Promise<readonly Mensagem[]> =>
     (await api.get<readonly MensagemWire[]>(`/conversas/${conversaId}/mensagens`)).map(mapearMensagem),
   enviar: async (conversaId: string, texto: string): Promise<Mensagem> =>
-    mapearMensagem(await api.post<MensagemWire>(`/conversas/${conversaId}/mensagens`, { texto })),
+    mapearMensagem(await api.post<MensagemWire>(
+      `/conversas/${conversaId}/mensagens`,
+      { texto },
+      { idempotencyKey: crypto.randomUUID(), retry: 'idempotent-write' },
+    )),
 };

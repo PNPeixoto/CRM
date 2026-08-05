@@ -15,8 +15,8 @@ export interface RotaResolvida extends RotaApp {
 }
 
 /**
- * View model da autorização de navegação. Cada lista usa os ids estáveis de
- * rota depois que um adaptador validar o contrato publicado pelo backend.
+ * View model da autorização de navegação. Capabilities e entitlements usam os
+ * ids estáveis de rota; permissões usam códigos atômicos publicados pelo backend.
  * Ausência significa que a dimensão ainda não foi publicada, nunca que o
  * frontend concedeu autorização: os endpoints continuam protegidos no servidor.
  */
@@ -48,7 +48,10 @@ export function resolveNavigation(
     const item = overrides.get(route.id);
     const capability = resolverSinal(sinais.capabilities, route.id);
     const entitlement = resolverSinal(sinais.entitlements, route.id);
-    const permissao = resolverSinal(sinais.permissoes, route.id);
+    const permissao = resolverPermissao(
+      sinais.permissoes,
+      route.permissaoNecessaria,
+    );
     const permitido = ![capability, entitlement, permissao].includes('negado');
 
     return {
@@ -85,4 +88,13 @@ function resolverSinal(
 ): ResultadoDoSinalDeAcesso {
   if (!rotasPermitidas) return 'nao-publicado';
   return rotasPermitidas.includes(routeId) ? 'permitido' : 'negado';
+}
+
+function resolverPermissao(
+  permissoesConcedidas: readonly string[] | undefined,
+  permissaoNecessaria: string | undefined,
+): ResultadoDoSinalDeAcesso {
+  // Rotas sem API publicada ainda não inventam uma permissão no frontend.
+  if (!permissaoNecessaria || !permissoesConcedidas) return 'nao-publicado';
+  return permissoesConcedidas.includes(permissaoNecessaria) ? 'permitido' : 'negado';
 }

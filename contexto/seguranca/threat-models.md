@@ -69,7 +69,8 @@ Baseline: commit `a603534`.
 | Enumeração de `channelConnectionId` | Mapa de conexões | Resposta uniforme para conexão inexistente e para assinatura inválida | Log | `InboundMessageTest` | Baixo |
 | Perda de mensagem por falha após ACK | Mensagem do cliente sumida | **Persiste antes de confirmar**; só então responde 200 — ADR-0003 | Evento pendente na tabela | `IngestaoTransacionalTest` | Baixo |
 | Reentrega duplicada pelo provedor | Mensagem repetida | Idempotência por identificador de evento | — | `InboundMessageTest` | Baixo |
-| Corpo malicioso muito grande | Exaustão de memória | **Sem limite explícito de tamanho de corpo** — ver `SEC-003` | — | — | **Médio** |
+| Corpo malicioso muito grande | Exaustão de memória | Teto global de 1 MiB, contando bytes mesmo sem `Content-Length` | Resposta 413 correlacionada | `HttpProtectionFilterTest` | Baixo |
+| Rajada por uma origem | Exaustão de recurso | Janela por origem nas rotas públicas e webhook | 429 com `Retry-After` e correlação | `HttpProtectionFilterTest` | Baixo; produção horizontal exigirá contador distribuído |
 | CSRF no webhook | — | Não se aplica: não há navegador, sessão nem cookie neste caminho | — | — | — |
 
 ## F4 — WebSocket e tempo real
@@ -106,13 +107,13 @@ publica é a aplicação, e o broker não conhece banco.
 
 | Abuso | Impacto | Preventivo | Detectivo | Teste | Residual |
 |---|---|---|---|---|---|
-| Dependência vulnerável entrando sem revisão | Falha herdada | `dependency-review-action` reprova PR com severidade alta | `npm audit` no gate | job `seguranca` | Baixo |
+| Dependência vulnerável entrando sem revisão | Falha herdada | `npm audit` no frontend; Trivy na imagem final cobre dependências Java transitivas e pacotes do sistema | Job `seguranca` falha em alta/crítica | CI versionado; execução externa pendente em `SEC-016` | Baixo |
 | Vulnerabilidade conhecida ignorada com `\|\| true` | Controle desligado na prática | Verificador exige **exceção nomeada** com responsável e prazo, e reprova quando o prazo vence | — | verificado nos dois caminhos negativos nesta execução | Baixo |
 | Segredo versionado por engano | Credencial pública | gitleaks sobre o histórico completo (`fetch-depth: 0`) | — | 25 commits varridos, sem vazamento | Baixo |
 | Exceção de segredo ampla demais | Segredo real escondido | Allowlist casa **valor literal e caminho**; segredo novo no mesmo arquivo continua reprovando | — | verificado por injeção de segredo falso nesta execução | Baixo |
 | Ação de CI comprometida | Execução arbitrária no pipeline | Dependabot acompanha `github-actions` | — | — | Médio — ações ainda referenciadas por tag móvel, não por SHA |
 | Imagem base desatualizada | CVE herdada do sistema | Dependabot acompanha `docker`; imagem escaneada | `docker scout`: 0 críticas, 0 altas, 9 médias | execução | Baixo |
-| Falha de infraestrutura confundida com falha de código | Diagnóstico errado, tempo perdido | **Nenhum** — ver `SEC-012` | — | aconteceu duas vezes nesta sessão | **Médio** |
+| Falha de infraestrutura confundida com falha de código | Diagnóstico errado, tempo perdido | Preflight único do Docker antes da suíte; gate rápido explicitamente isento | Mensagem única com instrução de recuperação | gate completo com 123 testes | Baixo |
 
 ---
 

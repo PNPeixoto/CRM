@@ -47,6 +47,23 @@ try {
   process.exit(1);
 }
 
+// O npm também devolve JSON quando o registry está indisponível, mas esse JSON
+// contém `error` e não é um relatório. Tratar `{}` ou erro de transporte como
+// "zero vulnerabilidades" faria o gate aprovar exatamente quando o scanner não
+// conseguiu trabalhar. A forma válida atual tem versão e totais explícitos.
+if (
+  auditoria.error
+  || typeof auditoria.auditReportVersion !== 'number'
+  || !auditoria.metadata
+  || !auditoria.metadata.vulnerabilities
+) {
+  console.error(
+    'O `npm audit` não produziu um relatório completo. '
+      + 'A auditoria falha fechado; verifique registry e conectividade.',
+  );
+  process.exit(1);
+}
+
 const arquivoExcecoes = join(aqui, 'excecoes-de-dependencia.json');
 const { excecoes = [] } = JSON.parse(readFileSync(arquivoExcecoes, 'utf8'));
 
@@ -104,7 +121,7 @@ for (const [nome, v] of Object.entries(vulnerabilidades)) {
   }
 }
 
-const totais = auditoria.metadata?.vulnerabilities ?? {};
+const totais = auditoria.metadata.vulnerabilities;
 console.log(`Auditoria npm: ${JSON.stringify(totais)}`);
 
 for (const e of excetuadas) {

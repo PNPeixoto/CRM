@@ -9,8 +9,8 @@ e o resultado observado nesta execução ou registrado em sessão anterior;
 comportamento observado. A diferença importa: inspeção não pega
 comportamento em runtime que contradiz o que o código parece dizer.
 
-Baseline: commit `a603534`, suíte backend com 112 testes verdes, frontend com
-56.
+Baseline atualizado no Prompt 08: suíte backend com 123 testes verdes e
+frontend com 101.
 
 ---
 
@@ -19,7 +19,7 @@ Baseline: commit `a603534`, suíte backend com 112 testes verdes, frontend com
 | Controle | Aplicável | Implementação | Teste | Evidência |
 |---|---|---|---|---|
 | Injeção SQL | sim | JPQL com parâmetros nomeados; nenhuma concatenação de entrada em consulta. `ContactRepository.buscar` recebe o termo como parâmetro, inclusive no `LIKE` | `IsolamentoEntreTenantsTest`, `ReferenciasMultiTenantTest` | execução |
-| `ORDER BY` dinâmico | **não** | Nenhum endpoint aceita campo de ordenação do usuário; a ordenação é fixa em cada consulta | — | inspeção |
+| `ORDER BY` dinâmico | sim | Contatos aceita somente `ordenarPor=nome`; qualquer outro campo é rejeitado antes da consulta | `ContratosTransversaisTest` | execução |
 | Injeção de comando de SO | **não** | A aplicação não invoca processo externo | — | inspeção |
 | XSS refletido/armazenado | sim | React escapa por padrão; nenhum `dangerouslySetInnerHTML` no código; CSP sem `unsafe-eval` e sem `unsafe-inline` em `script-src` | cobertura indireta pelos testes de componente | inspeção |
 | Deserialização insegura | sim | Jackson com `fail-on-unknown-properties: true`; DTOs são records de campos explícitos; sem tipagem polimórfica habilitada | `GlobalExceptionHandlerTest` | execução |
@@ -28,10 +28,10 @@ Baseline: commit `a603534`, suíte backend com 112 testes verdes, frontend com
 
 | Controle | Aplicável | Implementação | Teste | Evidência |
 |---|---|---|---|---|
-| Validação de entrada | sim | Jakarta Validation nos DTOs (`@NotBlank`, `@Size`, `@Email`); teto de página de 100 em `ContactController` | `ModeloOrganizacionalTest` | execução |
+| Validação de entrada | sim | Jakarta Validation nos DTOs; página 0–100 rejeita em vez de truncar; filtro tem 100 caracteres; corpo global tem 1 MiB | `ModeloOrganizacionalTest`, `ContratosTransversaisTest`, `HttpProtectionFilterTest` | execução |
 | Invariante de domínio | sim | Dinheiro em centavos (`BIGINT`), nunca ponto flutuante; transição de etapa passa por `moverPara` | `FunilPorSegmentoTest`, `SegmentPresetCatalogTest` | execução |
-| Mass assignment | sim | DTO por caso de uso; entidade nunca é corpo de requisição; campo desconhecido — inclusive `tenantId` — é **rejeitado** e não ignorado | `ReferenciasMultiTenantTest` | execução |
-| Limite de taxa em lógica de negócio | **parcial** | Existe em login (por tenant, login e origem). **Ausente** nos demais endpoints — ver `SEC-003` | `AutenticacaoSeguraTest` | execução |
+| Mass assignment | sim | DTO por caso de uso; entidade nunca é corpo; campo desconhecido é rejeitado. A propriedade efetiva também é conferida no profile de produção | `ReferenciasMultiTenantTest`, `ContratosTransversaisTest`, `ProductionConfigurationTest` | execução |
+| Limite de taxa em lógica de negócio | sim nas portas públicas atuais | Login mantém bloqueio por tenant/login/origem; autenticação pública e webhook têm ainda janela por origem | `AutenticacaoSeguraTest`, `HttpProtectionFilterTest` | execução |
 
 ## V3 — Web Frontend Security
 
@@ -54,9 +54,11 @@ Baseline: commit `a603534`, suíte backend com 112 testes verdes, frontend com
 |---|---|---|---|---|
 | Contrato explícito | sim | OpenAPI 3.1 determinístico, snapshot versionado; alteração de contrato reprova o build | `OpenApiContractTest` | execução |
 | CORS | sim | Lista branca por variável; **vazio = nenhuma origem**, falha fechada | — | inspeção |
-| Erro padronizado | sim | RFC 9457 com `correlationId`; detalhe interno não é apresentado | `GlobalExceptionHandlerTest` | execução |
+| Erro padronizado | sim | RFC 9457 com `correlationId`; filtro atribui a correlação antes da autenticação e a inclui também no sucesso | `GlobalExceptionHandlerTest`, `HttpProtectionFilterTest` | execução |
 | Método HTTP e verbo seguro | sim | Leitura em `GET`, mutação em `POST`/`PUT`/`DELETE`; `@Transactional(readOnly = true)` nas leituras | — | inspeção |
-| Exposição do contrato | **achado** | `/v3/api-docs/**` é público em todos os profiles — ver `SEC-001` | — | inspeção |
+| Exposição do contrato | sim | Snapshot fica no build; API docs e Swagger UI estão desabilitados no profile de produção | `ProductionConfigurationTest` | execução |
+| Idempotência de escrita repetível | sim | Envio de mensagem aceita chave opaca persistida; replay devolve o mesmo recurso e conteúdo divergente retorna conflito | `ContratosTransversaisTest` | execução |
+| Histórico extenso | sim | Mensagens usam keyset `(createdAt,id)`, lote máximo de 100 e preservam ordem cronológica do contrato | `ContratosTransversaisTest` | execução |
 
 ## V5 — File Handling
 
@@ -150,7 +152,7 @@ SSO corporativo dispara revisão por novo ADR, conforme ADR-0006.
 | Separação de privilégio no banco | sim **(nível 3)** | `crm_migrator` só durante migration; a aplicação conecta sempre pelo papel restrito | `BancoSegurancaTest` | execução |
 | Contêiner endurecido | sim | Não-root (UID 10001), `read_only`, `cap_drop: ALL`, `no-new-privileges`, tmpfs limitada | — | inspeção |
 | Segredo em imagem | sim | Nenhum; varredura do repositório sem vazamento | gitleaks sobre 25 commits | execução |
-| Deriva entre ambiente e código | **achado** | Nada compara schema esperado com aplicado no boot — ver `SEC-006` | — | execução (ENV-001 aconteceu de fato) |
+| Deriva entre ambiente e código | sim | Readiness `schemaVersion` compara a versão esperada pela imagem à maior migration estrutural aplicada e falha nos dois sentidos | `SchemaVersionHealthIndicatorTest`, `ContratosTransversaisTest` | execução |
 
 ## V14 — Data Protection
 
@@ -175,7 +177,7 @@ SSO corporativo dispara revisão por novo ADR, conforme ADR-0006.
 | Controle | Aplicável | Implementação | Teste | Evidência |
 |---|---|---|---|---|
 | Erro sem detalhe interno | sim | RFC 9457; exceção de domínio nomeada; stack trace não vai para a resposta | `GlobalExceptionHandlerTest` | execução |
-| Correlação | sim | `correlationId` em toda resposta de erro e no log correspondente | `GlobalExceptionHandlerTest` | execução |
+| Correlação | sim | UUID confiável é criado antes da cadeia, fica no MDC e no cabeçalho de toda resposta; entrada forjada é substituída sem ser refletida | `GlobalExceptionHandlerTest`, `HttpProtectionFilterTest` | execução |
 | Log de negação | sim | Registra permissão e usuário e **não** o id do recurso alvo, para o log não virar inventário do que existe | inspeção de `AutorizacaoService.negar` | inspeção |
 | Log de evento de segurança | **parcial** | Reuso de refresh token, negação de autorização e SUBSCRIBE recusado são registrados. Não há trilha consultável | — | inspeção |
 | Trilha de auditoria | **não — ausente** | O módulo `audit` não existe. É `AUDIT-001`, P0 do produto, e bloqueia o Gate E | — | execução |
@@ -187,7 +189,7 @@ SSO corporativo dispara revisão por novo ADR, conforme ADR-0006.
 
 | Situação | Capítulos |
 |---|---|
-| Atendido no nível 2 ou acima | V1, V2 (com ressalva de taxa), V3, V4 (com `SEC-001`), V6, V7, V8, V11, V12, V13, V14, V15 |
+| Atendido no nível 2 ou acima | V1, V2, V3, V4, V6, V7, V8, V11, V12, V13, V14, V15 |
 | Não aplicável por ausência de superfície | V5, V10 |
 | Atendido parcialmente | V9 (`SEC-002`), V16 (auditoria ausente) |
 

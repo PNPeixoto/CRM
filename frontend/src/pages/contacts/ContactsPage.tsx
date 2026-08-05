@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { contatosApi } from '@/shared/crm/api';
+import { formatarResponsavel } from '@/shared/crm/responsavel';
 import type { Contato } from '@/shared/crm/tipos';
 import { formatarData } from '@/shared/formato';
 import { Carregando, Pagina, Vazio } from '@/shared/components/Pagina';
@@ -205,6 +206,7 @@ function TabelaDeContatos({
             <Th>E-mail</Th>
             <Th>Telefone</Th>
             <Th>Empresa</Th>
+            <Th>Responsável</Th>
             <Th>Criado em</Th>
             <Th>Ações</Th>
           </tr>
@@ -222,6 +224,7 @@ function TabelaDeContatos({
               <Td>{contato.email ?? '—'}</Td>
               <Td>{contato.telefone ?? '—'}</Td>
               <Td>{contato.empresa ?? '—'}</Td>
+              <Td>{formatarResponsavel(contato)}</Td>
               <Td>{formatarData(contato.criadoEm)}</Td>
               <Td>
                 <Button variant="fantasma" size="pequeno" onClick={() => aoExcluir(contato)}>

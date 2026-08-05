@@ -1,17 +1,18 @@
 # Estado atual
 
 > Reescrito ao fim de cada sessão. Máximo 150 linhas.
-> Última atualização: 2026-08-03 15:50 (America/Montevideo)
+> Última atualização: 2026-08-03 23:42 (America/Montevideo)
 
 ## Onde parei
 
-Os Prompts backend 00–07 e frontend F0–F4 estão concluídos. Os Gates A e B
-estão **fechados**; a revisão integrada do Gate B foi executada em 2026-08-03
-e está em `contexto/revisao-tecnica/resultados/`.
+Os Prompts backend 00–08 e frontend F0–F4 estão concluídos. Os Gates A e B
+estão **fechados**; o Gate B foi revalidado após corrigir a jornada de MFA,
+o scanner de dependências, o contrato gerado e a imagem local divergente.
 
-O backend está na migration V11 com 112 testes verdes; o frontend tem 89.
-Próximo passo é `backend:08`, que já tem seis itens endereçados a ele no
-backlog de segurança.
+O backend está na migration V13 com 123 testes verdes; o frontend tem 101.
+A conta máxima da empresa tem visão `TENANT` de contatos, tarefas, funil,
+conversas, canais e relatórios; contatos, tarefas e oportunidades identificam
+nome e login do responsável. Próximo passo canônico é `backend:09`.
 
 ## Implementado
 
@@ -32,7 +33,8 @@ backlog de segurança.
 - Reset de senha uniforme, token único de 256 bits/15 minutos armazenado por
   hash, política atual e revogação de todas as sessões.
 - MFA TOTP obrigatório para OWNER/ADMIN/SUPERADMIN, segredo AES-256-GCM, replay
-  bloqueado e dez códigos de recuperação de uso único armazenados por hash.
+  bloqueado e dez códigos de recuperação de uso único armazenados por hash. A
+  SPA cobre cadastro inicial, TOTP e recovery code sem persistir segredo.
 - **Autorização por ação e por registro em ponto único (`Autorizacao`), aplicada
   a todas as superfícies HTTP atuais.** Alcance vem do membership vigente; o recorte por
   responsável entra na consulta, não sobre a página. Atualização verifica antes
@@ -52,6 +54,15 @@ backlog de segurança.
 - OpenAPI 3.1 determinístico via springdoc 3.0.3 e snapshot versionado.
 - Erro RFC 9457 com status, código, campos, instância e correlation id; detalhes
   internos não são apresentados pelo frontend.
+- Filtro HTTP transversal atribui correlação antes da autenticação, limita todo
+  corpo a 1 MiB inclusive em transferência chunked e limita por origem as
+  portas públicas de autenticação e webhook.
+- Histórico de mensagens usa página keyset de até 100 itens; envio da SPA usa
+  `Idempotency-Key`, replay devolve a mesma mensagem e reutilização com outro
+  conteúdo falha em conflito.
+- Readiness compara a versão estrutural esperada pela imagem com o histórico do
+  Flyway, detectando banco atrasado e imagem antiga. OpenAPI fica desabilitado
+  no profile de produção.
 - `openapi-typescript` 7.13.0 fixo e saída gerada versionada. Apenas o adaptador
   importa o contrato; páginas usam modelos próprios.
 - Cliente HTTP central com cookies, token em memória, CSRF, timeout,
@@ -59,10 +70,10 @@ backlog de segurança.
   chave e contrato de idempotência explícitos.
 - CI verifica backend, snapshot OpenAPI, geração TypeScript sem diff, lint,
   testes e build do frontend.
-- Job de segurança no CI: gitleaks no histórico completo e auditoria de
-  dependência do frontend, com exceção nomeada que exige responsável, prazo e
-  fundamento — o gate **reprova quando o prazo vence**. Dependabot acompanha
-  maven, npm, github-actions e docker.
+- Job de segurança no CI: gitleaks no histórico completo, auditoria de
+  dependência do frontend e Trivy sobre a imagem final do backend; exceção
+  vencida, scanner incompleto ou vulnerabilidade alta/crítica **reprova**.
+  Dependabot acompanha maven, npm, github-actions e docker.
 - Baseline ASVS 5.0.0 nível 2, threat models e backlog em `contexto/seguranca/`.
 - CSP no documento da SPA, verificada no navegador em modo `enforce`; sem
   `eval`, `innerHTML` nem HTML arbitrário, com teste de contrato que reprova a
@@ -81,33 +92,36 @@ backlog de segurança.
 - V9: privilégios mínimos de funções.
 - V10: modelo organizacional e escopos.
 - V11: sessão endurecida, recuperação e MFA.
-- Seeds e dados demonstrativos existem somente no profile `dev`. O seed separa
-  `ATTENDANT` com alcance `OWN` nos registros e `ATTENDANT_SHARED` com alcance
-  `TENANT` apenas para a caixa de entrada compartilhada.
+- V12: atribui ao autor registros históricos que estavam sem responsável.
+- V13: idempotência persistente do envio de mensagens.
+- Seeds e dados demonstrativos existem somente no profile `dev`. O seed mantém
+  contatos e tarefas do `ATTENDANT` em `OWN`; funil e caixa de entrada ficam no
+  papel `ATTENDANT_SHARED`, com alcance `TENANT`.
 
 ## Verificado nesta máquina
 
-- Baseline `a603534` + árvore desta sessão, branch `main`, Windows/JDK 25.0.4 e Docker Desktop 29.6.2.
-- Backend: 112 testes, 0 falhas, 0 erros, 0 ignorados; PostgreSQL/Redis reais com
+- Baseline `4901499` + working tree, branch `main`, Windows/JDK 25.0.4 e Docker Desktop 29.6.2.
+- Backend: 123 testes, 0 falhas, 0 erros, 0 ignorados; PostgreSQL/Redis reais com
   runtime restrito `crm_runtime_test`.
-- Flyway limpo até V11, caminho de atualização e os 14 artefatos do conjunto de
+- Flyway limpo até V13, caminho de atualização e os 17 artefatos do conjunto de
   migrations + seeds `dev` verificados.
-- Benchmark Argon2id local: média de 103 ms, cinco amostras após aquecimento.
-- Frontend: 89 testes em 19 arquivos, todos verdes.
-- `npm run api:check` passou em 2026-08-01; build de produção reexecutado em
-  2026-08-03, sem script inline e sem source map.
+- Frontend: 101 testes em 22 arquivos, todos verdes.
+- `npm run api:check` e build passaram em 2026-08-03; sem source map público.
 - Lint frontend sem erros; permanecem três avisos conhecidos de Fast Refresh.
+- Backend local reconstruído como `0.0.1-dev`, readiness `UP`; volume preservado.
+  Na empresa PNP, 1 contato, 9 oportunidades e 1 tarefa ficaram atribuídos a
+  `peixoto`, sem registro órfão. As migrations V12 e V13 estão aplicadas.
 
 ## Governança
 
 - `contexto/prompts/manifest.yaml` v3 é a trilha backend canônica.
 - `contexto/prompts/frontend/manifest.yaml` v4 é a trilha frontend companheira.
-- Prompts 00–07 e F0–F4 estão marcados como `completed`; a revisão corretiva do
+- Prompts 00–08 e F0–F4 estão concluídos; a revisão corretiva do
   Prompt 06 está registrada na sessão de 2026-08-03.
 - ADRs individuais registram banco, modelo organizacional, autenticação e o
   alcance de autorização (ADR-0008).
-- A revisão integrada de 2026-08-02 permanece em
-  `contexto/revisao-tecnica/resultados/`, com notas de fechamento por achado.
+- A revalidação vigente do Gate B está em
+  `contexto/revisao-tecnica/resultados/2026-08-03-revisao-gate-b-revalidacao.md`.
 - O acervo acumulado foi versionado em 2026-08-03 na `main`, em cinco commits
   por área (infra/CI, backend, frontend, documentação, contexto), sobre
   `793777d`. Ambas as suítes estavam verdes no momento do commit. Nenhum
@@ -116,31 +130,25 @@ backlog de segurança.
 
 ## Próximo passo
 
-1. Conferir no GitHub a execução do job `seguranca` — enviado em 2026-08-03,
-   resultado não observável daqui porque o repositório é privado.
-2. Habilitar alertas do Dependabot nas configurações do repositório: hoje é o
-   único controle de dependência do backend — `SEC-017`.
-3. Executar `backend:08`, com `SEC-001`, `SEC-003`, `SEC-006`, `SEC-012`,
-   `SEC-015` e `SEC-017` endereçados a ele.
-4. Seguir para `backend:09` e `frontend:F5`.
+1. Conferir no GitHub a primeira execução do novo scan Trivy — o repositório é
+   privado e o resultado externo não é observável daqui (`SEC-016`).
+2. Seguir para `backend:09` e `frontend:F5`.
 
 ## Riscos restantes
 
 - Alcance por unidade não decide sobre registro de domínio: nenhuma tabela de
   domínio declara unidade. Falha fechada por decisão registrada em ADR-0008; a
   saída é migration aditiva com regra de backfill.
-- O seletor de contexto do frontend segue alimentado por lista fabricada no
-  cliente; `/api/organizacao/contextos` e `/api/organizacao/permissoes` ainda não
-  têm consumidor.
+- O frontend já consome `/api/organizacao/permissoes` para ocultar módulos sem
+  acesso e bloquear a rota antes da chamada protegida. O seletor de contexto
+  ainda usa uma lista fabricada; `/api/organizacao/contextos` segue sem consumidor.
 - `frame-ancestors` é ignorada em `<meta>` e exige cabeçalho do servidor de
   estáticos, que não existe no repositório: a proteção contra clickjacking do
   documento depende hoje de configuração externa não versionada.
 - Auditoria — classificada P0 pelo próprio produto — não existe (AUDIT-001);
   bloqueia o Gate E.
-- Seis riscos médios abertos em `contexto/seguranca/backlog.md`: contrato
-  OpenAPI público, ausência de limite de taxa e de tamanho de corpo fora do
-  login, deriva de schema não detectada, inscrição WebSocket que sobrevive à
-  revogação, e falha de infraestrutura que se apresenta como falha de teste.
+- Dois riscos médios permanecem: inscrição WebSocket já ativa após revogação
+  (`SEC-011`) e confirmação externa da primeira execução do CI (`SEC-016`).
 - Herdados de autenticação: blocklist inicial, reset por provedor externo,
   TOTP sem resistência a phishing, e janela de até 15 min na revogação.
 - As duas altas do `npm audit` são de RSC no `react-router`, que este frontend

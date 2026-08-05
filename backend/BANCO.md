@@ -41,8 +41,10 @@ ao pool sempre zera a variável.
 4. Valide catálogo, RLS, grants e papel conectado antes de liberar tráfego.
 5. Só então promova a mesma imagem da aplicação.
 
-V9 a V11 preservam as estruturas anteriores; V10 adiciona o modelo
-organizacional e V11 adiciona sessões endurecidas, recuperação e MFA.
+V9 a V13 preservam as estruturas anteriores; V10 adiciona o modelo
+organizacional, V11 adiciona sessões endurecidas, recuperação e MFA, V12
+atribui registros históricos ao autor quando estavam órfãos e V13 adiciona a
+chave idempotente de mensagens de saída.
 Portanto o rollback do binário não exige rollback de schema. Migrations aplicadas não são editadas nem
 revertidas por script `down`; uma reversão de dados usa restauração testada ou
 uma migration compensatória revisada.

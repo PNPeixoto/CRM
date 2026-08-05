@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -51,10 +52,19 @@ class TaskController {
     @Transactional(readOnly = true)
     ResponseEntity<List<TarefaResponse>> listar(
             @RequestParam(defaultValue = "false") boolean apenasAbertas) {
-        return ResponseEntity.ok(
-                repository.listar(TenantContext.obrigatorio(),
-                                filtroDeResponsavel(Permissao.TASKS_READ), apenasAbertas)
-                        .stream().map(TaskController::paraResposta).toList());
+        List<TaskEntity> tarefas = repository.listar(
+                TenantContext.obrigatorio(),
+                filtroDeResponsavel(Permissao.TASKS_READ), apenasAbertas);
+        Map<UUID, UsuarioLookup.UsuarioReference> responsaveis = users.findKnown(
+                TenantContext.obrigatorio(), tarefas.stream()
+                        .map(TaskEntity::getAssignedUserId)
+                        .filter(java.util.Objects::nonNull)
+                        .distinct()
+                        .toList());
+        return ResponseEntity.ok(tarefas.stream()
+                .map(tarefa -> paraResposta(
+                        tarefa, responsaveis.get(tarefa.getAssignedUserId())))
+                .toList());
     }
 
     /** Ver a explicação equivalente em {@code ContactController}. */
@@ -146,9 +156,20 @@ class TaskController {
                 r.contatoId(), r.oportunidadeId(), autorId);
     }
 
-    private static TarefaResponse paraResposta(TaskEntity t) {
+    private TarefaResponse paraResposta(TaskEntity t) {
+        UsuarioLookup.UsuarioReference responsavel = t.getAssignedUserId() == null
+                ? null
+                : users.findKnown(TenantContext.obrigatorio(), List.of(t.getAssignedUserId()))
+                        .get(t.getAssignedUserId());
+        return paraResposta(t, responsavel);
+    }
+
+    private static TarefaResponse paraResposta(
+            TaskEntity t, UsuarioLookup.UsuarioReference responsavel) {
         return new TarefaResponse(t.getId(), t.getTitle(), t.getDescription(), t.getDueAt(),
                 t.getDoneAt(), t.getAssignedUserId(), t.getContactId(), t.getDealId(),
+                responsavel == null ? null : responsavel.login(),
+                responsavel == null ? null : responsavel.nomeCompleto(),
                 t.getCreatedAt());
     }
 
@@ -163,6 +184,7 @@ class TaskController {
 
     record TarefaResponse(
             UUID id, String titulo, String descricao, Instant vencimentoEm, Instant concluidaEm,
-            UUID responsavelId, UUID contatoId, UUID oportunidadeId, Instant criadaEm) {
+            UUID responsavelId, UUID contatoId, UUID oportunidadeId,
+            String responsavelLogin, String responsavelNome, Instant criadaEm) {
     }
 }

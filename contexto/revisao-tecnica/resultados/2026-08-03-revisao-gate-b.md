@@ -1,5 +1,10 @@
 # Revisão integrada do Gate B — Segurança do núcleo
 
+> **Relatório histórico.** Uma revalidação posterior encontrou e corrigiu a
+> interface ausente de MFA, uma falha aberta no verificador do `npm audit`,
+> deriva do contrato gerado e nova divergência da imagem local. O veredito
+> vigente está em `2026-08-03-revisao-gate-b-revalidacao.md`.
+
 > Execução: 2026-08-03, 12:44–12:50 UTC. Consolida `backend:05`, `backend:06`,
 > `backend:07`, `frontend:F4A` e `frontend:F4`.
 

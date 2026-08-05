@@ -49,6 +49,8 @@ final class ContactDtos {
             String empresa,
             String observacoes,
             UUID responsavelId,
+            String responsavelLogin,
+            String responsavelNome,
             Instant criadoEm) {
     }
 }

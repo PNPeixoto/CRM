@@ -10,6 +10,8 @@ export interface RotaApp {
   /** Implementada significa renderizável; não equivale a gate de produção. */
   readonly status: StatusPagina;
   readonly grupo: 'operacao' | 'gestao' | 'plataforma';
+  /** Permissão atômica de leitura exigida pelo endpoint principal da página. */
+  readonly permissaoNecessaria?: string;
   readonly componente: LazyExoticComponent<ComponentType>;
 }
 
@@ -21,26 +23,31 @@ export const ROTAS: readonly RotaApp[] = [
   {
     id: 'dashboard', caminho: '/dashboard', rotulo: 'Visão geral',
     icone: 'layout-dashboard', status: 'pronto', grupo: 'operacao',
+    permissaoNecessaria: 'reports.read',
     componente: lazy(() => import('@/pages/dashboard').then((m) => ({ default: m.DashboardPage }))),
   },
   {
     id: 'inbox', caminho: '/inbox', rotulo: 'Caixa de entrada',
     icone: 'messages-square', status: 'pronto', grupo: 'operacao',
+    permissaoNecessaria: 'conversations.read',
     componente: lazy(() => import('@/pages/inbox').then((m) => ({ default: m.InboxPage }))),
   },
   {
     id: 'contacts', caminho: '/contatos', rotulo: 'Contatos',
     icone: 'users', status: 'pronto', grupo: 'operacao',
+    permissaoNecessaria: 'contacts.read',
     componente: lazy(() => import('@/pages/contacts').then((m) => ({ default: m.ContactsPage }))),
   },
   {
     id: 'pipelines', caminho: '/funis', rotulo: 'Oportunidades',
     icone: 'git-branch', status: 'pronto', grupo: 'operacao',
+    permissaoNecessaria: 'deals.read',
     componente: lazy(() => import('@/pages/pipelines').then((m) => ({ default: m.PipelinesPage }))),
   },
   {
     id: 'tasks', caminho: '/tarefas', rotulo: 'Tarefas',
     icone: 'check-square', status: 'pronto', grupo: 'operacao',
+    permissaoNecessaria: 'tasks.read',
     componente: lazy(() => import('@/pages/tasks').then((m) => ({ default: m.TasksPage }))),
   },
   {
@@ -76,6 +83,7 @@ export const ROTAS: readonly RotaApp[] = [
   {
     id: 'integrations', caminho: '/integracoes', rotulo: 'Canais e números',
     icone: 'plug', status: 'pronto', grupo: 'plataforma',
+    permissaoNecessaria: 'channels.read',
     componente: lazy(() => import('@/pages/integrations').then((m) => ({ default: m.IntegrationsPage }))),
   },
   {
@@ -86,6 +94,7 @@ export const ROTAS: readonly RotaApp[] = [
   {
     id: 'reports', caminho: '/relatorios', rotulo: 'Relatórios',
     icone: 'bar-chart-3', status: 'pronto', grupo: 'gestao',
+    permissaoNecessaria: 'reports.read',
     componente: lazy(() => import('@/pages/reports').then((m) => ({ default: m.ReportsPage }))),
   },
   {

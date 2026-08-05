@@ -45,6 +45,16 @@ spring:
     timeout-per-shutdown-phase: 20s
 
 app:
+  http:
+    # Vale também para JSON chunked: o filtro conta os bytes lidos e não
+    # confia apenas em Content-Length.
+    max-request-bytes: 1048576
+    public-requests-per-minute: 120
+    webhook-requests-per-minute: 60
+  schema:
+    # Atualizado junto com toda migration estrutural. Readiness compara este
+    # valor ao histórico realmente aplicado e detecta inclusive imagem antiga.
+    expected-version: "13"
   security:
     # Sem valor padrão, de propósito: a aplicação não sobe sem estes segredos.
     # Um default aqui seria herdado silenciosamente em produção, e um pepper
@@ -113,7 +123,7 @@ management:
         # componente usado por bloqueio/rate limit. Liveness continua local
         # para não reiniciar todas as instâncias por falha de dependência.
         readiness:
-          include: readinessState,db,redis
+          include: readinessState,db,redis,schemaVersion
 
 springdoc:
   api-docs:

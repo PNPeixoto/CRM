@@ -74,17 +74,15 @@ public interface Autorizacao {
     /**
      * Responsável a gravar quando a requisição não informa um.
      *
-     * <p>Sob {@link Alcance#TENANT} devolve o que veio — inclusive
-     * {@code null}, porque uma fila de registros sem dono é legítima quando
-     * todos enxergam todos.
-     *
-     * <p>Sob {@link Alcance#PROPRIO} o autor vira o responsável. Sem isso a
-     * permissão de escrita seria inútil no alcance próprio: o registro nasceria
-     * órfão e, pela regra de {@link #exigirSobreRegistro}, ninguém com esse
-     * alcance conseguiria lê-lo nem corrigi-lo depois.
+     * <p>Quando a requisição omite o responsável, o autor assume a
+     * responsabilidade em qualquer alcance. Isso mantém todo contato, tarefa e
+     * oportunidade identificável para a conta gestora e impede registros órfãos.
+     * Uma fila explicitamente não atribuída exige um caso de uso próprio, em vez
+     * de reutilizar a ausência acidental desse campo.
      */
     default UUID responsavelPadrao(Permissao permissao, UUID informado) {
-        if (informado == null && alcanceDe(permissao) == Alcance.PROPRIO) {
+        if (informado == null) {
+            alcanceDe(permissao);
             return usuarioCorrente();
         }
         return informado;

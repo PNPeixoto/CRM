@@ -12,6 +12,8 @@ export interface Contato {
   readonly empresa: string | null;
   readonly observacoes: string | null;
   readonly responsavelId: string | null;
+  readonly responsavelLogin: string | null;
+  readonly responsavelNome: string | null;
   readonly criadoEm: string;
 }
 
@@ -43,6 +45,8 @@ export interface Oportunidade {
   readonly previsaoFechamento: string | null;
   readonly motivoPerda: string | null;
   readonly responsavelId: string | null;
+  readonly responsavelLogin: string | null;
+  readonly responsavelNome: string | null;
   readonly criadaEm: string;
 }
 
@@ -53,6 +57,8 @@ export interface Tarefa {
   readonly vencimentoEm: string | null;
   readonly concluidaEm: string | null;
   readonly responsavelId: string | null;
+  readonly responsavelLogin: string | null;
+  readonly responsavelNome: string | null;
   readonly contatoId: string | null;
   readonly oportunidadeId: string | null;
   readonly criadaEm: string;

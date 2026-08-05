@@ -35,10 +35,12 @@ export function AppRouter() {
 
 function ApplicationRoutes() {
   const { usuario } = useAuth();
-  const { apresentacao } = useTenantPresentation();
+  const { apresentacao, permissoes } = useTenantPresentation();
   const navigation = useMemo(
-    () => resolveNavigation(ROTAS, apresentacao),
-    [apresentacao],
+    () => resolveNavigation(ROTAS, apresentacao, {
+      permissoes: permissoes ? Object.keys(permissoes) : undefined,
+    }),
+    [apresentacao, permissoes],
   );
   const safePath = caminhoInicialSeguro(navigation);
   const contextosAutorizados = usuario

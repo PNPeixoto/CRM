@@ -62,6 +62,9 @@ jobs:
         working-directory: frontend
         run: npm ci --legacy-peer-deps
 
+      - name: Verificar que a auditoria falha fechado
+        run: node --test .github/security/verificar-dependencias.test.mjs
+
       # `npm audit` sozinho reprovaria por vulnerabilidade que não alcança esta
       # aplicação, e o hábito de contornar com `|| true` desliga o controle
       # inteiro. O verificador exige exceção nomeada, com responsável e prazo,
@@ -69,6 +72,21 @@ jobs:
       - name: Auditar dependências do frontend
         working-directory: frontend
         run: npm audit --json | node ../.github/security/verificar-dependencias.mjs
+
+      # Varre a imagem final, incluindo dependências Java transitivas e pacotes
+      # do sistema. Funciona em repositório privado sem GitHub Advanced
+      # Security nem chave externa. O SHA é imutável e corresponde ao v0.36.0.
+      - name: Construir imagem do backend para auditoria
+        run: docker build --tag crm-pnp-backend:security ./backend
+
+      - name: Auditar dependências do backend
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: crm-pnp-backend:security
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
 
       # Compara a árvore de dependências contra a base do PR e reprova o que a
       # mudança introduz de novo.
@@ -78,9 +96,8 @@ jobs:
       # passo falharia em toda execução — e um passo que sempre falha é
       # desligado por alguém em duas semanas, junto com o resto do job.
       #
-      # Enquanto o repositório for privado sem GHAS, a cobertura de dependência
-      # do backend fica com o Dependabot (alertas de segurança, gratuitos em
-      # repositório privado) — ver SEC-017.
+      # A imagem completa já foi varrida acima; este passo adicional continua
+      # útil em repositório público para mostrar exatamente o que o PR trouxe.
       - name: Revisar dependências introduzidas pelo PR
         if: github.event_name == 'pull_request' && github.event.repository.private == false
         uses: actions/dependency-review-action@v4

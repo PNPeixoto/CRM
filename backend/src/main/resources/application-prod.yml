@@ -21,6 +21,14 @@ spring:
     redis:
       url: ${REDIS_URL}
 
+# O snapshot versionado continua alimentando o frontend; produção não expõe o
+# mapa de rotas e DTOs para reconhecimento anônimo.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 server:
   # Usa o RemoteIpValve do Tomcat, que só aceita X-Forwarded-* dos endereços
   # declarados. A aplicação não sobe em prod sem a allowlist do proxy.

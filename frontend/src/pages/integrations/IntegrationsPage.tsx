@@ -35,7 +35,11 @@ export function IntegrationsPage() {
   const carregar = useCallback(async () => {
     setCarregando(true);
     try {
+      setErro(null);
       setCanais(await canaisApi.listar());
+    } catch {
+      setCanais([]);
+      setErro('Não foi possível carregar os canais.');
     } finally {
       setCarregando(false);
     }
@@ -75,7 +79,7 @@ export function IntegrationsPage() {
 
         {carregando ? (
           <Carregando />
-        ) : canais.length === 0 ? (
+        ) : erro && canais.length === 0 ? null : canais.length === 0 ? (
           <Vazio
             titulo="Nenhum canal conectado"
             descricao="Conecte o chat ao vivo ou um bot do Telegram para começar a receber mensagens."
@@ -87,8 +91,13 @@ export function IntegrationsPage() {
                 key={canal.id}
                 canal={canal}
                 aoAlternar={async () => {
-                  await canaisApi.alternarAtivacao(canal.id);
-                  await carregar();
+                  setErro(null);
+                  try {
+                    await canaisApi.alternarAtivacao(canal.id);
+                    await carregar();
+                  } catch {
+                    setErro('Não foi possível alterar o canal.');
+                  }
                 }}
               />
             ))}

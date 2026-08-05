@@ -48,6 +48,7 @@
 		     caminho cotidiano. Os profiles abaixo tornam cada corte reproduzível. -->
 		<testes.grupos.incluidos></testes.grupos.incluidos>
 		<testes.grupos.excluidos>carga</testes.grupos.excluidos>
+		<testes.docker.preflight>true</testes.docker.preflight>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -204,6 +205,12 @@
 			<artifactId>testcontainers-postgresql</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Compila o listener de pré-voo registrado no launcher da suíte. -->
+		<dependency>
+			<groupId>org.junit.platform</groupId>
+			<artifactId>junit-platform-launcher</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>
@@ -250,6 +257,9 @@
 				<configuration>
 					<groups>${testes.grupos.incluidos}</groups>
 					<excludedGroups>${testes.grupos.excluidos}</excludedGroups>
+					<systemPropertyVariables>
+						<crm.test.docker.preflight>${testes.docker.preflight}</crm.test.docker.preflight>
+					</systemPropertyVariables>
 				</configuration>
 			</plugin>
 		</plugins>
@@ -260,6 +270,7 @@
 			<id>gate-rapido</id>
 			<properties>
 				<testes.grupos.excluidos>integracao | carga | quarentena</testes.grupos.excluidos>
+				<testes.docker.preflight>false</testes.docker.preflight>
 			</properties>
 		</profile>
 		<profile>

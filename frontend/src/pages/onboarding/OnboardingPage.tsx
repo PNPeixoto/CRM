@@ -13,7 +13,7 @@ const SEGMENTOS: readonly { id: SegmentoDeNegocio; titulo: string; descricao: st
 ];
 
 export function OnboardingPage() {
-  const { escolherSegmento } = useTenantPresentation();
+  const { escolherSegmento, permissoes } = useTenantPresentation();
   const [salvando, setSalvando] = useState<SegmentoDeNegocio | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -23,7 +23,9 @@ export function OnboardingPage() {
     setErro(null);
     try {
       const atualizada = await escolherSegmento(segmento);
-      navigate(caminhoInicialSeguro(resolveNavigation(ROTAS, atualizada)), { replace: true });
+      navigate(caminhoInicialSeguro(resolveNavigation(ROTAS, atualizada, {
+        permissoes: permissoes ? Object.keys(permissoes) : undefined,
+      })), { replace: true });
     } catch {
       setErro('Não foi possível salvar o segmento. Tente novamente.');
     } finally {

@@ -61,7 +61,7 @@ describe('resolveNavigation', () => {
     const routes = resolveNavigation(ROTAS, presentation([]), {
       capabilities: ['dashboard', 'contacts'],
       entitlements: ['dashboard'],
-      permissoes: ['dashboard', 'contacts'],
+      permissoes: ['reports.read', 'contacts.read'],
     });
 
     expect(routes.find((route) => route.id === 'dashboard')?.acesso).toEqual({
@@ -77,6 +77,16 @@ describe('resolveNavigation', () => {
       permitido: false,
     });
     expect(routes.find((route) => route.id === 'contacts')?.visivel).toBe(false);
+  });
+
+  it('uses the atomic backend codes instead of route ids as permissions', () => {
+    const routes = resolveNavigation(ROTAS, presentation([]), {
+      permissoes: ['contacts.read'],
+    });
+
+    expect(routes.find((route) => route.id === 'contacts')?.acesso.permissao).toBe('permitido');
+    expect(routes.find((route) => route.id === 'dashboard')?.acesso.permissao).toBe('negado');
+    expect(routes.find((route) => route.id === 'calendar')?.acesso.permissao).toBe('nao-publicado');
   });
 
   it('não reexibe rota negada como fallback', () => {

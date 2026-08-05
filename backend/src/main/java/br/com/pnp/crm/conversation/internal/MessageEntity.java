@@ -36,6 +36,9 @@ class MessageEntity {
     @Column(name = "external_id")
     private String externalId;
 
+    @Column(name = "idempotency_key", length = 128)
+    private String idempotencyKey;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DirecaoMensagem direction;
@@ -114,12 +117,14 @@ class MessageEntity {
     }
 
     static MessageEntity paraEnvio(UUID tenantId, UUID conversationId, UUID channelConnectionId,
-                                   TipoConteudo contentType, String texto, UUID autorId) {
+                                   TipoConteudo contentType, String texto, UUID autorId,
+                                   String idempotencyKey) {
         MessageEntity entity = new MessageEntity();
         entity.id = UuidV7.gerar();
         entity.tenantId = tenantId;
         entity.conversationId = conversationId;
         entity.channelConnectionId = channelConnectionId;
+        entity.idempotencyKey = idempotencyKey;
         entity.direction = DirecaoMensagem.OUTBOUND;
         entity.contentType = contentType;
         entity.textContent = texto;
@@ -147,6 +152,10 @@ class MessageEntity {
 
     String getExternalId() {
         return externalId;
+    }
+
+    String getIdempotencyKey() {
+        return idempotencyKey;
     }
 
     DirecaoMensagem getDirection() {

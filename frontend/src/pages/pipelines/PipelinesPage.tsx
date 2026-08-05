@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { funilApi } from '@/shared/crm/api';
+import { formatarResponsavel } from '@/shared/crm/responsavel';
 import type { Etapa, Funil, Oportunidade } from '@/shared/crm/tipos';
 import { formatarMoeda, paraCentavos } from '@/shared/formato';
 import { Carregando, Pagina } from '@/shared/components/Pagina';
@@ -170,6 +171,9 @@ function Coluna({
             <p className="text-sm font-medium">{oportunidade.titulo}</p>
             <p className="mt-0.5 text-sm tabular-nums" style={{ color: 'var(--text-muted)' }}>
               {formatarMoeda(oportunidade.valorCentavos)}
+            </p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+              Responsável: {formatarResponsavel(oportunidade)}
             </p>
 
             {/*

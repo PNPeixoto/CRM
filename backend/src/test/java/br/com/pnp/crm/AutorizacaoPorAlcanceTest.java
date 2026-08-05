@@ -18,6 +18,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -143,6 +144,38 @@ class AutorizacaoPorAlcanceTest {
         mockMvc.perform(get("/api/contatos").with(como(gerente)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void alcanceTenantVeCarteirasComResponsavelIdentificado() throws Exception {
+        criarContato(atendente, "Maria do atendente");
+        criarContato(colega, "Maria do colega");
+        criarContato(gerente, "Maria do gerente");
+
+        mockMvc.perform(get("/api/contatos").with(como(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].responsavelLogin")
+                        .value(containsInAnyOrder("atendente", "colega", "gerente")))
+                .andExpect(jsonPath("$[*].responsavelNome")
+                        .value(containsInAnyOrder(
+                                "Usuário atendente", "Usuário colega", "Usuário gerente")));
+
+        criarTarefa(atendente, "Tarefa do atendente");
+        criarTarefa(colega, "Tarefa do colega");
+        mockMvc.perform(get("/api/tarefas").with(como(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].responsavelLogin")
+                        .value(containsInAnyOrder("atendente", "colega")));
+
+        UUID etapa = criarEtapa();
+        criarOportunidade(atendente, etapa, null);
+        criarOportunidade(colega, etapa, null);
+        UUID funil = TenantContext.executarComo(tenant, () -> jdbc.queryForObject(
+                "SELECT pipeline_id FROM pipeline_stage WHERE id = ?", UUID.class, etapa));
+        mockMvc.perform(get("/api/funis/" + funil + "/oportunidades").with(como(gerente)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].responsavelLogin")
+                        .value(containsInAnyOrder("atendente", "colega")));
     }
 
     @Test

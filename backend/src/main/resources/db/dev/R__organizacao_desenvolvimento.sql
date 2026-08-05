@@ -68,7 +68,7 @@ VALUES ('019fa91c-2000-7000-8000-000000000004',
 ON CONFLICT DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- Atendente com alcance PRÓPRIO, no tenant `pnp`
+-- Atendente com carteira própria e operação compartilhada, no tenant `pnp`
 -- ---------------------------------------------------------------------------
 --
 -- Existe para que haja um caso negativo real em desenvolvimento e nos testes.
@@ -76,10 +76,10 @@ ON CONFLICT DO NOTHING;
 -- por construção — e uma regra que nunca é exercida no caminho negativo é uma
 -- regra que ninguém sabe se funciona.
 --
--- Ele lê e escreve contato, oportunidade e tarefa, mas apenas os que estiverem
--- sob sua responsabilidade. Conversa e apresentação são recursos coletivos e
--- vêm de um segundo papel com alcance TENANT; colocá-las neste papel OWN faria
--- o controller precisar promover silenciosamente próprio para tenant.
+-- Ele lê e escreve contatos e tarefas sob sua responsabilidade. Funil e
+-- conversas são recursos coletivos e vêm de um segundo papel com alcance
+-- TENANT; colocá-los neste papel OWN faria usuários da mesma empresa enxergarem
+-- quadros diferentes e esconderia toda oportunidade ainda sem responsável.
 -- Não recebe `reports.read`: o consolidado soma registros de todo o tenant.
 
 SET LOCAL app.tenant_id = '019fa91c-0f63-75f7-b4a0-1494c1304c42';
@@ -109,8 +109,7 @@ INSERT INTO role_permission (tenant_id, role_id, permission_code)
 SELECT '019fa91c-0f63-75f7-b4a0-1494c1304c42',
        '019fa91c-3000-7000-8000-000000000003', permission
 FROM unnest(ARRAY[
-    'contacts.read', 'contacts.write', 'deals.read', 'deals.write',
-    'tasks.read', 'tasks.write'
+    'contacts.read', 'contacts.write', 'tasks.read', 'tasks.write'
 ]) AS permission
 ON CONFLICT DO NOTHING;
 
@@ -119,7 +118,9 @@ ON CONFLICT DO NOTHING;
 DELETE FROM role_permission
  WHERE tenant_id = '019fa91c-0f63-75f7-b4a0-1494c1304c42'
    AND role_id = '019fa91c-3000-7000-8000-000000000003'
-   AND permission_code IN ('conversations.read', 'conversations.write');
+   AND permission_code IN (
+       'conversations.read', 'conversations.write', 'deals.read', 'deals.write'
+   );
 
 INSERT INTO membership_scope
     (id, tenant_id, membership_id, role_id, scope_type, valid_from)
@@ -139,7 +140,7 @@ INSERT INTO role_permission (tenant_id, role_id, permission_code)
 SELECT '019fa91c-0f63-75f7-b4a0-1494c1304c42',
        '019fa91c-3000-7000-8000-000000000005', permission
 FROM unnest(ARRAY[
-    'conversations.read', 'conversations.write'
+    'conversations.read', 'conversations.write', 'deals.read', 'deals.write'
 ]) AS permission
 ON CONFLICT DO NOTHING;
 

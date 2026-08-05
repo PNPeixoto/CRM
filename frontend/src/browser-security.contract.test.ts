@@ -146,6 +146,12 @@ describe('contrato de segurança do navegador', () => {
     expect(config).toMatch(/sourcemap:\s*false/);
   });
 
+  it('encaminha API e WebSocket ao backend no desenvolvimento', () => {
+    const config = readFileSync(resolve(raiz, 'vite.config.ts'), 'utf8');
+    expect(config).toMatch(/['"]\/api['"]\s*:\s*\{/);
+    expect(config).toMatch(/['"]\/ws['"]\s*:\s*\{[\s\S]*?ws:\s*true/);
+  });
+
   it('fixa runtime e gerenciador de pacotes', () => {
     const pacote = JSON.parse(readFileSync(resolve(raiz, 'package.json'), 'utf8')) as {
       engines?: { node?: string };

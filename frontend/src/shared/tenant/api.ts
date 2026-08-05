@@ -1,10 +1,20 @@
-import type { ApresentacaoWire, PerfilInicialWire } from '@/adapters/http/contracts';
+import type {
+  ApresentacaoWire,
+  PerfilInicialWire,
+  PermissoesWire,
+} from '@/adapters/http/contracts';
 import { obrigatorio, umDe } from '@/adapters/http/mapping';
 import { api } from '@/lib/api';
-import type { ApresentacaoDoTenant, SegmentoDeNegocio } from './tipos';
+import type {
+  ApresentacaoDoTenant,
+  EscopoDePermissao,
+  PermissoesDoUsuario,
+  SegmentoDeNegocio,
+} from './tipos';
 
 const SEGMENTOS = ['GENERAL_SERVICES', 'RESTAURANT', 'CONFECTIONERY', 'RENTAL'] as const;
 const GRUPOS = ['operacao', 'gestao', 'plataforma'] as const;
+const ESCOPOS = ['TENANT', 'OWN', 'UNIT', 'TEAM', 'NETWORK'] as const;
 
 function mapearApresentacao(dados: ApresentacaoWire): ApresentacaoDoTenant {
   const funil = obrigatorio(dados.funilPadrao, 'apresentacao.funilPadrao');
@@ -36,6 +46,16 @@ function mapearApresentacao(dados: ApresentacaoWire): ApresentacaoDoTenant {
 
 export async function obterApresentacao(): Promise<ApresentacaoDoTenant> {
   return mapearApresentacao(await api.get<ApresentacaoWire>('/empresa/apresentacao'));
+}
+
+export async function obterPermissoes(): Promise<PermissoesDoUsuario> {
+  const dados = await api.get<PermissoesWire>('/organizacao/permissoes');
+  return Object.fromEntries(
+    Object.entries(dados).map(([codigo, escopo]) => [
+      codigo,
+      umDe(escopo, ESCOPOS, `permissoes.${codigo}`),
+    ]),
+  ) as Readonly<Record<string, EscopoDePermissao>>;
 }
 
 export async function salvarPerfilInicial(

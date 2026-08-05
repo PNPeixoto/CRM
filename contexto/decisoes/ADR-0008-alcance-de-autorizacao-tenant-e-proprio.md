@@ -71,10 +71,13 @@ superfícies. Quando o mesmo papel recebe `OWN` e um alcance ainda não suportad
 para a mesma permissão, `OWN` continua sendo o alcance efetivo suportado; apenas
 `UNIT` permanece insuficiente e falha fechado.
 
-O seed de desenvolvimento materializa essa separação: `ATTENDANT` usa `OWN`
-para registros com responsável e `ATTENDANT_SHARED` usa `TENANT` somente para
-a caixa compartilhada. Isso evita transformar conveniência operacional em
-ampliação silenciosa de acesso.
+O seed de desenvolvimento materializa essa separação com uma decisão de produto
+adicional: `ATTENDANT` usa `OWN` para contatos e tarefas, enquanto
+`ATTENDANT_SHARED` usa `TENANT` para caixa e funil. O quadro comercial é
+coletivo mesmo quando uma oportunidade possui responsável; filtrar por `OWN`
+fazia usuários da mesma empresa enxergarem quadros diferentes e ocultava
+oportunidades ainda não atribuídas. A ampliação fica restrita a `deals.*` e não
+promove silenciosamente contatos ou tarefas.
 
 O caminho de revisão é uma migration aditiva que dê `unit_id` a `contact`,
 `deal`, `task` e `conversation`, com origem definida no momento da criação e
@@ -84,5 +87,5 @@ novo ADR referencia este e acrescenta `UNIDADE` ao enum `Alcance`.
 ## Evidências
 
 `Permissao`, `Autorizacao`, `AutorizacaoService`, V10 (`membership_scope`),
-ADR-0006 e o papel `ATTENDANT` de alcance `OWN` em
+ADR-0006 e os papéis `ATTENDANT`/`ATTENDANT_SHARED` em
 `db/dev/R__organizacao_desenvolvimento.sql`.

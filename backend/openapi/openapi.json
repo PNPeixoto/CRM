@@ -1381,6 +1381,14 @@
             "format" : "int32",
             "default" : 50
           }
+        }, {
+          "in" : "query",
+          "name" : "ordenarPor",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "nome"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -2018,6 +2026,31 @@
             "type" : "string",
             "format" : "uuid"
           }
+        }, {
+          "in" : "query",
+          "name" : "antesDe",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "in" : "query",
+          "name" : "antesDoId",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "in" : "query",
+          "name" : "limite",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 100
+          }
         } ],
         "responses" : {
           "200" : {
@@ -2125,6 +2158,13 @@
           "schema" : {
             "type" : "string",
             "format" : "uuid"
+          }
+        }, {
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
           }
         } ],
         "requestBody" : {
@@ -4253,6 +4293,12 @@
             "type" : "string",
             "format" : "uuid"
           },
+          "responsavelLogin" : {
+            "type" : "string"
+          },
+          "responsavelNome" : {
+            "type" : "string"
+          },
           "telefone" : {
             "type" : "string"
           },
@@ -4599,6 +4645,12 @@
             "type" : "string",
             "format" : "uuid"
           },
+          "responsavelLogin" : {
+            "type" : "string"
+          },
+          "responsavelNome" : {
+            "type" : "string"
+          },
           "status" : {
             "type" : "string"
           },
@@ -4732,6 +4784,12 @@
           "responsavelId" : {
             "type" : "string",
             "format" : "uuid"
+          },
+          "responsavelLogin" : {
+            "type" : "string"
+          },
+          "responsavelNome" : {
+            "type" : "string"
           },
           "titulo" : {
             "type" : "string"

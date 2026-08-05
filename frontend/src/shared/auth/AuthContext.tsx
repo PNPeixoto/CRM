@@ -1,14 +1,26 @@
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { definirAccessToken, tentarRenovarSessao } from '@/lib/api';
 import { criarCanalDeSessao } from './canalDeSessao';
-import { authApi, type Usuario } from './api';
+import { authApi, type CadastroMfa, type Sessao, type Usuario } from './api';
 
 export type { Usuario } from './api';
 
 interface AuthContextValue {
   readonly usuario: Usuario | null;
   readonly carregando: boolean;
-  readonly entrar: (empresa: string, login: string, senha: string) => Promise<void>;
+  readonly entrar: (
+    empresa: string,
+    login: string,
+    senha: string,
+    codigoMfa?: string,
+  ) => Promise<void>;
+  readonly iniciarCadastroMfa: (
+    empresa: string,
+    login: string,
+    senha: string,
+    codigoMfa?: string,
+  ) => Promise<CadastroMfa>;
+  readonly ativarMfa: (desafio: string, codigo: string) => Promise<readonly string[]>;
   readonly sair: () => Promise<void>;
 }
 
@@ -58,11 +70,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { cancelado = true; };
   }, []);
 
-  const entrar = useCallback(async (empresa: string, login: string, senha: string) => {
-    const sessao = await authApi.entrar(empresa, login, senha);
+  const adotarSessao = useCallback((sessao: Sessao) => {
     definirAccessToken(sessao.accessToken);
     setUsuario(sessao.usuario);
   }, []);
+
+  const entrar = useCallback(async (
+    empresa: string,
+    login: string,
+    senha: string,
+    codigoMfa?: string,
+  ) => {
+    adotarSessao(await authApi.entrar(empresa, login, senha, codigoMfa));
+  }, [adotarSessao]);
+
+  const iniciarCadastroMfa = useCallback((
+    empresa: string,
+    login: string,
+    senha: string,
+    codigoMfa?: string,
+  ) => authApi.iniciarCadastroMfa(empresa, login, senha, codigoMfa), []);
+
+  const ativarMfa = useCallback(async (desafio: string, codigo: string) => {
+    const ativacao = await authApi.ativarMfa(desafio, codigo);
+    adotarSessao(ativacao.sessao);
+    return ativacao.codigosRecuperacao;
+  }, [adotarSessao]);
 
   const sair = useCallback(async () => {
     try {
@@ -78,8 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const valor = useMemo(
-    () => ({ usuario, carregando, entrar, sair }),
-    [usuario, carregando, entrar, sair],
+    () => ({ usuario, carregando, entrar, iniciarCadastroMfa, ativarMfa, sair }),
+    [usuario, carregando, entrar, iniciarCadastroMfa, ativarMfa, sair],
   );
   return <AuthContext value={valor}>{children}</AuthContext>;
 }

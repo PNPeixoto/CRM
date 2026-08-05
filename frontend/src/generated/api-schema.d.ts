@@ -388,6 +388,22 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/organizacao/permissoes": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get: operations["permissoes"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/relatorios/visao-geral": {
         readonly parameters: {
             readonly query?: never;
@@ -540,6 +556,8 @@ export interface components {
             readonly observacoes?: string;
             /** Format: uuid */
             readonly responsavelId?: string;
+            readonly responsavelLogin?: string;
+            readonly responsavelNome?: string;
             readonly telefone?: string;
             /** @enum {string} */
             readonly tipo?: "PERSON" | "ORGANIZATION";
@@ -673,6 +691,8 @@ export interface components {
             readonly previsaoFechamento?: string;
             /** Format: uuid */
             readonly responsavelId?: string;
+            readonly responsavelLogin?: string;
+            readonly responsavelNome?: string;
             readonly status?: string;
             readonly titulo?: string;
             /** Format: int64 */
@@ -723,6 +743,8 @@ export interface components {
             readonly oportunidadeId?: string;
             /** Format: uuid */
             readonly responsavelId?: string;
+            readonly responsavelLogin?: string;
+            readonly responsavelNome?: string;
             readonly titulo?: string;
             /** Format: date-time */
             readonly vencimentoEm?: string;
@@ -2009,6 +2031,7 @@ export interface operations {
         readonly parameters: {
             readonly query?: {
                 readonly busca?: string;
+                readonly ordenarPor?: string;
                 readonly pagina?: number;
                 readonly tamanho?: number;
             };
@@ -2575,7 +2598,11 @@ export interface operations {
     };
     readonly mensagens: {
         readonly parameters: {
-            readonly query?: never;
+            readonly query?: {
+                readonly antesDe?: string;
+                readonly antesDoId?: string;
+                readonly limite?: number;
+            };
             readonly header?: never;
             readonly path: {
                 readonly conversationId: string;
@@ -2670,7 +2697,9 @@ export interface operations {
     readonly enviar: {
         readonly parameters: {
             readonly query?: never;
-            readonly header?: never;
+            readonly header?: {
+                readonly "Idempotency-Key"?: string;
+            };
             readonly path: {
                 readonly conversationId: string;
             };
@@ -3539,6 +3568,100 @@ export interface operations {
                 };
                 content: {
                     readonly "*/*": components["schemas"]["AccessSummary"];
+                };
+            };
+            /** @description Requisição ou JSON inválido */
+            readonly 400: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Autenticação ausente ou expirada */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Acesso negado */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Conflito de estado ou idempotência */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Regra de negócio ou validação semântica */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Limite de requisições excedido */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Falha interna com detalhe seguro */
+            readonly 500: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+        };
+    };
+    readonly permissoes: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "*/*": {
+                        readonly [key: string]: string;
+                    };
                 };
             };
             /** @description Requisição ou JSON inválido */

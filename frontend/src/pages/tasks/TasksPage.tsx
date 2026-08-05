@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { tarefasApi } from '@/shared/crm/api';
+import { formatarResponsavel } from '@/shared/crm/responsavel';
 import type { Tarefa } from '@/shared/crm/tipos';
 import { formatarDataHora } from '@/shared/formato';
 import { Carregando, Pagina, Vazio } from '@/shared/components/Pagina';
@@ -127,6 +128,10 @@ function ItemDeTarefa({
             {tarefa.descricao}
           </p>
         )}
+
+        <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+          Responsável: {formatarResponsavel(tarefa)}
+        </p>
 
         {tarefa.vencimentoEm && (
           <p

@@ -22,6 +22,11 @@ No Windows, troque `./mvnw` por `.\mvnw.cmd`.
 O gate completo desta máquina leva cerca de 70 segundos. O corte rápido deve
 ficar em segundos; a duração real deve ser registrada a cada mudança de CI.
 
+Antes de descobrir testes, o gate completo confirma o runtime de containers
+uma única vez. Se o Docker estiver parado, a execução termina com uma mensagem
+de infraestrutura e indica `-Pgate-rapido`, sem repetir a mesma causa em cada
+classe de integração.
+
 ## Quarentena
 
 Não use `@Disabled` nem `@Tag("quarentena")`. A única entrada permitida é

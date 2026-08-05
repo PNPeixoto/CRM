@@ -8,12 +8,18 @@ import {
   type ReactNode,
 } from 'react';
 import { useAuth } from '@/shared/auth/AuthContext';
-import { obterApresentacao, salvarPerfilInicial } from './api';
-import type { ApresentacaoDoTenant, SegmentoDeNegocio } from './tipos';
+import { obterApresentacao, obterPermissoes, salvarPerfilInicial } from './api';
+import type {
+  ApresentacaoDoTenant,
+  PermissoesDoUsuario,
+  SegmentoDeNegocio,
+} from './tipos';
 
 interface TenantPresentationContextValue {
   readonly apresentacao: ApresentacaoDoTenant | null;
+  readonly permissoes: PermissoesDoUsuario | null;
   readonly carregando: boolean;
+  readonly erroAoCarregar: boolean;
   readonly recarregar: () => Promise<void>;
   readonly escolherSegmento: (segmento: SegmentoDeNegocio) => Promise<ApresentacaoDoTenant>;
 }
@@ -23,17 +29,33 @@ const TenantPresentationContext = createContext<TenantPresentationContextValue |
 export function TenantPresentationProvider({ children }: { readonly children: ReactNode }) {
   const { usuario } = useAuth();
   const [apresentacao, setApresentacao] = useState<ApresentacaoDoTenant | null>(null);
+  const [permissoes, setPermissoes] = useState<PermissoesDoUsuario | null>(null);
   const [carregando, setCarregando] = useState(false);
+  const [erroAoCarregar, setErroAoCarregar] = useState(false);
 
   const recarregar = useCallback(async () => {
     if (!usuario) {
       setApresentacao(null);
+      setPermissoes(null);
       setCarregando(false);
+      setErroAoCarregar(false);
       return;
     }
     setCarregando(true);
+    setErroAoCarregar(false);
     try {
-      setApresentacao(await obterApresentacao());
+      const [novaApresentacao, novasPermissoes] = await Promise.all([
+        obterApresentacao(),
+        obterPermissoes(),
+      ]);
+      setApresentacao(novaApresentacao);
+      setPermissoes(novasPermissoes);
+    } catch {
+      // Sem os sinais de acesso, a interface falha fechada e não tenta
+      // descobrir autorização chamando cada endpoint protegido.
+      setApresentacao(null);
+      setPermissoes(null);
+      setErroAoCarregar(true);
     } finally {
       setCarregando(false);
     }
@@ -52,8 +74,15 @@ export function TenantPresentationProvider({ children }: { readonly children: Re
   }, []);
 
   const value = useMemo(
-    () => ({ apresentacao, carregando, recarregar, escolherSegmento }),
-    [apresentacao, carregando, recarregar, escolherSegmento],
+    () => ({
+      apresentacao,
+      permissoes,
+      carregando,
+      erroAoCarregar,
+      recarregar,
+      escolherSegmento,
+    }),
+    [apresentacao, permissoes, carregando, erroAoCarregar, recarregar, escolherSegmento],
   );
 
   return <TenantPresentationContext value={value}>{children}</TenantPresentationContext>;

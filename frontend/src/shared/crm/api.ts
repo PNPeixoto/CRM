@@ -26,6 +26,8 @@ function mapearContato(dados: ContatoWire): Contato {
     empresa: dados.empresa ?? null,
     observacoes: dados.observacoes ?? null,
     responsavelId: dados.responsavelId ?? null,
+    responsavelLogin: dados.responsavelLogin ?? null,
+    responsavelNome: dados.responsavelNome ?? null,
     criadoEm: obrigatorio(dados.criadoEm, 'contato.criadoEm'),
   };
 }
@@ -57,6 +59,8 @@ function mapearOportunidade(dados: OportunidadeWire): Oportunidade {
     previsaoFechamento: dados.previsaoFechamento ?? null,
     motivoPerda: dados.motivoPerda ?? null,
     responsavelId: dados.responsavelId ?? null,
+    responsavelLogin: dados.responsavelLogin ?? null,
+    responsavelNome: dados.responsavelNome ?? null,
     criadaEm: obrigatorio(dados.criadaEm, 'oportunidade.criadaEm'),
   };
 }
@@ -69,6 +73,8 @@ function mapearTarefa(dados: TarefaWire): Tarefa {
     vencimentoEm: dados.vencimentoEm ?? null,
     concluidaEm: dados.concluidaEm ?? null,
     responsavelId: dados.responsavelId ?? null,
+    responsavelLogin: dados.responsavelLogin ?? null,
+    responsavelNome: dados.responsavelNome ?? null,
     contatoId: dados.contatoId ?? null,
     oportunidadeId: dados.oportunidadeId ?? null,
     criadaEm: obrigatorio(dados.criadaEm, 'tarefa.criadaEm'),

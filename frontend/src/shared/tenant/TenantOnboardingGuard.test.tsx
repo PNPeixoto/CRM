@@ -15,7 +15,9 @@ describe('TenantOnboardingGuard', () => {
         segmento: 'GENERAL_SERVICES', versaoPreset: 1, onboardingConcluido: false,
         navegacao: [], funilPadrao: { nome: 'Funil', etapas: [] },
       },
+      permissoes: { 'organization.manage': 'TENANT' },
       carregando: false,
+      erroAoCarregar: false,
       recarregar: vi.fn(),
       escolherSegmento: vi.fn(),
     });
@@ -32,6 +34,30 @@ describe('TenantOnboardingGuard', () => {
     );
 
     expect(await screen.findByText('Escolha o segmento')).toBeInTheDocument();
+    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
+  });
+
+  it('shows an explicit error when access signals cannot be loaded', async () => {
+    vi.mocked(useTenantPresentation).mockReturnValue({
+      apresentacao: null,
+      permissoes: null,
+      carregando: false,
+      erroAoCarregar: true,
+      recarregar: vi.fn(),
+      escolherSegmento: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Routes>
+          <Route element={<TenantOnboardingGuard safePath="/dashboard" />}>
+            <Route path="/dashboard" element={<span>Dashboard</span>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/carregar seu acesso/i);
     expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
   });
 });

@@ -11,10 +11,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.Instant;
 
 /**
  * REST de conversa.
@@ -56,15 +59,20 @@ class ConversaController {
 
     @GetMapping("/{conversationId}/mensagens")
     ResponseEntity<List<ConversationDtos.MensagemResposta>> mensagens(
-            @PathVariable UUID conversationId) {
+            @PathVariable UUID conversationId,
+            @RequestParam(required = false) Instant antesDe,
+            @RequestParam(required = false) UUID antesDoId,
+            @RequestParam(defaultValue = "100") int limite) {
         autorizacao.exigirNoTenant(Permissao.CONVERSATIONS_READ);
-        return ResponseEntity.ok(conversas.mensagensDa(conversationId));
+        return ResponseEntity.ok(conversas.mensagensDa(
+                conversationId, antesDe, antesDoId, limite));
     }
 
     @PostMapping("/{conversationId}/mensagens")
     ResponseEntity<ConversationDtos.MensagemResposta> enviar(
             @PathVariable UUID conversationId,
             @Valid @RequestBody ConversationDtos.EnviarMensagemRequest requisicao,
+            @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
             @AuthenticationPrincipal Jwt jwt) {
 
         autorizacao.exigirNoTenant(Permissao.CONVERSATIONS_WRITE);
@@ -74,6 +82,6 @@ class ConversaController {
         UUID autorId = UUID.fromString(jwt.getSubject());
 
         return ResponseEntity.ok(
-                conversas.enviar(conversationId, requisicao.texto(), autorId));
+                conversas.enviar(conversationId, requisicao.texto(), autorId, idempotencyKey));
     }
 }

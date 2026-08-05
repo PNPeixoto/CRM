@@ -61,6 +61,8 @@ final class DealDtos {
             LocalDate previsaoFechamento,
             String motivoPerda,
             UUID responsavelId,
+            String responsavelLogin,
+            String responsavelNome,
             Instant criadaEm) {
     }
 }

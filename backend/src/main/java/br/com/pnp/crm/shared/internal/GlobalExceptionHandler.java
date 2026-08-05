@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.net.URI;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 /** Traduz falhas para RFC 9457 sem expor detalhe interno. */
 @RestControllerAdvice
@@ -128,6 +127,12 @@ class GlobalExceptionHandler {
         if ("PERFIL_INICIAL_JA_CONCLUIDO".equals(exception.getCodigo())) {
             return HttpStatus.CONFLICT;
         }
+        if ("CHAVE_IDEMPOTENCIA_EM_CONFLITO".equals(exception.getCodigo())) {
+            return HttpStatus.CONFLICT;
+        }
+        if ("REQUISICAO_INVALIDA".equals(exception.getCodigo())) {
+            return HttpStatus.BAD_REQUEST;
+        }
         if (exception.getCodigo().endsWith("_NAO_ENCONTRADA")) {
             return HttpStatus.NOT_FOUND;
         }
@@ -152,14 +157,6 @@ class GlobalExceptionHandler {
     }
 
     private static String correlation(HttpServletRequest request) {
-        String recebido = request.getHeader(CORRELATION_HEADER);
-        if (recebido != null) {
-            try {
-                return UUID.fromString(recebido).toString();
-            } catch (IllegalArgumentException ignored) {
-                // Entrada não confiável: substitui, não registra nem reflete.
-            }
-        }
-        return UUID.randomUUID().toString();
+        return HttpProtectionFilter.correlation(request);
     }
 }
