@@ -36,7 +36,7 @@ expira, quem consegue ler, e para onde sai.
 | Telemetria de uso | `usage_event` | — (referencia mensagem) | **nenhuma** |
 | Stream de tempo real | `realtime_event` | — (só identificadores) | **nenhuma** |
 | Diagnóstico de conector | `http_connector_attempt` | variável, conforme o destino configurado | **nenhuma** |
-| **Log de eventos do Modulith** | `event_publication.serialized_event` | cliente do cliente | **nenhuma** — ver achado `LGPD-001` |
+| Log de eventos do Modulith | `event_publication.serialized_event` | — (só identificadores desde 2026-08-10) | concluída é apagada na conclusão — ver `LGPD-001` |
 
 ## 2. Onde já existe retenção verificável
 
@@ -78,20 +78,24 @@ O controle é o mesmo de todo o produto e já está provado por teste:
   devolve.
 - A leitura da própria trilha de auditoria é auditada e exige `audit.read`.
 
-A exceção é a tabela do item 1 marcada como achado.
+A exceção continua sendo `event_publication`, que não tem RLS. Depois da
+correção do `LGPD-001` ela não guarda mais dado de titular, e publicação
+concluída é apagada — mas a ausência de isolamento segue valendo para qualquer
+evento novo, e é o que o teste de contrato vigia.
 
 ## 5. Achados do levantamento
 
-### `LGPD-001` — Texto de mensagem fora do isolamento e de toda retenção
+### `LGPD-001` — Texto de mensagem fora do isolamento e de toda retenção — **CORRIGIDO**
 
-- **Severidade:** alta
+- **Severidade:** alta · **Corrigido em 2026-08-10**
 - **Onde:** `event_publication`, tabela interna do Spring Modulith.
-- **O fato:** `MensagemRecebidaEvent` declara `String texto` e é serializado
-  nessa tabela. Em 2026-08-10 havia **871 eventos** desse tipo, publicados
-  entre 09 e 10 de agosto.
+- **O fato:** `MensagemRecebidaEvent` declarava `String texto` e era
+  serializado nessa tabela. No momento da correção havia **2334 publicações
+  concluídas**, das quais **1119** carregavam texto de cliente.
 - **Por que importa, em três camadas:**
   1. **Sem RLS.** `relrowsecurity` e `relforcerowsecurity` são `f`. É a única
-     tabela do schema sem isolamento por tenant — todas as outras 38 têm.
+     tabela do schema sem isolamento por tenant — todas as outras 38 têm. Isso
+     **permanece verdadeiro**; o que mudou é não haver mais dado de titular ali.
   2. **Acesso total do runtime:** `INSERT, SELECT, UPDATE, DELETE`.
   3. **Sem retenção.** Nada expurga. O evento fica concluído e permanece.
 - **O contraste é o que denuncia:** o mesmo texto, em `inbound_event`, é
@@ -100,9 +104,22 @@ A exceção é a tabela do item 1 marcada como achado.
 - **Não é vazamento hoje:** o acesso continua mediado pela aplicação, e nenhum
   endpoint expõe essa tabela. É exposição latente — e é exatamente o tipo de
   cópia esquecida que um pedido de exclusão de titular não alcançaria.
-- **Correção candidata:** parar de trafegar texto no evento, passando só
-  identificadores, como o push de WebSocket já faz; ou aplicar RLS e retenção
-  à tabela. A primeira é preferível: o texto não precisa estar ali.
+- **Correção aplicada**, em três frentes:
+  1. `MensagemRecebidaEvent` deixou de declarar `String texto`. Ninguém o lia —
+     o único consumidor já dizia, no próprio comentário, que não copiava texto
+     para o motor de automações. Era peso morto serializado para sempre.
+  2. `spring.modulith.events.completion-mode: delete`: publicação concluída
+     deixa de existir em vez de virar linha permanente. O que a tabela serve —
+     republicar o que **falhou** — continua intacto, porque falha não é
+     conclusão.
+  3. As 2334 publicações concluídas acumuladas, das quais 1119 carregavam
+     texto de cliente, foram expurgadas com backup direcionado prévio. Nenhuma
+     pendente foi tocada: havia zero.
+- **Barreira contra regressão:** `PrivacidadeDeEventosTest` reprova qualquer
+  campo de texto livre em evento de `api`, e não apenas o campo que falhou.
+  Acrescentar `String` a um evento é o gesto natural de quem precisa de
+  contexto; a barreira precisa estar no gesto. O caminho negativo foi
+  exercitado: reintroduzi o campo e o teste acusou.
 
 ### `LGPD-002` — Categorias sem prazo algum
 

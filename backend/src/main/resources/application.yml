@@ -34,6 +34,21 @@ spring:
     placeholders:
       runtime_role: ${DB_RUNTIME_USER:crm_runtime}
 
+  modulith:
+    events:
+      # Publicação concluída é apagada em vez de marcada como concluída.
+      #
+      # O padrão `update` mantém a linha para sempre, com o evento serializado
+      # dentro. `event_publication` é a única tabela do schema sem RLS e sem
+      # prazo de retenção, então cada evento concluído virava uma cópia
+      # permanente, fora do isolamento por tenant e fora de todo expurgo.
+      #
+      # O que se perde é a inspeção de eventos já entregues — e não é o que a
+      # tabela serve. O valor operacional dela é a republicação do que
+      # **falhou**, e essas linhas continuam retidas, porque não estão
+      # concluídas. Ver LGPD-001.
+      completion-mode: delete
+
   data:
     redis:
       # Readiness precisa falhar rápido quando o cache fica indisponível; sem

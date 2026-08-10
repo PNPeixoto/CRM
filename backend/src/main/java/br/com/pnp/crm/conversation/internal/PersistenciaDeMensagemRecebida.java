@@ -58,9 +58,12 @@ class PersistenciaDeMensagemRecebida {
         eventosTempoReal.registrar("MESSAGE_CREATED", conversation.getId(), message.getId(),
                 message.getVersion(), input.ocorridoEm());
 
+        // Sem o texto: o evento é serializado em `event_publication`, que não
+        // tem RLS nem retenção. Quem precisar do conteúdo lê a mensagem pelo
+        // id, onde isolamento e autorização valem. Ver LGPD-001.
         events.publishEvent(new MensagemRecebidaEvent(
                 tenantId, conversation.getId(), message.getId(), input.channelConnectionId(),
-                input.texto(), input.ocorridoEm()));
+                input.ocorridoEm()));
         return Optional.of(message.getId());
     }
 
