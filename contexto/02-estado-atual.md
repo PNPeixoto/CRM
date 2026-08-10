@@ -1,7 +1,7 @@
 # Estado atual
 
 > Reescrito ao fim de cada sessão. Máximo 150 linhas.
-> Última atualização: 2026-08-09 14:20 (America/Montevideo)
+> Última atualização: 2026-08-10 00:30 (America/Montevideo)
 
 ## Onde parei
 
@@ -21,16 +21,16 @@ ser executado somente por ordem numérica.
   `ENABLE + FORCE`, integridade composta e tenant derivado só da identidade.
 - Modelo organizacional com memberships temporais, papéis, permissões e
   alcances; a UI identifica o responsável de contato, tarefa e oportunidade.
-- Argon2id com pepper, JWT curto, refresh rotativo, detecção de reuso, logout,
-  reset de senha e MFA TOTP/recovery code para papéis privilegiados.
-- Autorização central por ação e registro; listagens aplicam alcance antes da
-  paginação. Recursos coletivos exigem alcance `TENANT`.
-- Onboarding atômico por segmento materializa um funil só e não reescreve dado
-  personalizado quando a apresentação muda.
+- Argon2id com pepper, JWT curto, refresh rotativo com detecção de reuso, reset
+  de senha e MFA TOTP para papéis privilegiados.
+- Autorização central por ação e registro; alcance aplicado antes da paginação,
+  e recurso coletivo exige `TENANT`.
+- Onboarding atômico por segmento materializa um funil só, sem reescrever dado
+  personalizado.
 - OpenAPI 3.1 determinístico, erros RFC 9457, correlação, limite de corpo,
   CORS, CSRF e rate limit nas superfícies públicas.
-- Frontend com access token somente em memória, refresh single-flight, cache
-  remoto segregado, formulários acessíveis e identificação do responsável.
+- Frontend com token só em memória, refresh single-flight, cache segregado por
+  contexto e formulários acessíveis.
 
 ## Omnichannel — backend 12 a 14 e frontend F8
 
@@ -48,19 +48,17 @@ ser executado somente por ordem numérica.
 
 ## Evolution API experimental — V18
 
-- `WHATSAPP_EVOLUTION` é exclusivo do laboratório local e não substitui o
-  `WHATSAPP_CLOUD` de produção. Compose fixa a 2.3.7 com PostgreSQL, Redis e
-  volumes próprios em `127.0.0.1:8081`.
+- `WHATSAPP_EVOLUTION` é laboratório local e não substitui o `WHATSAPP_CLOUD`
+  de produção. Compose fixa a 2.3.7 com banco, Redis e volumes próprios.
 - Entrada `MESSAGES_UPSERT`, saída de texto, webhook e reconciliação usam o
   mesmo pipeline idempotente do CRM.
 - `pnp-teste` está **pareada e `HEALTHY`**: entrada e saída provadas na Inbox em
   2026-08-09, uma tentativa cada, sem retry nem dead letter.
-- O pareamento passou a existir no CRM: `POST /api/canais/{id}/pareamento` cria
-  a instância se faltar, devolve QR e código, exige `CHANNELS_WRITE`, audita
-  como credencial e recusa reparear sessão já aberta. **Ainda não implantado** —
-  subir exige aceitar a V22.
-- Um canal órfão (`teste` → instância inexistente `peixoto`) segue em `ERROR`
-  por decisão, reconciliando a cada dez segundos contra um nome que não existe.
+- `POST /api/canais/{id}/pareamento` cria a instância se faltar, devolve QR e
+  código, exige `CHANNELS_WRITE`, audita como credencial e recusa reparear
+  sessão já aberta. Implantado em 2026-08-09.
+- Um canal órfão segue em `ERROR` por decisão, reconciliando contra instância
+  inexistente.
 
 ## Motor de automações — backend 15
 
@@ -91,29 +89,34 @@ ser executado somente por ordem numérica.
   AES-256-GCM e resolvido só no envio; request, response, token e URL
   renderizada não entram no preview. Decisão: `ADR-0012`.
 
-## Auditoria corporativa — backend 17 em revisão, V22 aplicada
+## Auditoria — backend 17; privacidade e retenção — backend 18
 
-- V22 adiciona `audit_event` sem `updated_at`, com RLS forçado, paginação
-  keyset, catálogo versionado e hash verificável. Aplicada em 2026-08-09.
-- Runtime só consulta e insere — confirmado no banco após a aplicação:
-  `INSERT, SELECT` e nada mais. `UPDATE`/`DELETE` é revogado e bloqueado por
-  gatilho; retenção e expurgo pertencem ao Prompt 18.
-- API interna tipada não aceita texto livre. Token, cookie, segredo, payload,
-  mensagem, arquivo e URL renderizada não existem no schema.
+- V22: `audit_event` append-only, RLS forçado, catálogo versionado e hash
+  verificável. Aplicada em 2026-08-09.
+- Runtime só consulta e insere na trilha — confirmado no banco. `UPDATE` e
+  `DELETE` são revogados e bloqueados por gatilho.
+- API interna tipada não aceita texto livre; token, segredo, payload e mensagem
+  não existem no schema.
 - Credencial, configuração, role e exportação são fail-closed; negação é best
-  effort e preserva o `403`. `/auditoria` exige `audit.read`, audita a própria
-  leitura, mascara IDs e pagina no servidor. Decisão: `ADR-0013`.
+  effort e preserva o `403`. `/auditoria` exige `audit.read` e audita a própria
+  leitura. Decisão: `ADR-0013`.
+- V23 traz legal hold sob RLS e seis funções de expurgo por categoria. Nenhuma
+  chama `now()`: o corte é parâmetro, o que torna a retenção verificável com
+  relógio controlado. **Prazos `A VALIDAR` e worker desligado por padrão.**
+- `/api/privacidade` exporta o dado do titular dizendo a origem, a finalidade e
+  o prazo de cada seção, e anonimiza sob demanda. Legal hold produz recusa
+  fundamentada, nunca falha silenciosa. Exige `privacy.manage`.
+- O inventário de tratamento e a política de backup estão em
+  `contexto/privacidade/`.
 
 ## Migrations atuais
 
 - V1–V9: CRM/canais/fila, eventos, perfil, integridade e privilégios mínimos.
 - V10–V14: organização/escopos, sessão/MFA, responsáveis e idempotência.
 - V15–V17: fundação operacional omnichannel, Telegram e mídia em quarentena.
-- V18: adaptador experimental Evolution.
-- V19: Inbox paginada, stream recuperável e SLA.
-- V20: motor interno de automações.
-- V21: conector HTTP seguro.
-- V22: auditoria corporativa append-only.
+- V18–V21: adaptador Evolution, Inbox paginada com SLA, motor de automações e
+  conector HTTP seguro.
+- V22: auditoria append-only. V23: retenção, legal hold e direitos do titular.
 - Seeds e dados demonstrativos existem somente no profile `dev`.
 
 ## Verificado nesta máquina
@@ -121,8 +124,8 @@ ser executado somente por ordem numérica.
 - Branch observada `main`; Windows, JDK 25.0.4, Node 24 e Docker disponíveis.
 - Backend: **193 testes, 0 falhas**, com PostgreSQL e Redis reais. O lambda
   `void` que impedia a compilação foi corrigido em 2026-08-09.
-- Evolution: 7 testes de contrato, OpenAPI, fronteira de módulos e
-  `MigracaoDeAtualizacaoTest` verdes.
+- Evolution, retenção, direitos do titular, OpenAPI, fronteira de módulos e
+  caminho de migração: todos verdes.
 - Frontend: 130 testes, typecheck e lint verdes; três avisos conhecidos.
 - CRM local saudável na **V22**. A aplicação da migration preservou todos os
   contadores (2 tenants, 3 usuários, 4 canais, 3 conversas, 32 mensagens, 1
@@ -132,9 +135,9 @@ ser executado somente por ordem numérica.
 
 ## Próximo passo
 
-1. Executar `backend:18` — LGPD e retenção. A V22 está aplicada, o Prompt 17
-   fechou e o pareamento pelo CRM está no ar.
-2. Manter F9 adiado até haver medição representativa.
+1. Aplicar a V23 no ambiente local, com backup prévio, como foi feito na V22.
+2. Decidir os prazos de retenção por categoria para poder ligar o expurgo.
+3. Manter F9 adiado até haver medição representativa.
 
 ## Riscos restantes
 

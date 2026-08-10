@@ -35,7 +35,7 @@ prompts:
   - {id: "15", name: motor-automacoes, file: "15-motor-automacoes.md", phase: omnichannel, prerequisites: ["10", "12"], gate: D, status: completed}
   - {id: "16", name: conector-http-seguro, file: "16-conector-http-seguro.md", phase: omnichannel, prerequisites: ["07", "15"], gate: D, status: completed}
   - {id: "17", name: auditoria, file: "17-auditoria.md", phase: operations_compliance, prerequisites: ["06", "08"], gate: E, status: completed}
-  - {id: "18", name: lgpd-retencao, file: "18-lgpd-retencao.md", phase: operations_compliance, prerequisites: ["07", "17"], gate: E, status: ready}
+  - {id: "18", name: lgpd-retencao, file: "18-lgpd-retencao.md", phase: operations_compliance, prerequisites: ["07", "17"], gate: E, status: completed}
   - {id: "19", name: entitlements-medicao, file: "19-entitlements-medicao.md", phase: operations_compliance, prerequisites: ["04", "08", "12"], gate: E, status: ready}
   - {id: "20", name: billing, file: "20-billing.md", phase: operations_compliance, prerequisites: ["17", "19"], gate: E, status: ready}
   - {id: "21", name: relatorios-exportacoes, file: "21-relatorios-exportacoes.md", phase: operations_compliance, prerequisites: ["06", "17", "18", "19"], gate: E, status: ready}

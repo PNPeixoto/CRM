@@ -121,23 +121,23 @@ evento novo, e é o que o teste de contrato vigia.
   contexto; a barreira precisa estar no gesto. O caminho negativo foi
   exercitado: reintroduzi o campo e o teste acusou.
 
-### `LGPD-002` — Categorias sem prazo algum
+### `LGPD-002` — Categorias sem prazo algum — **MECANISMO PRONTO, PRAZOS PENDENTES**
 
-- **Severidade:** média
+- **Severidade:** média · **Mecanismo entregue em 2026-08-10**
 - Contato, conversa, mensagem, auditoria, telemetria e diagnóstico de conector
   não têm prazo nem expurgo. Hoje isso é ausência de decisão, não decisão de
   reter para sempre — e a diferença precisa virar explícita.
 
-### `LGPD-003` — Não há superfície de direitos do titular
+### `LGPD-003` — Não há superfície de direitos do titular — **CORRIGIDO**
 
-- **Severidade:** média
+- **Severidade:** média · **Corrigido em 2026-08-10**
 - Não existe endpoint de exportação, correção, anonimização ou exclusão. O
   catálogo de auditoria já reserva `EXPORT_REQUESTED` e `EXPORT_COMPLETED`,
   mas nada os emite: a intenção está registrada e a implementação não existe.
 
-### `LGPD-004` — Backup sem tratamento documentado
+### `LGPD-004` — Backup sem tratamento documentado — **DOCUMENTADO**
 
-- **Severidade:** média
+- **Severidade:** média · **Documentado em 2026-08-10**
 - O aceite exige que backup e réplicas tenham tratamento documentado. Hoje não
   há política, e o backup que **esta sessão criou** para a V22 é um exemplo
   concreto: um dump completo, com dado pessoal, num diretório temporário.
@@ -179,3 +179,46 @@ fixado no código:
 
 Nada disso é ligado por padrão. Um expurgo com prazo errado é irreversível de
 um jeito que schema quebrado não é.
+
+---
+
+## 8. Situação em 2026-08-10
+
+| Achado | Situação |
+|---|---|
+| `LGPD-001` | **Corrigido.** Texto fora do log do Modulith, passivo expurgado, teste de contrato vigiando |
+| `LGPD-002` | **Mecanismo pronto**, prazos pendentes de decisão |
+| `LGPD-003` | **Corrigido.** Exportação com procedência, anonimização e recusa fundamentada |
+| `LGPD-004` | **Documentado** em `politica-de-backup-e-replica.md`; execução no Prompt 23 |
+
+### O que o `LGPD-002` entregou, e o que falta
+
+V23 traz legal hold sob RLS e seis funções de expurgo por categoria. Nenhuma
+delas chama `now()`: o corte entra como parâmetro. Isso torna a retenção
+verificável com relógio controlado e impede ligar o expurgo sem escolher a
+data.
+
+**Os prazos continuam `A VALIDAR` e o worker nasce desligado.** Zero desativa
+cada categoria. Ligar exige preencher a tabela do item 1 com prazo, hipótese
+legal e responsável — o mecanismo está pronto justamente para que a decisão
+seja a única coisa que falte.
+
+### O que o `LGPD-003` entregou
+
+`POST /api/privacidade/titulares/{id}/exportacao` devolve o dado do titular
+**dizendo de onde cada seção veio**: tabela de origem, finalidade e prazo — ou
+a ausência dele, escrita com todas as letras. Uma lista sem origem obriga o
+titular a confiar; com origem, ele confere.
+
+`POST /api/privacidade/titulares/{id}/anonimizacao` remove o dado pessoal e
+preserva a relação. Sob legal hold, **recusa com motivo e instrução**, nunca em
+silêncio: devolver 200 sem apagar faria o titular sair acreditando que o dado
+foi removido.
+
+Ambos exigem `privacy.manage` com alcance de tenant — permissão separada de
+`organization.manage`, porque responder a um direito não deveria exigir poder
+de administrar papéis e canais. Ambos são auditados, com pedido e conclusão
+registrados separadamente, e respondem `no-store`.
+
+A exportação não inclui dado de terceiro: numa conversa, a identidade do
+atendente aparece como função, porque ele é outro titular.

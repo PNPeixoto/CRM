@@ -24,6 +24,7 @@ FROM unnest(ARRAY[
     'tasks.read', 'tasks.write', 'conversations.read', 'conversations.write',
       'channels.read', 'channels.write', 'automations.read', 'automations.write',
       'integrations.read', 'integrations.write', 'reports.read', 'audit.read',
+      'privacy.manage',
     'organization.manage'
 ]) AS permission
 ON CONFLICT DO NOTHING;
@@ -58,6 +59,7 @@ FROM unnest(ARRAY[
     'tasks.read', 'tasks.write', 'conversations.read', 'conversations.write',
       'channels.read', 'channels.write', 'automations.read', 'automations.write',
       'integrations.read', 'integrations.write', 'reports.read', 'audit.read',
+      'privacy.manage',
     'organization.manage'
 ]) AS permission
 ON CONFLICT DO NOTHING;

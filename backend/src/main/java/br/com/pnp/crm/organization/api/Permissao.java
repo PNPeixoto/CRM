@@ -48,6 +48,17 @@ public enum Permissao {
     /** Leitura da trilha corporativa; sempre exige alcance de todo o tenant. */
     AUDIT_READ("audit.read"),
 
+    /**
+     * Atender pedido de titular: exportar, corrigir e anonimizar.
+     *
+     * <p>Separada de {@link #ORGANIZATION_MANAGE} de proposito. Quem administra
+     * a empresa nao precisa, por isso, ler o dado pessoal de todos os contatos
+     * de uma vez — e quem responde a um pedido de titular precisa, sem herdar
+     * o poder de mexer em papeis e canais. Juntar as duas transformaria a
+     * resposta a um direito em privilegio de administrador.
+     */
+    PRIVACY_MANAGE("privacy.manage"),
+
     ORGANIZATION_MANAGE("organization.manage");
 
     private final String codigo;
