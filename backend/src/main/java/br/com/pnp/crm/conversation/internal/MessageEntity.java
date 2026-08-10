@@ -10,6 +10,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -73,8 +74,24 @@ class MessageEntity {
     @Column(name = "read_at")
     private Instant readAt;
 
+    @Version
+    @Column(nullable = false)
+    private long version;
+
     @Column(name = "failure_reason")
     private String failureReason;
+
+    @Column(name = "lease_owner")
+    private String leaseOwner;
+
+    @Column(name = "lease_until")
+    private Instant leaseUntil;
+
+    @Column(name = "dead_lettered_at")
+    private Instant deadLetteredAt;
+
+    @Column(name = "next_attempt_at")
+    private Instant nextAttemptAt;
 
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private Instant createdAt;
@@ -133,6 +150,11 @@ class MessageEntity {
         // a tela mentir para o atendente.
         entity.status = StatusMensagem.PENDING;
         entity.authorUserId = autorId;
+        // A coluna mantem o default do banco como fonte persistida, mas a API
+        // responde antes de uma nova leitura. Sem o valor local, o envio e
+        // aceito e enfileirado, porem o frontend recebe criadaEm=null e exibe
+        // uma falha falsa mesmo com a mensagem entregue pelo worker.
+        entity.createdAt = Instant.now();
         entity.createdBy = autorId;
         entity.updatedBy = autorId;
         return entity;
@@ -186,14 +208,36 @@ class MessageEntity {
         return createdAt;
     }
 
+    long getVersion() {
+        return version;
+    }
+
     void marcarEnviada(String externalIdDoProvedor) {
         this.externalId = externalIdDoProvedor;
         this.status = StatusMensagem.SENT;
         this.sentAt = Instant.now();
+        this.leaseOwner = null;
+        this.leaseUntil = null;
+        this.deadLetteredAt = null;
     }
 
     void marcarFalha(String motivoSanitizado) {
         this.status = StatusMensagem.FAILED;
         this.failureReason = motivoSanitizado;
+    }
+
+    void marcarFalhaPermanente(String motivoSanitizado) {
+        marcarFalha(motivoSanitizado);
+        this.leaseOwner = null;
+        this.leaseUntil = null;
+        this.deadLetteredAt = Instant.now();
+    }
+
+    void adiar(java.time.Duration espera) {
+        Instant minimo = Instant.now().plus(espera);
+        if (this.nextAttemptAt == null || this.nextAttemptAt.isBefore(minimo)) {
+            this.nextAttemptAt = minimo;
+        }
+        this.leaseUntil = this.nextAttemptAt;
     }
 }

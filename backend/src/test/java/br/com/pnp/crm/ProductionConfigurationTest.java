@@ -25,6 +25,15 @@ class ProductionConfigurationTest {
         assertThat(environment.getProperty(
                 "spring.jackson.deserialization.fail-on-unknown-properties", Boolean.class))
                 .isTrue();
-        assertThat(environment.getProperty("app.schema.expected-version")).isEqualTo("13");
+        assertThat(environment.getProperty("app.schema.expected-version")).isEqualTo("22");
+        assertThat(environment.getProperty(
+                "app.http-connector.require-egress-proxy", Boolean.class)).isTrue();
+        assertThat(environment.getPropertySources().get("prod")
+                .getProperty("app.http-connector.egress-proxy-url"))
+                .isEqualTo("${HTTP_CONNECTOR_EGRESS_PROXY_URL}");
+        assertThat(environment.getProperty("app.providers.evolution.enabled", Boolean.class))
+                .isFalse();
+        assertThat(environment.getProperty("app.providers.telegram.bot-api-version"))
+                .isEqualTo("10.2");
     }
 }

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,11 +37,14 @@ class ContactController {
     private final ContactRepository repository;
     private final UsuarioLookup users;
     private final Autorizacao autorizacao;
+    private final ContactCreationService creation;
 
-    ContactController(ContactRepository repository, UsuarioLookup users, Autorizacao autorizacao) {
+    ContactController(ContactRepository repository, UsuarioLookup users, Autorizacao autorizacao,
+                      ContactCreationService creation) {
         this.repository = repository;
         this.users = users;
         this.autorizacao = autorizacao;
+        this.creation = creation;
     }
 
     @GetMapping
@@ -83,21 +87,12 @@ class ContactController {
     }
 
     @PostMapping
-    @Transactional
     ResponseEntity<ContactDtos.ContatoResponse> criar(
             @Valid @RequestBody ContactDtos.ContatoRequest requisicao,
-            @AuthenticationPrincipal Jwt jwt) {
-
-        autorizacao.exigir(Permissao.CONTACTS_WRITE);
-
-        UUID autorId = UUID.fromString(jwt.getSubject());
-        ContactEntity contato = ContactEntity.novo(TenantContext.obrigatorio(), autorId);
-        aplicar(contato, requisicao, autorId);
-        // Quem só alcança o próprio não pode criar registro em nome de outro:
-        // seria criar hoje o que não poderia ler amanhã.
-        autorizacao.exigirSobreRegistro(Permissao.CONTACTS_WRITE, contato.getOwnerUserId());
-
-        return ResponseEntity.ok(paraResposta(repository.save(contato)));
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey) {
+        return ResponseEntity.ok(paraResposta(creation.criar(
+                requisicao, UUID.fromString(jwt.getSubject()), idempotencyKey)));
     }
 
     @PutMapping("/{id}")

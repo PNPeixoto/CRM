@@ -52,7 +52,21 @@ class FunilPadraoService {
             // o funil geral antes da escolha real do segmento.
             throw new PerfilInicialPendenteException();
         }
-        DefaultPipelineTemplate template = presentation.defaultPipeline();
+        return createIfAbsent(tenantId, authorId, presentation.defaultPipeline());
+    }
+
+    PipelineEntity criarDoPerfilInicial(
+            UUID tenantId, UUID authorId, DefaultPipelineTemplate template) {
+        UUID tenantCorrente = TenantContext.obrigatorio();
+        if (!tenantCorrente.equals(tenantId)) {
+            throw new IllegalStateException("Evento de perfil pertence a outro tenant.");
+        }
+        return pipelines.findFirstByTenantIdAndIsDefaultTrueAndDeletedAtIsNull(tenantId)
+                .orElseGet(() -> createIfAbsent(tenantId, authorId, template));
+    }
+
+    private PipelineEntity createIfAbsent(
+            UUID tenantId, UUID authorId, DefaultPipelineTemplate template) {
         UUID pipelineId = UuidV7.gerar();
         int inserted = pipelines.insertDefaultIfAbsent(
                 pipelineId, tenantId, template.name(), authorId);

@@ -1,83 +1,89 @@
 package br.com.pnp.crm.shared.internal;
 
-import br.com.pnp.crm.shared.api.AutorizacaoDeEscuta;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Transporte de tempo real.
- *
- * <p><b>Broker simples, e a limitação é conhecida:</b> o broker embutido do
- * Spring mantém as inscrições em memória. Com duas instâncias atrás de um
- * balanceador, uma mensagem publicada na instância A não chega a quem está
- * conectado na B, e o sintoma é "às vezes a mensagem não aparece" — difícil de
- * reproduzir e fácil de culpar a rede. Trocar por um broker STOMP externo
- * (RabbitMQ) não é ajuste de configuração, muda o desenho, e precisa ser
- * decidido <b>antes</b> de subir a segunda instância.
- *
- * <p><b>Sem SockJS.</b> Ele existe para navegador sem WebSocket, o que hoje
- * não existe, e em troca acrescenta rotas HTTP de fallback que precisariam
- * entrar na configuração de segurança e no CSP.
- */
+/** Transporte STOMP limitado; REST e o stream persistido continuam sendo a verdade. */
 @Configuration(proxyBeanMethods = false)
 @EnableWebSocketMessageBroker
 class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    private final JwtDecoder jwtDecoder;
-    private final AutorizacaoDeEscuta autorizacao;
+    private final StompAuthChannelInterceptor interceptor;
+    private final TaskScheduler heartbeatScheduler;
+    private final RegistroDeSessoesWebSocket sessoes;
     private final String origensPermitidas;
 
-    WebSocketConfig(JwtDecoder jwtDecoder, AutorizacaoDeEscuta autorizacao,
-                    @Value("${app.cors.allowed-origins:}") String origensPermitidas) {
-        this.jwtDecoder = jwtDecoder;
-        this.autorizacao = autorizacao;
+    WebSocketConfig(
+            StompAuthChannelInterceptor interceptor,
+            RegistroDeSessoesWebSocket sessoes,
+            @Qualifier("stompHeartbeatScheduler") TaskScheduler heartbeatScheduler,
+            @Value("${app.cors.allowed-origins:}") String origensPermitidas) {
+        this.interceptor = interceptor;
+        this.sessoes = sessoes;
+        this.heartbeatScheduler = heartbeatScheduler;
         this.origensPermitidas = origensPermitidas;
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                // Mesma lista branca do CORS. O handshake de WebSocket NÃO é
-                // protegido pela política de mesma origem do navegador — sem
-                // esta checagem, qualquer site consegue abrir uma conexão
-                // contra a nossa API a partir do navegador de um usuário
-                // logado. É o equivalente a CSRF no WebSocket.
                 .setAllowedOrigins(listaBrancaDeOrigens().toArray(String[]::new));
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/topic");
-        // Prefixo das mensagens que o cliente ENVIA para métodos @MessageMapping.
-        // Hoje não há nenhum: o envio de mensagem passa por REST, para que a
-        // validação e a autorização sigam um caminho só.
+        registry.enableSimpleBroker("/topic")
+                .setHeartbeatValue(new long[]{10_000, 10_000})
+                .setTaskScheduler(heartbeatScheduler);
         registry.setApplicationDestinationPrefixes("/app");
     }
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(new StompAuthChannelInterceptor(jwtDecoder, autorizacao));
+        registration.interceptors(interceptor);
+        registration.taskExecutor()
+                .corePoolSize(2)
+                .maxPoolSize(8)
+                .queueCapacity(500);
     }
 
-    /**
-     * Vazio significa nenhuma origem — a mesma falha fechada do CORS HTTP.
-     */
+    @Override
+    public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
+        registration
+                .addDecoratorFactory(sessoes::decorar)
+                .setMessageSizeLimit(64 * 1024)
+                .setSendBufferSizeLimit(256 * 1024)
+                .setSendTimeLimit(10_000)
+                .setTimeToFirstMessage(15_000);
+    }
+
     private List<String> listaBrancaDeOrigens() {
-        if (origensPermitidas == null || origensPermitidas.isBlank()) {
-            return List.of();
-        }
+        if (origensPermitidas == null || origensPermitidas.isBlank()) return List.of();
         return Arrays.stream(origensPermitidas.split(","))
                 .map(String::trim)
                 .filter(origem -> !origem.isBlank())
                 .toList();
+    }
+
+    @Bean({"stompHeartbeatScheduler", "taskScheduler"})
+    static TaskScheduler stompHeartbeatScheduler() {
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(4);
+        scheduler.setThreadNamePrefix("stomp-heartbeat-");
+        scheduler.setRemoveOnCancelPolicy(true);
+        return scheduler;
     }
 }

@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,12 +40,18 @@ class EnvioDeMensagemService {
     private final MessageRepository mensagens;
     private final ChannelConnectionLookup conexoes;
     private final Map<TipoCanal, ChannelAdapter> adaptadores;
+    private final EventoTempoRealService eventos;
+    private final SlaDeConversaService sla;
 
     EnvioDeMensagemService(MessageRepository mensagens,
                            ChannelConnectionLookup conexoes,
-                           List<ChannelAdapter> adaptadores) {
+                           List<ChannelAdapter> adaptadores,
+                           EventoTempoRealService eventos,
+                           SlaDeConversaService sla) {
         this.mensagens = mensagens;
         this.conexoes = conexoes;
+        this.eventos = eventos;
+        this.sla = sla;
         // Indexa por tipo na construção. Se dois adaptadores declararem o mesmo
         // canal, o Map.toMap lança na subida da aplicação — melhor do que
         // escolher um em silêncio e enviar pelo provedor errado.
@@ -76,12 +83,14 @@ class EnvioDeMensagemService {
         ConexaoDeCanal conexao = conexoes.buscarAtiva(mensagem.getChannelConnectionId()).orElse(null);
         if (conexao == null) {
             mensagem.marcarFalha("Canal desconectado ou inativo.");
+            publicarMudanca(mensagem);
             return;
         }
 
         ChannelAdapter adaptador = adaptadores.get(conexao.tipo());
         if (adaptador == null) {
             mensagem.marcarFalha("Canal sem adaptador disponível.");
+            publicarMudanca(mensagem);
             return;
         }
 
@@ -94,14 +103,21 @@ class EnvioDeMensagemService {
                     mensagem.getTextContent()));
 
             mensagem.marcarEnviada(externalId);
+            sla.satisfazer(mensagem.getConversationId(), Instant.now());
 
         } catch (EnvioDeMensagemException e) {
             // O log não inclui o texto da mensagem: conteúdo de cliente não
             // entra em log, por regra do projeto.
             log.warn("Envio recusado pelo provedor. messageId={} permanente={}",
                     messageId, e.isPermanente());
-            mensagem.marcarFalha(motivoDe(e));
+            if (e.isPermanente()) {
+                mensagem.marcarFalhaPermanente(motivoDe(e));
+            } else {
+                mensagem.marcarFalha(motivoDe(e));
+                e.tentarNovamenteEm().ifPresent(mensagem::adiar);
+            }
         }
+        publicarMudanca(mensagem);
     }
 
     /**
@@ -119,5 +135,11 @@ class EnvioDeMensagemService {
     private String motivoDe(EnvioDeMensagemException e) {
         String motivo = e.getMessage();
         return motivo == null || motivo.isBlank() ? MOTIVO_DESCONHECIDO : motivo;
+    }
+
+    private void publicarMudanca(MessageEntity mensagem) {
+        mensagens.flush();
+        eventos.registrar("MESSAGE_STATUS_CHANGED", mensagem.getConversationId(),
+                mensagem.getId(), mensagem.getVersion(), Instant.now());
     }
 }

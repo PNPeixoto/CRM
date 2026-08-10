@@ -1,6 +1,7 @@
 package br.com.pnp.crm.channel.internal;
 
 import br.com.pnp.crm.channel.api.TipoCanal;
+import br.com.pnp.crm.audit.api.AuditTrail;
 import br.com.pnp.crm.organization.api.Autorizacao;
 import br.com.pnp.crm.organization.api.Permissao;
 import br.com.pnp.crm.shared.api.RecursoNaoEncontradoException;
@@ -9,6 +10,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -21,6 +24,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,16 +40,29 @@ import java.util.UUID;
 @RequestMapping("/api/canais")
 class CanalController {
 
+    private static final SecureRandom RANDOM = new SecureRandom();
+
     private final ChannelConnectionRepository conexoes;
     private final CredenciaisDeCanal credenciais;
 
     private final Autorizacao autorizacao;
+    private final AuditTrail audit;
+    /**
+     * Opcional por construção: o adaptador só nasce com
+     * {@code app.providers.evolution.enabled=true}. Uma dependência rígida
+     * impediria o CRM de subir em produção, onde a ponte experimental é
+     * deliberadamente desligada.
+     */
+    private final ObjectProvider<EvolutionAdapter> evolution;
 
     CanalController(ChannelConnectionRepository conexoes, CredenciaisDeCanal credenciais,
-                    Autorizacao autorizacao) {
+                    Autorizacao autorizacao, AuditTrail audit,
+                    ObjectProvider<EvolutionAdapter> evolution) {
         this.conexoes = conexoes;
         this.credenciais = credenciais;
         this.autorizacao = autorizacao;
+        this.audit = audit;
+        this.evolution = evolution;
     }
 
     @GetMapping
@@ -68,7 +87,9 @@ class CanalController {
                 requisicao.identificadorExterno(), autorId);
 
         conexoes.saveAndFlush(conexao);
-        guardarCredenciais(conexao.getId(), requisicao);
+        boolean credencialAlterada = guardarCredenciais(conexao.getId(), requisicao, true);
+        auditarConfiguracao(conexao.getId(), autorId, AuditTrail.Motivo.CHANNEL_CREATED);
+        if (credencialAlterada) auditarCredencial(conexao.getId(), autorId);
 
         return ResponseEntity.ok(paraResposta(conexao));
     }
@@ -82,7 +103,10 @@ class CanalController {
         ChannelConnectionEntity conexao = carregar(id);
         conexao.renomear(requisicao.nome(), requisicao.identificadorExterno(),
                 UUID.fromString(jwt.getSubject()));
-        guardarCredenciais(id, requisicao);
+        UUID autorId = UUID.fromString(jwt.getSubject());
+        boolean credencialAlterada = guardarCredenciais(id, requisicao, false);
+        auditarConfiguracao(id, autorId, AuditTrail.Motivo.CHANNEL_UPDATED);
+        if (credencialAlterada) auditarCredencial(id, autorId);
         return ResponseEntity.ok(paraResposta(conexao));
     }
 
@@ -92,8 +116,77 @@ class CanalController {
                                                    @AuthenticationPrincipal Jwt jwt) {
         autorizacao.exigirNoTenant(Permissao.CHANNELS_WRITE);
         ChannelConnectionEntity conexao = carregar(id);
-        conexao.alternarAtivacao(UUID.fromString(jwt.getSubject()));
+        UUID autorId = UUID.fromString(jwt.getSubject());
+        conexao.alternarAtivacao(autorId);
+        auditarConfiguracao(id, autorId, AuditTrail.Motivo.CHANNEL_ACTIVATION_CHANGED);
         return ResponseEntity.ok(paraResposta(conexao));
+    }
+
+    /**
+     * Material para parear um canal Evolution.
+     *
+     * <p>Existe porque parear era, até aqui, impossível pela aplicação: era
+     * preciso chamar a Evolution na mão, com a API key do servidor. Isso
+     * obrigava a distribuir a chave de administração do provedor para alguém
+     * conectar um número — a credencial mais ampla do laboratório entregue
+     * para a tarefa mais corriqueira.
+     *
+     * <p><b>Nunca reconecta uma sessão saudável.</b> Se a instância já está
+     * {@code open}, devolve o estado e não pede QR novo. Pedir reinicia o
+     * pareamento no provedor: um clique acidental derrubaria um WhatsApp que
+     * estava atendendo.
+     *
+     * <p>A resposta carrega credencial de sessão e por isso é {@code no-store}.
+     * O conteúdo não é auditado nem registrado — a auditoria guarda que houve
+     * pareamento, quem pediu e quando, jamais o material.
+     */
+    @PostMapping("/{id}/pareamento")
+    @Transactional
+    ResponseEntity<PareamentoResponse> parear(@PathVariable UUID id,
+                                              @AuthenticationPrincipal Jwt jwt) {
+        autorizacao.exigirNoTenant(Permissao.CHANNELS_WRITE);
+        ChannelConnectionEntity conexao = carregar(id);
+
+        if (conexao.getKind() != TipoCanal.WHATSAPP_EVOLUTION) {
+            throw new PareamentoIndisponivelException(
+                    "Somente o canal WhatsApp Evolution é pareado por QR.");
+        }
+        if (!conexao.isActive()) {
+            throw new PareamentoIndisponivelException(
+                    "Ative o canal antes de parear.");
+        }
+        EvolutionAdapter adapter = evolution.getIfAvailable();
+        if (adapter == null) {
+            throw new PareamentoIndisponivelException(
+                    "O adaptador Evolution não está habilitado neste servidor.");
+        }
+
+        adapter.garantirInstancia(id);
+        String estado = adapter.obterEstado(id).estadoDaConexao();
+        if ("open".equalsIgnoreCase(estado)) {
+            return semCache(new PareamentoResponse(estado, null, null, 0));
+        }
+
+        EvolutionAdapter.Pareamento pareamento = adapter.iniciarPareamento(id);
+        // Parear estabelece uma sessão capaz de enviar como aquele número:
+        // é evento de credencial, e não de mera configuração.
+        auditarCredencial(id, UUID.fromString(jwt.getSubject()));
+
+        return semCache(new PareamentoResponse(
+                estado,
+                vazioParaNulo(pareamento.qrCodeBase64()),
+                vazioParaNulo(pareamento.codigoDeParear()),
+                pareamento.tentativa()));
+    }
+
+    private ResponseEntity<PareamentoResponse> semCache(PareamentoResponse corpo) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore().cachePrivate())
+                .body(corpo);
+    }
+
+    private static String vazioParaNulo(String valor) {
+        return valor == null || valor.isBlank() ? null : valor;
     }
 
     /**
@@ -105,17 +198,61 @@ class CanalController {
      * qualquer captura de tela e a qualquer pessoa que passe atrás do
      * atendente.
      */
-    private void guardarCredenciais(UUID conexaoId, CanalRequest requisicao) {
+    private boolean guardarCredenciais(UUID conexaoId, CanalRequest requisicao,
+                                       boolean novaConexao) {
         UUID tenantId = TenantContext.obrigatorio();
+        boolean alterada = false;
 
-        if (preenchido(requisicao.token())) {
+        if (requisicao.tipo() == TipoCanal.TELEGRAM) {
+            if (preenchido(requisicao.token())) {
+                credenciais.guardar(tenantId, conexaoId,
+                        TipoCredencial.TELEGRAM_BOT_TOKEN, requisicao.token());
+                alterada = true;
+            }
+            if (preenchido(requisicao.segredoWebhook())) {
+                credenciais.guardar(tenantId, conexaoId,
+                        TipoCredencial.TELEGRAM_WEBHOOK_SECRET, requisicao.segredoWebhook());
+                alterada = true;
+            } else if (novaConexao) {
+                credenciais.guardar(tenantId, conexaoId,
+                        TipoCredencial.TELEGRAM_WEBHOOK_SECRET, gerarSegredoWebhook());
+                alterada = true;
+            }
+        } else if (requisicao.tipo() == TipoCanal.WHATSAPP_EVOLUTION && novaConexao) {
             credenciais.guardar(tenantId, conexaoId,
-                    TipoCredencial.TELEGRAM_BOT_TOKEN, requisicao.token());
+                    TipoCredencial.EVOLUTION_WEBHOOK_SECRET, gerarSegredoWebhook());
+            alterada = true;
         }
-        if (preenchido(requisicao.segredoWebhook())) {
-            credenciais.guardar(tenantId, conexaoId,
-                    TipoCredencial.TELEGRAM_WEBHOOK_SECRET, requisicao.segredoWebhook());
-        }
+        return alterada;
+    }
+
+    private void auditarConfiguracao(UUID alvoId, UUID autorId, AuditTrail.Motivo motivo) {
+        audit.registrar(new AuditTrail.Evento(
+                AuditTrail.Acao.SENSITIVE_CONFIGURATION_CHANGED,
+                AuditTrail.Ator.humano(autorId),
+                AuditTrail.Escopo.tenant(TenantContext.obrigatorio()),
+                new AuditTrail.Alvo(AuditTrail.TipoAlvo.CHANNEL_CONNECTION, alvoId),
+                AuditTrail.Resultado.SUCCEEDED, motivo));
+    }
+
+    private void auditarCredencial(UUID alvoId, UUID autorId) {
+        audit.registrar(new AuditTrail.Evento(
+                AuditTrail.Acao.CREDENTIAL_CHANGED,
+                AuditTrail.Ator.humano(autorId),
+                AuditTrail.Escopo.tenant(TenantContext.obrigatorio()),
+                new AuditTrail.Alvo(AuditTrail.TipoAlvo.CHANNEL_CONNECTION, alvoId),
+                AuditTrail.Resultado.SUCCEEDED, AuditTrail.Motivo.CHANNEL_CREDENTIAL_CHANGED));
+    }
+
+    /**
+     * O segredo do webhook e interno: gerar no servidor evita copia manual,
+     * reutilizacao de senha e exposicao no navegador. O alfabeto Base64 URL
+     * sem padding e aceito pelo cabecalho secreto da Telegram Bot API.
+     */
+    private String gerarSegredoWebhook() {
+        byte[] bytes = new byte[32];
+        RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private boolean preenchido(String valor) {
@@ -128,10 +265,18 @@ class CanalController {
     }
 
     private CanalResponse paraResposta(ChannelConnectionEntity c) {
+        TipoCredencial token = c.getKind() == TipoCanal.TELEGRAM
+                ? TipoCredencial.TELEGRAM_BOT_TOKEN : null;
+        TipoCredencial segredo = c.getKind() == TipoCanal.WHATSAPP_EVOLUTION
+                ? TipoCredencial.EVOLUTION_WEBHOOK_SECRET
+                : c.getKind() == TipoCanal.TELEGRAM
+                    ? TipoCredencial.TELEGRAM_WEBHOOK_SECRET : null;
         return new CanalResponse(
                 c.getId(), c.getKind().name(), c.getName(), c.getExternalAccountId(), c.isActive(),
-                credenciais.recuperar(c.getId(), TipoCredencial.TELEGRAM_BOT_TOKEN).isPresent(),
-                credenciais.recuperar(c.getId(), TipoCredencial.TELEGRAM_WEBHOOK_SECRET).isPresent());
+                token == null || credenciais.recuperar(c.getId(), token).isPresent(),
+                segredo == null || credenciais.recuperar(c.getId(), segredo).isPresent(),
+                c.getRemoteStatus(), c.getRemotePendingCount(),
+                c.getLastReconciledAt(), c.getLastRemoteErrorAt());
     }
 
     record CanalRequest(
@@ -142,9 +287,26 @@ class CanalController {
             @Size(max = 300) String segredoWebhook) {
     }
 
+    /**
+     * Estado do pareamento.
+     *
+     * <p>{@code qrCodeBase64} e {@code codigoDeParear} vêm nulos quando a
+     * sessão já está aberta — não há o que parear, e devolver material novo
+     * convidaria a derrubar a conexão em uso.
+     */
+    record PareamentoResponse(String estado, String qrCodeBase64,
+                              String codigoDeParear, int tentativa) {
+        @Override
+        public String toString() {
+            return "PareamentoResponse[estado=" + estado + ", conteudo omitido]";
+        }
+    }
+
     /** Sem os segredos — apenas a informação de que existem. */
     record CanalResponse(
             UUID id, String tipo, String nome, String identificadorExterno, boolean ativo,
-            boolean temToken, boolean temSegredoWebhook) {
+            boolean temToken, boolean temSegredoWebhook,
+            String estadoRemoto, Integer pendenciasRemotas,
+            Instant ultimaReconciliacaoEm, Instant ultimaFalhaRemotaEm) {
     }
 }

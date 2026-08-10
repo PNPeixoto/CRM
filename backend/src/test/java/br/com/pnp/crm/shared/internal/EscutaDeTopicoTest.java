@@ -3,6 +3,7 @@ package br.com.pnp.crm.shared.internal;
 import br.com.pnp.crm.shared.api.AcessoNegadoException;
 import br.com.pnp.crm.shared.api.AutorizacaoDeEscuta;
 import br.com.pnp.crm.shared.api.TopicosTempoReal;
+import br.com.pnp.crm.shared.api.SessaoTempoRealRevogada;
 import org.junit.jupiter.api.Test;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -32,6 +33,7 @@ class EscutaDeTopicoTest {
     private static final UUID TENANT = UUID.fromString("019fa91c-0f63-75f7-b4a0-1494c1304c42");
     private static final UUID VIZINHO = UUID.fromString("019fa91c-0f66-7d34-9a39-2f79328d02c9");
     private static final UUID USUARIO = UUID.fromString("019fa91c-0f66-7a68-8384-20e85b6c8f5a");
+    private static final UUID SESSAO = UUID.fromString("019fa91c-0f66-7a68-8384-20e85b6c8f60");
 
     private final List<UUID> consultados = new ArrayList<>();
 
@@ -87,6 +89,35 @@ class EscutaDeTopicoTest {
         assertThat(consultados).isEmpty();
     }
 
+    @Test
+    void logoutRetiraImediatamenteAsConexoesDaFamiliaRevogada() {
+        JwtDecoder decoder = token -> jwt();
+        StompAuthChannelInterceptor interceptor = new StompAuthChannelInterceptor(
+                decoder, (tenant, usuario) -> {}, (tenant, usuario, sessao) -> {},
+                3, 100, 20);
+
+        interceptor.preSend(conexao("socket-1"), null);
+
+        assertThat(interceptor.retirarSessoes(
+                new SessaoTempoRealRevogada(TENANT, USUARIO, SESSAO)))
+                .containsExactly("socket-1");
+        assertThat(interceptor.retirarSessoes(
+                new SessaoTempoRealRevogada(TENANT, USUARIO, SESSAO)))
+                .isEmpty();
+    }
+
+    @Test
+    void limiteDeConexoesPorUsuarioEhAplicadoNoConnect() {
+        JwtDecoder decoder = token -> jwt();
+        StompAuthChannelInterceptor interceptor = new StompAuthChannelInterceptor(
+                decoder, (tenant, usuario) -> {}, (tenant, usuario, sessao) -> {},
+                1, 100, 20);
+
+        interceptor.preSend(conexao("socket-1"), null);
+        assertThatThrownBy(() -> interceptor.preSend(conexao("socket-2"), null))
+                .isInstanceOf(StompNaoAutorizadoException.class);
+    }
+
     private StompAuthChannelInterceptor interceptor(boolean autorizado) {
         JwtDecoder decoder = token -> {
             throw new UnsupportedOperationException("CONNECT não é o objeto deste teste");
@@ -107,11 +138,20 @@ class EscutaDeTopicoTest {
         return MessageBuilder.createMessage(new byte[0], acessor.getMessageHeaders());
     }
 
+    private Message<?> conexao(String sessaoWebSocket) {
+        StompHeaderAccessor acessor = StompHeaderAccessor.create(StompCommand.CONNECT);
+        acessor.setSessionId(sessaoWebSocket);
+        acessor.setNativeHeader("Authorization", "Bearer teste");
+        acessor.setLeaveMutable(true);
+        return MessageBuilder.createMessage(new byte[0], acessor.getMessageHeaders());
+    }
+
     private Jwt jwt() {
         return Jwt.withTokenValue("irrelevante")
                 .header("alg", "HS256")
                 .subject(USUARIO.toString())
                 .claim("tid", TENANT.toString())
+                .claim("sid", SESSAO.toString())
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(900))
                 .build();

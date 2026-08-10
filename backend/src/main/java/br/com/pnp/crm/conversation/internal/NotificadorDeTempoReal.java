@@ -1,6 +1,6 @@
 package br.com.pnp.crm.conversation.internal;
 
-import br.com.pnp.crm.conversation.api.MensagemRecebidaEvent;
+import br.com.pnp.crm.conversation.api.AtualizacaoTempoRealEvent;
 import br.com.pnp.crm.shared.api.TopicosTempoReal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,14 +38,16 @@ class NotificadorDeTempoReal {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    void aoReceberMensagem(MensagemRecebidaEvent evento) {
+    void aoPersistirAtualizacao(AtualizacaoTempoRealEvent evento) {
         try {
             MensagemPush push = new MensagemPush(
+                    evento.eventId(),
+                    evento.sequence(),
+                    evento.eventType(),
                     evento.conversationId(),
                     evento.messageId(),
-                    "INBOUND",
-                    evento.texto(),
-                    evento.ocorridoEm());
+                    evento.resourceVersion(),
+                    evento.occurredAt());
 
             // Dois destinos, porque são duas telas: quem está com a conversa
             // aberta e quem está olhando a lista.
@@ -57,8 +59,8 @@ class NotificadorDeTempoReal {
         } catch (RuntimeException e) {
             // O log não inclui o texto da mensagem: conteúdo de cliente não
             // entra em log, por regra do projeto.
-            log.warn("Falha ao publicar mensagem em tempo real. conversationId={} messageId={}",
-                    evento.conversationId(), evento.messageId(), e);
+            log.warn("Falha sanitizada ao publicar em tempo real. conversationId={} messageId={} tipo={}",
+                    evento.conversationId(), evento.messageId(), e.getClass().getSimpleName());
         }
     }
 
@@ -69,10 +71,12 @@ class NotificadorDeTempoReal {
      * decidir isso.
      */
     record MensagemPush(
+            UUID eventId,
+            long sequence,
+            String tipo,
             UUID conversationId,
             UUID messageId,
-            String direcao,
-            String texto,
+            long versao,
             Instant ocorridoEm) {
     }
 }

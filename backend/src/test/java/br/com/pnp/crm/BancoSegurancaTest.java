@@ -21,7 +21,13 @@ class BancoSegurancaTest {
             "tenant_profile", "organizational_unit", "organization_membership",
             "app_role", "role_permission", "membership_scope",
             "password_reset_token", "mfa_authenticator", "mfa_recovery_code",
-            "mfa_enrollment");
+            "mfa_enrollment", "usage_event", "channel_media",
+            "realtime_stream_cursor", "realtime_event", "conversation_sla_event",
+            "automation_definition", "automation_definition_version",
+            "automation_execution", "automation_execution_step",
+            "automation_compensation", "automation_transition",
+            "http_connector", "http_connector_secret", "http_connector_attempt",
+            "audit_event");
 
     private static final Set<String> TABELAS_OPERACIONAIS = Set.of(
             "event_publication", "flyway_schema_history");
@@ -34,7 +40,16 @@ class BancoSegurancaTest {
             "resolve_tenant_id_por_mfa_enrollment_hash",
             "resolve_tenant_id_por_channel_connection",
             "reservar_mensagens_para_envio",
-            "reservar_eventos_para_processar");
+            "reservar_eventos_para_processar",
+            "reprocessar_mensagem_saida",
+            "reprocessar_evento_entrada",
+            "expurgar_payloads_eventos_recebidos",
+            "reservar_canais_telegram_para_reconciliar",
+            "reservar_canais_evolution_para_reconciliar",
+            "reservar_midias_expiradas",
+            "next_realtime_sequence",
+            "reservar_slas_vencidos",
+            "reservar_execucoes_automacao");
 
     @Autowired JdbcTemplate jdbc;
     @Autowired Flyway flyway;
@@ -111,7 +126,13 @@ class BancoSegurancaTest {
                 "resolve_tenant_id_por_mfa_enrollment_hash",
                 "resolve_tenant_id_por_channel_connection",
                 "reservar_mensagens_para_envio",
-                "reservar_eventos_para_processar");
+                "reservar_eventos_para_processar",
+                "expurgar_payloads_eventos_recebidos",
+                "reservar_canais_telegram_para_reconciliar",
+                "reservar_canais_evolution_para_reconciliar",
+                "reservar_midias_expiradas",
+                "reservar_slas_vencidos",
+                "reservar_execucoes_automacao");
 
         List<String> executaveis = jdbc.queryForList("""
                 SELECT p.proname
@@ -134,7 +155,7 @@ class BancoSegurancaTest {
     }
 
     @Test
-    void flywayValidaHistoricoLimpoAteV13() {
+    void flywayValidaHistoricoLimpoAteV22() {
         flyway.validate();
         List<String> versoes = jdbc.queryForList("""
                 SELECT version
@@ -143,6 +164,6 @@ class BancoSegurancaTest {
                  ORDER BY installed_rank
                 """, String.class);
         assertThat(versoes).containsExactly(
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13");
+                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22");
     }
 }

@@ -1,12 +1,14 @@
 package br.com.pnp.crm.identity.internal;
 
 import br.com.pnp.crm.shared.api.SessaoExpiradaException;
+import br.com.pnp.crm.shared.api.SessaoTempoRealRevogada;
 import br.com.pnp.crm.shared.api.TenantContext;
 import br.com.pnp.crm.shared.api.UuidV7;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
@@ -28,10 +30,13 @@ class RefreshTokenService {
 
     private final RefreshTokenRepository repository;
     private final EntityManager entityManager;
+    private final ApplicationEventPublisher eventos;
 
-    RefreshTokenService(RefreshTokenRepository repository, EntityManager entityManager) {
+    RefreshTokenService(RefreshTokenRepository repository, EntityManager entityManager,
+                        ApplicationEventPublisher eventos) {
         this.repository = repository;
         this.entityManager = entityManager;
+        this.eventos = eventos;
     }
 
     @Transactional(readOnly = true)
@@ -78,13 +83,16 @@ class RefreshTokenService {
 
     @Transactional
     void revogarFamilia(UUID tenantId, UUID familyId, String motivo) {
-        repository.findByTenantIdAndFamilyId(tenantId, familyId)
-                .forEach(token -> token.revogar(motivo));
+        List<RefreshTokenEntity> familia = repository.findByTenantIdAndFamilyId(tenantId, familyId);
+        familia.forEach(token -> token.revogar(motivo));
+        familia.stream().findFirst().ifPresent(token -> eventos.publishEvent(
+                new SessaoTempoRealRevogada(tenantId, token.getUserId(), familyId)));
     }
 
     @Transactional
     void encerrarSessoesDoUsuario(UUID tenantId, UUID usuarioId, String motivo) {
         repository.revogarTodosDoUsuario(tenantId, usuarioId, Instant.now(), motivo);
+        eventos.publishEvent(new SessaoTempoRealRevogada(tenantId, usuarioId, null));
     }
 
     private TokenEmitido emitir(UUID tenantId, UUID usuarioId, UUID familyId,

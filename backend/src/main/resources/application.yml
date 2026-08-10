@@ -54,7 +54,7 @@ app:
   schema:
     # Atualizado junto com toda migration estrutural. Readiness compara este
     # valor ao histórico realmente aplicado e detecta inclusive imagem antiga.
-    expected-version: "13"
+    expected-version: "22"
   security:
     # Sem valor padrão, de propósito: a aplicação não sobe sem estes segredos.
     # Um default aqui seria herdado silenciosamente em produção, e um pepper
@@ -69,6 +69,11 @@ app:
     # Chave distinta para segredos TOTP. Assim, a rotação de uma credencial de
     # integração não invalida MFA e um vazamento não cruza domínios.
     mfa-secret-key: ${MFA_SECRET_KEY}
+    # HMAC independente para URLs curtas de midia ja liberada pelo scanner.
+    media-signing-key: ${MEDIA_SIGNING_KEY}
+    # Chave exclusiva do cofre do conector HTTP. Segredos de integrações não
+    # compartilham domínio criptográfico com canais, MFA ou URLs de mídia.
+    http-connector-secret-key: ${HTTP_CONNECTOR_SECRET_KEY}
     # HTTPS obrigatório fora de desenvolvimento: o cookie de refresh não pode
     # trafegar em texto puro, e o CSP não deve aceitar WebSocket sem TLS.
     cookie-secure: true
@@ -98,6 +103,69 @@ app:
     tamanho-do-lote: 50
     max-tentativas: 5
     espera-base-segundos: 15
+
+  retencao-de-webhook:
+    habilitada: true
+    intervalo-ms: 3600000
+
+  websocket:
+    max-connections-per-user: 3
+    max-connections-per-tenant: 100
+    max-frames-per-second: 20
+    session-expiration-check-ms: 5000
+
+  conversation:
+    sla:
+      first-response-minutes: 15
+      check-interval-ms: 30000
+      check-batch-size: 100
+
+  automation:
+    worker-enabled: true
+    worker-interval-ms: 1000
+    batch-size: 25
+    lease-seconds: 30
+    max-duration-seconds: 300
+    max-steps: 50
+    max-branches: 20
+    max-concurrent-per-tenant: 10
+    max-executions-per-minute: 100
+    max-pending-per-tenant: 1000
+
+  http-connector:
+    # Redirects permanecem desativados. Produção exige um proxy/política de
+    # egress independente; desenvolvimento conecta diretamente ao IP A/AAAA
+    # previamente validado e fixado.
+    require-egress-proxy: false
+    egress-proxy-url: ${HTTP_CONNECTOR_EGRESS_PROXY_URL:}
+    max-concurrent-per-tenant: 4
+    max-requests-per-minute: 120
+    max-timeout-ms: 30000
+    max-response-bytes: 1048576
+
+  providers:
+    evolution:
+      enabled: ${EVOLUTION_ENABLED:false}
+      base-url: ${EVOLUTION_API_BASE_URL:http://evolution-api:8080}
+      api-key: ${EVOLUTION_API_KEY:}
+      origin: ${EVOLUTION_API_ORIGIN:http://localhost:8081}
+      webhook-base-url: ${EVOLUTION_WEBHOOK_BASE_URL:http://app:8080/api/webhooks/evolution}
+      reconciliation-schedule-ms: ${EVOLUTION_RECONCILIATION_SCHEDULE_MS:10000}
+      reconciliation-interval-seconds: ${EVOLUTION_RECONCILIATION_INTERVAL_SECONDS:30}
+      reconciliation-batch-size: ${EVOLUTION_RECONCILIATION_BATCH_SIZE:10}
+    telegram:
+      # Contrato consultado na documentacao oficial em 2026-08-08.
+      bot-api-version: "10.2"
+      rate-limit-tenant-per-second: 30
+      rate-limit-connection-per-second: 30
+      reconciliation-enabled: ${TELEGRAM_RECONCILIATION_ENABLED:false}
+      public-base-url: ${TELEGRAM_PUBLIC_BASE_URL:}
+      reconciliation-schedule-ms: 60000
+      reconciliation-interval-seconds: 300
+      reconciliation-batch-size: 25
+      media-storage-path: ${TELEGRAM_MEDIA_STORAGE_PATH:./var/media-quarantine}
+      media-retention-enabled: true
+      media-retention-schedule-ms: 3600000
 
 server:
   port: 8080

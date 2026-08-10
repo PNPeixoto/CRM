@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SegmentPresetCatalogTest {
 
@@ -50,5 +51,14 @@ class SegmentPresetCatalogTest {
         assertThat(presentation.navigation())
                 .anyMatch(item -> item.routeId().equals("assets") && item.label().equals("Cardápio"))
                 .anyMatch(item -> item.routeId().equals("bookings") && item.label().equals("Reservas"));
+    }
+
+    @Test
+    void versaoPersistidaNuncaCaiSilenciosamenteNoPresetAtual() {
+        assertThat(catalog.resolve(BusinessSegment.GENERAL_SERVICES, 1, true).presetVersion())
+                .isEqualTo(1);
+        assertThatThrownBy(() -> catalog.resolve(BusinessSegment.GENERAL_SERVICES, 2, true))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Versão de preset desconhecida");
     }
 }

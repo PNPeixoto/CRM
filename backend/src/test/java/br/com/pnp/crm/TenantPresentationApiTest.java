@@ -10,8 +10,11 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -63,6 +66,88 @@ class TenantPresentationApiTest {
         mockMvc.perform(get("/api/empresa/apresentacao").with(token(tenantA, userA)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.segmento").value("CONFECTIONERY"));
+
+        Long funis = TenantContext.executarComo(tenantA, () -> jdbc.queryForObject(
+                "SELECT count(*) FROM pipeline WHERE is_default AND deleted_at IS NULL",
+                Long.class));
+        Long etapas = TenantContext.executarComo(tenantA, () -> jdbc.queryForObject(
+                "SELECT count(*) FROM pipeline_stage WHERE deleted_at IS NULL", Long.class));
+        assertThat(funis).isOne();
+        assertThat(etapas).isEqualTo(8);
+    }
+
+    @Test
+    void conclusoesConcorrentesConvergemSemDuplicarFunil() throws Exception {
+        CountDownLatch prontas = new CountDownLatch(2);
+        CountDownLatch iniciar = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var concluir = (java.util.concurrent.Callable<Integer>) () -> {
+                prontas.countDown();
+                iniciar.await();
+                return mockMvc.perform(put("/api/empresa/perfil-inicial")
+                                .with(token(tenantA, userA)).with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"segmento\":\"GENERAL_SERVICES\"}"))
+                        .andReturn().getResponse().getStatus();
+            };
+            var primeira = executor.submit(concluir);
+            var segunda = executor.submit(concluir);
+            prontas.await();
+            iniciar.countDown();
+            assertThat(List.of(primeira.get(), segunda.get())).containsOnly(200);
+        }
+
+        Long perfis = TenantContext.executarComo(tenantA,
+                () -> jdbc.queryForObject("SELECT count(*) FROM tenant_profile", Long.class));
+        Long funis = TenantContext.executarComo(tenantA,
+                () -> jdbc.queryForObject("SELECT count(*) FROM pipeline WHERE is_default", Long.class));
+        Long etapas = TenantContext.executarComo(tenantA,
+                () -> jdbc.queryForObject("SELECT count(*) FROM pipeline_stage", Long.class));
+        assertThat(perfis).isOne();
+        assertThat(funis).isOne();
+        assertThat(etapas).isEqualTo(6);
+    }
+
+    @Test
+    void segmentoPodeMudarSemReaplicarOuSobrescreverFunilPersonalizado() throws Exception {
+        mockMvc.perform(put("/api/empresa/perfil-inicial")
+                        .with(token(tenantA, userA)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"segmento\":\"GENERAL_SERVICES\"}"))
+                .andExpect(status().isOk());
+        TenantContext.executarComo(tenantA, () -> jdbc.update(
+                "UPDATE pipeline SET name = 'Funil personalizado' WHERE is_default"));
+
+        mockMvc.perform(put("/api/empresa/apresentacao")
+                        .with(token(tenantA, userA)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"segmento\":\"RESTAURANT\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.segmento").value("RESTAURANT"))
+                .andExpect(jsonPath("$.versaoPreset").value(1))
+                .andExpect(jsonPath("$.funilPadrao.nome").value("Pedidos"));
+
+        Map<String, Object> profile = TenantContext.executarComo(tenantA, () ->
+                jdbc.queryForMap("SELECT business_segment, preset_version FROM tenant_profile"));
+        String nomeDoFunil = TenantContext.executarComo(tenantA, () -> jdbc.queryForObject(
+                "SELECT name FROM pipeline WHERE is_default", String.class));
+        Long etapas = TenantContext.executarComo(tenantA,
+                () -> jdbc.queryForObject("SELECT count(*) FROM pipeline_stage", Long.class));
+        assertThat(profile.get("business_segment")).isEqualTo("RESTAURANT");
+        assertThat(profile.get("preset_version")).isEqualTo(1);
+        assertThat(nomeDoFunil).isEqualTo("Funil personalizado");
+        assertThat(etapas).isEqualTo(6);
+    }
+
+    @Test
+    void apresentacaoNaoPodeSerAlteradaAntesDoPerfilInicial() throws Exception {
+        mockMvc.perform(put("/api/empresa/apresentacao")
+                        .with(token(tenantA, userA)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"segmento\":\"RENTAL\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.codigo").value("PERFIL_INICIAL_PENDENTE"));
     }
 
     @Test
@@ -106,6 +191,11 @@ class TenantPresentationApiTest {
         mockMvc.perform(get("/api/empresa/apresentacao").with(token(tenantA, leitor)))
                 .andExpect(status().isOk());
         mockMvc.perform(put("/api/empresa/perfil-inicial")
+                        .with(token(tenantA, leitor)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"segmento\":\"RENTAL\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put("/api/empresa/apresentacao")
                         .with(token(tenantA, leitor)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"segmento\":\"RENTAL\"}"))

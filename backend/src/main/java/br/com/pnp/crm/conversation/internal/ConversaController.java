@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 import java.time.Instant;
 
@@ -52,13 +51,17 @@ class ConversaController {
      * ela só poderá ser usada quando existir uma inbox individual filtrada.
      */
     @GetMapping
-    ResponseEntity<List<ConversationDtos.ConversaResumo>> listar() {
+    ResponseEntity<ConversationDtos.PaginaConversas> listar(
+            @RequestParam(required = false) Instant antesDe,
+            @RequestParam(required = false) UUID antesDoId,
+            @RequestParam(defaultValue = "50") int limite,
+            @RequestParam(required = false) String busca) {
         autorizacao.exigirNoTenant(Permissao.CONVERSATIONS_READ);
-        return ResponseEntity.ok(conversas.listar());
+        return ResponseEntity.ok(conversas.listar(antesDe, antesDoId, limite, busca));
     }
 
     @GetMapping("/{conversationId}/mensagens")
-    ResponseEntity<List<ConversationDtos.MensagemResposta>> mensagens(
+    ResponseEntity<ConversationDtos.PaginaMensagens> mensagens(
             @PathVariable UUID conversationId,
             @RequestParam(required = false) Instant antesDe,
             @RequestParam(required = false) UUID antesDoId,
@@ -66,6 +69,14 @@ class ConversaController {
         autorizacao.exigirNoTenant(Permissao.CONVERSATIONS_READ);
         return ResponseEntity.ok(conversas.mensagensDa(
                 conversationId, antesDe, antesDoId, limite));
+    }
+
+    @GetMapping("/eventos")
+    ResponseEntity<ConversationDtos.PaginaEventos> eventos(
+            @RequestParam(defaultValue = "0") long apos,
+            @RequestParam(defaultValue = "100") int limite) {
+        autorizacao.exigirNoTenant(Permissao.CONVERSATIONS_READ);
+        return ResponseEntity.ok(conversas.eventosDepoisDe(apos, limite));
     }
 
     @PostMapping("/{conversationId}/mensagens")

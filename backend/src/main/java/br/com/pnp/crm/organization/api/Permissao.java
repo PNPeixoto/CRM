@@ -37,7 +37,16 @@ public enum Permissao {
      */
     CHANNELS_WRITE("channels.write"),
 
+    AUTOMATIONS_READ("automations.read"),
+    AUTOMATIONS_WRITE("automations.write"),
+
+    INTEGRATIONS_READ("integrations.read"),
+    INTEGRATIONS_WRITE("integrations.write"),
+
     REPORTS_READ("reports.read"),
+
+    /** Leitura da trilha corporativa; sempre exige alcance de todo o tenant. */
+    AUDIT_READ("audit.read"),
 
     ORGANIZATION_MANAGE("organization.manage");
 

@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 final class ConversationDtos {
@@ -28,7 +29,17 @@ final class ConversationDtos {
             String contatoNome,
             StatusConversa status,
             UUID atendenteId,
-            Instant ultimaMensagemEm) {
+            Instant ultimaMensagemEm,
+            Instant venceEm,
+            long versao) {
+    }
+
+    record PaginaConversas(
+            List<ConversaResumo> itens,
+            Instant proximoAntesDe,
+            UUID proximoAntesDoId,
+            boolean temMais,
+            long sequenciaDoStream) {
     }
 
     record MensagemResposta(
@@ -38,7 +49,33 @@ final class ConversationDtos {
             String texto,
             StatusMensagem status,
             UUID autorId,
-            Instant criadaEm) {
+            Instant criadaEm,
+            long versao) {
+    }
+
+    record PaginaMensagens(
+            List<MensagemResposta> itens,
+            Instant proximoAntesDe,
+            UUID proximoAntesDoId,
+            boolean temMais,
+            long sequenciaDoStream) {
+    }
+
+    record EventoResposta(
+            UUID id,
+            long sequence,
+            String tipo,
+            UUID conversationId,
+            UUID messageId,
+            long versao,
+            Instant ocorridoEm) {
+    }
+
+    record PaginaEventos(
+            List<EventoResposta> eventos,
+            long ultimaSequencia,
+            boolean temMais,
+            boolean resetObrigatorio) {
     }
 
     /**

@@ -15,6 +15,12 @@ interface ContactRepository extends JpaRepository<ContactEntity, UUID> {
 
     Optional<ContactEntity> findByIdAndTenantIdAndDeletedAtIsNull(UUID id, UUID tenantId);
 
+    Optional<ContactEntity> findByTenantIdAndIdempotencyKey(UUID tenantId, String idempotencyKey);
+
+    /** Serializa apenas criações com a mesma chave; o índice único fecha a última janela. */
+    @Query(value = "SELECT 1 FROM pg_advisory_xact_lock(:lockId)", nativeQuery = true)
+    int bloquearCriacaoIdempotente(@Param("lockId") long lockId);
+
     /**
      * Busca por nome, e-mail ou empresa.
      *

@@ -45,3 +45,10 @@ logging:
   level:
     root: INFO
     br.com.pnp.crm: INFO
+
+app:
+  http-connector:
+    # O proxy deve aplicar allowlist/denylist e resolver o destino de forma
+    # protegida. Ausência desta configuração faz o componente falhar na subida.
+    require-egress-proxy: true
+    egress-proxy-url: ${HTTP_CONNECTOR_EGRESS_PROXY_URL}

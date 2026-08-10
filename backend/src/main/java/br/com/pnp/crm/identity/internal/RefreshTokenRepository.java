@@ -27,6 +27,27 @@ interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity, UUID>
 
     List<RefreshTokenEntity> findByTenantIdAndFamilyId(UUID tenantId, UUID familyId);
 
+    @Query("""
+            SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END
+              FROM RefreshTokenEntity t
+             WHERE t.tenantId = :tenantId
+               AND t.userId = :userId
+               AND t.familyId = :familyId
+               AND t.usedAt IS NULL
+               AND t.revokedAt IS NULL
+               AND t.deletedAt IS NULL
+               AND t.expiresAt > :agora
+               AND t.issuedAt > :limiteInatividade
+               AND t.sessionStartedAt > :limiteAbsoluto
+            """)
+    boolean existeSessaoAtiva(
+            @Param("tenantId") UUID tenantId,
+            @Param("userId") UUID userId,
+            @Param("familyId") UUID familyId,
+            @Param("agora") Instant agora,
+            @Param("limiteInatividade") Instant limiteInatividade,
+            @Param("limiteAbsoluto") Instant limiteAbsoluto);
+
     /**
      * Revogação em massa no logout. UPDATE direto em vez de carregar as
      * entidades: o número de sessões abertas de um usuário é imprevisível e

@@ -22,7 +22,8 @@ SELECT '019fa91c-0f63-75f7-b4a0-1494c1304c42',
 FROM unnest(ARRAY[
     'dashboard.read', 'contacts.read', 'contacts.write', 'deals.read', 'deals.write',
     'tasks.read', 'tasks.write', 'conversations.read', 'conversations.write',
-    'channels.read', 'channels.write', 'reports.read',
+      'channels.read', 'channels.write', 'automations.read', 'automations.write',
+      'integrations.read', 'integrations.write', 'reports.read', 'audit.read',
     'organization.manage'
 ]) AS permission
 ON CONFLICT DO NOTHING;
@@ -55,7 +56,8 @@ SELECT '019fa91c-0f66-7d34-9a39-2f79328d02c9',
 FROM unnest(ARRAY[
     'dashboard.read', 'contacts.read', 'contacts.write', 'deals.read', 'deals.write',
     'tasks.read', 'tasks.write', 'conversations.read', 'conversations.write',
-    'channels.read', 'channels.write', 'reports.read',
+      'channels.read', 'channels.write', 'automations.read', 'automations.write',
+      'integrations.read', 'integrations.write', 'reports.read', 'audit.read',
     'organization.manage'
 ]) AS permission
 ON CONFLICT DO NOTHING;

@@ -8,4 +8,7 @@ import java.util.UUID;
 interface InboundEventRepository extends JpaRepository<InboundEventEntity, UUID> {
 
     Optional<InboundEventEntity> findByIdAndTenantId(UUID id, UUID tenantId);
+
+    Optional<InboundEventEntity> findByTenantIdAndChannelConnectionIdAndExternalEventId(
+            UUID tenantId, UUID channelConnectionId, String externalEventId);
 }

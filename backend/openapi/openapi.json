@@ -10,6 +10,135 @@
     "description" : "Generated server url"
   } ],
   "paths" : {
+    "/api/auditoria" : {
+      "get" : {
+        "operationId" : "listar_6",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "acao",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "resultado",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "cursor",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "limite",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 25
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Pagina"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "audit-controller" ]
+      }
+    },
     "/api/auth/login" : {
       "post" : {
         "operationId" : "login",
@@ -922,9 +1051,1555 @@
         "tags" : [ "auth-controller" ]
       }
     },
+    "/api/automacoes" : {
+      "get" : {
+        "operationId" : "listar_4",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/DefinicaoResumo"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      },
+      "post" : {
+        "operationId" : "criar_5",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DefinicaoRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DefinicaoResumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      }
+    },
+    "/api/automacoes/execucoes" : {
+      "get" : {
+        "operationId" : "listarExecucoes",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "definicaoId",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ExecucaoResumo"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      }
+    },
+    "/api/automacoes/execucoes/{id}" : {
+      "get" : {
+        "operationId" : "buscarExecucao",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ExecucaoResumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      }
+    },
+    "/api/automacoes/execucoes/{id}/cancelar" : {
+      "post" : {
+        "operationId" : "cancelar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ExecucaoResumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      }
+    },
+    "/api/automacoes/execucoes/{id}/pausar" : {
+      "post" : {
+        "operationId" : "pausarExecucao",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ExecucaoResumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      }
+    },
+    "/api/automacoes/execucoes/{id}/retomar" : {
+      "post" : {
+        "operationId" : "retomar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ExecucaoResumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      }
+    },
+    "/api/automacoes/execucoes/{id}/transicoes" : {
+      "get" : {
+        "operationId" : "transicoes",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/TransicaoResumo"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      }
+    },
+    "/api/automacoes/{id}" : {
+      "put" : {
+        "operationId" : "criarVersao",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NovaVersaoRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/VersaoResumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      }
+    },
+    "/api/automacoes/{id}/executar" : {
+      "post" : {
+        "operationId" : "executar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DisparoRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ExecucaoResumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      }
+    },
+    "/api/automacoes/{id}/pausar" : {
+      "post" : {
+        "operationId" : "pausarDefinicao",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DefinicaoResumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      }
+    },
+    "/api/automacoes/{id}/versoes" : {
+      "get" : {
+        "operationId" : "versoes",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/VersaoResumo"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      }
+    },
+    "/api/automacoes/{id}/versoes/{versao}/ativar" : {
+      "post" : {
+        "operationId" : "ativar_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "in" : "path",
+          "name" : "versao",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DefinicaoResumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      }
+    },
+    "/api/automacoes/{id}/versoes/{versao}/dry-run" : {
+      "post" : {
+        "operationId" : "simular",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "in" : "path",
+          "name" : "versao",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DisparoRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ExecucaoResumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "automation-controller" ]
+      }
+    },
     "/api/canais" : {
       "get" : {
-        "operationId" : "listar_2",
+        "operationId" : "listar_3",
         "responses" : {
           "200" : {
             "content" : {
@@ -1023,7 +2698,7 @@
         "tags" : [ "canal-controller" ]
       },
       "post" : {
-        "operationId" : "criar_3",
+        "operationId" : "criar_4",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1131,7 +2806,7 @@
     },
     "/api/canais/{id}" : {
       "put" : {
-        "operationId" : "atualizar_3",
+        "operationId" : "atualizar_4",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1353,9 +3028,116 @@
         "tags" : [ "canal-controller" ]
       }
     },
+    "/api/canais/{id}/pareamento" : {
+      "post" : {
+        "operationId" : "parear",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PareamentoResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "canal-controller" ]
+      }
+    },
     "/api/contatos" : {
       "get" : {
-        "operationId" : "listar_1",
+        "operationId" : "listar_2",
         "parameters" : [ {
           "in" : "query",
           "name" : "busca",
@@ -1488,7 +3270,15 @@
         "tags" : [ "contact-controller" ]
       },
       "post" : {
-        "operationId" : "criar_2",
+        "operationId" : "criar_3",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1799,7 +3589,7 @@
         "tags" : [ "contact-controller" ]
       },
       "put" : {
-        "operationId" : "atualizar_2",
+        "operationId" : "atualizar_3",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1916,16 +3706,163 @@
     },
     "/api/conversas" : {
       "get" : {
-        "operationId" : "listar_3",
+        "operationId" : "listar_5",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "antesDe",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "in" : "query",
+          "name" : "antesDoId",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "in" : "query",
+          "name" : "limite",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
+        }, {
+          "in" : "query",
+          "name" : "busca",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
         "responses" : {
           "200" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/ConversaResumo"
-                  }
+                  "$ref" : "#/components/schemas/PaginaConversas"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "conversa-controller" ]
+      }
+    },
+    "/api/conversas/eventos" : {
+      "get" : {
+        "operationId" : "eventos",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "apos",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64",
+            "default" : 0
+          }
+        }, {
+          "in" : "query",
+          "name" : "limite",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 100
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaginaEventos"
                 }
               }
             },
@@ -2057,10 +3994,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/MensagemResposta"
-                  }
+                  "$ref" : "#/components/schemas/PaginaMensagens"
                 }
               }
             },
@@ -2274,7 +4208,113 @@
     },
     "/api/empresa/apresentacao" : {
       "get" : {
-        "operationId" : "obter_1",
+        "operationId" : "obterApresentacao",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApresentacaoResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "tenant-presentation-controller" ]
+      },
+      "put" : {
+        "operationId" : "alterarApresentacao",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PerfilInicialRequest"
+              }
+            }
+          },
+          "required" : true
+        },
         "responses" : {
           "200" : {
             "content" : {
@@ -2687,6 +4727,991 @@
           }
         },
         "tags" : [ "deal-controller" ]
+      }
+    },
+    "/api/integracoes/http" : {
+      "get" : {
+        "operationId" : "listar_1",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Resumo"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "http-connector-controller" ]
+      },
+      "post" : {
+        "operationId" : "criar_2",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConnectorRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Resumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "http-connector-controller" ]
+      }
+    },
+    "/api/integracoes/http/{id}" : {
+      "put" : {
+        "operationId" : "atualizar_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConnectorRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Resumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "http-connector-controller" ]
+      }
+    },
+    "/api/integracoes/http/{id}/ativar" : {
+      "post" : {
+        "operationId" : "ativar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Resumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "http-connector-controller" ]
+      }
+    },
+    "/api/integracoes/http/{id}/pausar" : {
+      "post" : {
+        "operationId" : "pausar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Resumo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "http-connector-controller" ]
+      }
+    },
+    "/api/integracoes/http/{id}/preview" : {
+      "get" : {
+        "operationId" : "preview",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Preview"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "http-connector-controller" ]
+      }
+    },
+    "/api/integracoes/http/{id}/segredo" : {
+      "put" : {
+        "operationId" : "configurarSegredo",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SecretRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "http-connector-controller" ]
+      }
+    },
+    "/api/midias/{id}/conteudo" : {
+      "get" : {
+        "operationId" : "baixar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "in" : "query",
+          "name" : "exp",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "in" : "query",
+          "name" : "sig",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "media-access-controller" ]
+      }
+    },
+    "/api/midias/{id}/url" : {
+      "post" : {
+        "operationId" : "criarUrl",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UrlDeMidia"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "media-access-controller" ]
       }
     },
     "/api/oportunidades" : {
@@ -3987,7 +7012,8 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "type" : "string"
+                "type" : "string",
+                "format" : "byte"
               }
             }
           },
@@ -4189,7 +7215,7 @@
           },
           "tipo" : {
             "type" : "string",
-            "enum" : [ "LIVE_CHAT", "TELEGRAM", "WHATSAPP_CLOUD", "INSTAGRAM" ]
+            "enum" : [ "LIVE_CHAT", "TELEGRAM", "WHATSAPP_CLOUD", "WHATSAPP_EVOLUTION", "INSTAGRAM" ]
           },
           "token" : {
             "type" : "string",
@@ -4205,6 +7231,9 @@
           "ativo" : {
             "type" : "boolean"
           },
+          "estadoRemoto" : {
+            "type" : "string"
+          },
           "id" : {
             "type" : "string",
             "format" : "uuid"
@@ -4215,6 +7244,10 @@
           "nome" : {
             "type" : "string"
           },
+          "pendenciasRemotas" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "temSegredoWebhook" : {
             "type" : "boolean"
           },
@@ -4223,8 +7256,74 @@
           },
           "tipo" : {
             "type" : "string"
+          },
+          "ultimaFalhaRemotaEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ultimaReconciliacaoEm" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
+      },
+      "ConnectorRequest" : {
+        "type" : "object",
+        "properties" : {
+          "cabecalhoIdempotencia" : {
+            "type" : "string",
+            "pattern" : "^[A-Za-z][A-Za-z0-9-]{0,63}$"
+          },
+          "caminhoTemplate" : {
+            "type" : "string",
+            "maxLength" : 2048,
+            "minLength" : 0
+          },
+          "codigo" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "^[a-z][a-z0-9_-]{2,79}$"
+          },
+          "corpoTemplate" : {
+            "type" : "string",
+            "maxLength" : 65536,
+            "minLength" : 0
+          },
+          "maxRespostaBytes" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 1048576,
+            "minimum" : 1024
+          },
+          "metodo" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "^(GET|POST|PUT|PATCH)$"
+          },
+          "nome" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "origem" : {
+            "type" : "string",
+            "maxLength" : 500,
+            "minLength" : 0
+          },
+          "requisicoesPorMinuto" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 1000,
+            "minimum" : 1
+          },
+          "timeoutMs" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 30000,
+            "minimum" : 100
+          }
+        },
+        "required" : [ "caminhoTemplate", "codigo", "metodo", "nome", "origem" ]
       },
       "ContatoRequest" : {
         "type" : "object",
@@ -4333,6 +7432,14 @@
           "ultimaMensagemEm" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "venceEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "versao" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },
@@ -4378,6 +7485,85 @@
             "type" : "boolean"
           }
         }
+      },
+      "DefinicaoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "codigo" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "^[a-z][a-z0-9_-]{2,79}$"
+          },
+          "especificacao" : {
+            "$ref" : "#/components/schemas/EspecificacaoRequest"
+          },
+          "limiteConcorrencia" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 20,
+            "minimum" : 1
+          },
+          "nome" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "codigo", "especificacao", "nome" ]
+      },
+      "DefinicaoResumo" : {
+        "type" : "object",
+        "properties" : {
+          "atualizadaEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "codigo" : {
+            "type" : "string"
+          },
+          "criadaEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "limiteConcorrencia" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "versaoAtiva" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "versaoAtual" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "DisparoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "chaveIdempotencia" : {
+            "type" : "string",
+            "maxLength" : 160,
+            "minLength" : 0,
+            "pattern" : "^[A-Za-z0-9._:-]+$"
+          },
+          "referenciaOrigem" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        },
+        "required" : [ "chaveIdempotencia" ]
       },
       "EnviarMensagemRequest" : {
         "type" : "object",
@@ -4438,6 +7624,163 @@
           }
         }
       },
+      "EspecificacaoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "duracaoMaximaSegundos" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 86400,
+            "minimum" : 1
+          },
+          "gatilho" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "^[A-Z][A-Z0-9_]{2,79}$"
+          },
+          "passoInicial" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "^[a-z][a-z0-9_-]{0,79}$"
+          },
+          "passos" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PassoRequest"
+            },
+            "maxItems" : 500,
+            "minItems" : 0
+          }
+        },
+        "required" : [ "gatilho", "passoInicial", "passos" ]
+      },
+      "EventoResponse" : {
+        "type" : "object",
+        "properties" : {
+          "acao" : {
+            "type" : "string"
+          },
+          "alvoId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "alvoTipo" : {
+            "type" : "string"
+          },
+          "atorId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "atorNome" : {
+            "type" : "string"
+          },
+          "atorTipo" : {
+            "type" : "string"
+          },
+          "correlacaoId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "escopoId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "escopoTipo" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "motivo" : {
+            "type" : "string"
+          },
+          "ocorridoEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "resultado" : {
+            "type" : "string"
+          }
+        }
+      },
+      "EventoResposta" : {
+        "type" : "object",
+        "properties" : {
+          "conversationId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "messageId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "ocorridoEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "sequence" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "tipo" : {
+            "type" : "string"
+          },
+          "versao" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "ExecucaoResumo" : {
+        "type" : "object",
+        "properties" : {
+          "codigoFalha" : {
+            "type" : "string"
+          },
+          "criadaEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "definicaoId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "finalizadaEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "gatilho" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "iniciadaEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "limiteEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "simulacao" : {
+            "type" : "boolean"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "versaoDefinicao" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
       "LoginRequest" : {
         "type" : "object",
         "properties" : {
@@ -4493,6 +7836,10 @@
           "tipoConteudo" : {
             "type" : "string",
             "enum" : [ "TEXT", "IMAGE", "AUDIO", "VIDEO", "DOCUMENT", "LOCATION", "OTHER" ]
+          },
+          "versao" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },
@@ -4580,6 +7927,26 @@
           }
         }
       },
+      "NovaVersaoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "especificacao" : {
+            "$ref" : "#/components/schemas/EspecificacaoRequest"
+          },
+          "limiteConcorrencia" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 20,
+            "minimum" : 1
+          },
+          "nome" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "especificacao", "nome" ]
+      },
       "OportunidadeRequest" : {
         "type" : "object",
         "properties" : {
@@ -4663,6 +8030,151 @@
           }
         }
       },
+      "Pagina" : {
+        "type" : "object",
+        "properties" : {
+          "eventos" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/EventoResponse"
+            }
+          },
+          "integridadeVerificada" : {
+            "type" : "boolean"
+          },
+          "proximoCursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PaginaConversas" : {
+        "type" : "object",
+        "properties" : {
+          "itens" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ConversaResumo"
+            }
+          },
+          "proximoAntesDe" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "proximoAntesDoId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "sequenciaDoStream" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "temMais" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "PaginaEventos" : {
+        "type" : "object",
+        "properties" : {
+          "eventos" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/EventoResposta"
+            }
+          },
+          "resetObrigatorio" : {
+            "type" : "boolean"
+          },
+          "temMais" : {
+            "type" : "boolean"
+          },
+          "ultimaSequencia" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "PaginaMensagens" : {
+        "type" : "object",
+        "properties" : {
+          "itens" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/MensagemResposta"
+            }
+          },
+          "proximoAntesDe" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "proximoAntesDoId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "sequenciaDoStream" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "temMais" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "PareamentoResponse" : {
+        "type" : "object",
+        "properties" : {
+          "codigoDeParear" : {
+            "type" : "string"
+          },
+          "estado" : {
+            "type" : "string"
+          },
+          "qrCodeBase64" : {
+            "type" : "string"
+          },
+          "tentativa" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "PassoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "acao" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "^[A-Z][A-Z0-9_]{1,69}_V[0-9]+$"
+          },
+          "chave" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "^[a-z][a-z0-9_-]{0,79}$"
+          },
+          "configuracao" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "maxTentativas" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 5,
+            "minimum" : 1
+          },
+          "proximos" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "pattern" : "^[a-z][a-z0-9_-]{0,79}$"
+            },
+            "maxItems" : 100,
+            "minItems" : 0
+          }
+        },
+        "required" : [ "acao", "chave" ]
+      },
       "PasswordResetConfirmation" : {
         "type" : "object",
         "properties" : {
@@ -4704,6 +8216,108 @@
           }
         },
         "required" : [ "segmento" ]
+      },
+      "Preview" : {
+        "type" : "object",
+        "properties" : {
+          "cabecalhoAutenticacao" : {
+            "type" : "string"
+          },
+          "cabecalhoIdempotencia" : {
+            "type" : "string"
+          },
+          "contentType" : {
+            "type" : "string"
+          },
+          "credencialConfigurada" : {
+            "type" : "boolean"
+          },
+          "destinoTemplate" : {
+            "type" : "string"
+          },
+          "metodo" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Resumo" : {
+        "type" : "object",
+        "properties" : {
+          "atualizadaEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "cabecalhoAutenticacao" : {
+            "type" : "string"
+          },
+          "cabecalhoIdempotencia" : {
+            "type" : "string"
+          },
+          "caminhoTemplate" : {
+            "type" : "string"
+          },
+          "codigo" : {
+            "type" : "string"
+          },
+          "contentType" : {
+            "type" : "string"
+          },
+          "credencialConfigurada" : {
+            "type" : "boolean"
+          },
+          "criadaEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "maxRespostaBytes" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "metodo" : {
+            "type" : "string"
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "origem" : {
+            "type" : "string"
+          },
+          "requisicoesPorMinuto" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "timeoutMs" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "SecretRequest" : {
+        "type" : "object",
+        "properties" : {
+          "cabecalho" : {
+            "type" : "string",
+            "pattern" : "^[A-Za-z][A-Za-z0-9-]{0,63}$"
+          },
+          "segredo" : {
+            "type" : "string",
+            "maxLength" : 4096,
+            "minLength" : 0
+          },
+          "tipo" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "^(BEARER|HEADER)$"
+          }
+        },
+        "required" : [ "segredo", "tipo" ]
       },
       "SessaoResponse" : {
         "type" : "object",
@@ -4832,6 +8446,50 @@
           }
         }
       },
+      "TransicaoResumo" : {
+        "type" : "object",
+        "properties" : {
+          "ator" : {
+            "type" : "string"
+          },
+          "entidade" : {
+            "type" : "string"
+          },
+          "estadoAnterior" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "motivo" : {
+            "type" : "string"
+          },
+          "novoEstado" : {
+            "type" : "string"
+          },
+          "ocorridaEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "passoId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }
+      },
+      "UrlDeMidia" : {
+        "type" : "object",
+        "properties" : {
+          "expiraEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        }
+      },
       "UsuarioResponse" : {
         "type" : "object",
         "properties" : {
@@ -4848,6 +8506,41 @@
           "tenantId" : {
             "type" : "string",
             "format" : "uuid"
+          }
+        }
+      },
+      "VersaoResumo" : {
+        "type" : "object",
+        "properties" : {
+          "criadaEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "duracaoMaximaSegundos" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "gatilho" : {
+            "type" : "string"
+          },
+          "hash" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "numero" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "quantidadePassos" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "quantidadeRamificacoes" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },

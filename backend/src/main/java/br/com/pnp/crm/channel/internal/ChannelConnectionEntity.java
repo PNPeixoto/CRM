@@ -37,6 +37,18 @@ class ChannelConnectionEntity {
     @Column(nullable = false)
     private boolean active;
 
+    @Column(name = "remote_status", insertable = false, updatable = false)
+    private String remoteStatus;
+
+    @Column(name = "remote_pending_count", insertable = false, updatable = false)
+    private Integer remotePendingCount;
+
+    @Column(name = "last_reconciled_at", insertable = false, updatable = false)
+    private Instant lastReconciledAt;
+
+    @Column(name = "last_remote_error_at", insertable = false, updatable = false)
+    private Instant lastRemoteErrorAt;
+
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private Instant createdAt;
 
@@ -113,5 +125,21 @@ class ChannelConnectionEntity {
 
     boolean isActive() {
         return active;
+    }
+
+    String getRemoteStatus() {
+        return remoteStatus;
+    }
+
+    Integer getRemotePendingCount() {
+        return remotePendingCount;
+    }
+
+    Instant getLastReconciledAt() {
+        return lastReconciledAt;
+    }
+
+    Instant getLastRemoteErrorAt() {
+        return lastRemoteErrorAt;
     }
 }

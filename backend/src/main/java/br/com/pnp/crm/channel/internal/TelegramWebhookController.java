@@ -63,7 +63,7 @@ class TelegramWebhookController {
     ResponseEntity<Void> receber(
             @PathVariable UUID channelConnectionId,
             @RequestHeader(name = HEADER_SEGREDO, required = false) String segredoApresentado,
-            @RequestBody String corpoCru) {
+            @RequestBody byte[] corpoCru) {
 
         UUID tenantId = conexoes.resolverTenantId(channelConnectionId).orElse(null);
         if (tenantId == null) {

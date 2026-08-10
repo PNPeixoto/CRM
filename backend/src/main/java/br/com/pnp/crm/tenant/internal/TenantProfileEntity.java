@@ -60,6 +60,13 @@ class TenantProfileEntity {
         this.updatedBy = authorId;
     }
 
+    /** Atualiza só a apresentação; funis e dados materializados não são reaplicados. */
+    void alterarApresentacao(BusinessSegment segment, int version, UUID authorId) {
+        this.businessSegment = segment;
+        this.presetVersion = version;
+        this.updatedBy = authorId;
+    }
+
     BusinessSegment getBusinessSegment() {
         return businessSegment;
     }

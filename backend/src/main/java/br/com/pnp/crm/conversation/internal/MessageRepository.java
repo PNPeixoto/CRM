@@ -38,17 +38,24 @@ interface MessageRepository extends JpaRepository<MessageEntity, UUID> {
      * Página keyset em ordem reversa. O serviço inverte o lote para manter o
      * contrato cronológico já consumido pela interface.
      */
+    List<MessageEntity> findByTenantIdAndConversationIdAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(
+            UUID tenantId, UUID conversationId, Pageable pageable);
+
+    /**
+     * Paginas seguintes sempre recebem cursor completo. Separar a primeira
+     * pagina evita enviar um parametro temporal nulo ao PostgreSQL: dentro de
+     * {@code :cursor IS NULL OR ...}, o driver nao consegue inferir seu tipo.
+     */
     @Query("""
             SELECT m FROM MessageEntity m
              WHERE m.tenantId = :tenantId
                AND m.conversationId = :conversationId
                AND m.deletedAt IS NULL
-               AND (:cursorCriadoEm IS NULL
-                    OR m.createdAt < :cursorCriadoEm
+               AND (m.createdAt < :cursorCriadoEm
                     OR (m.createdAt = :cursorCriadoEm AND m.id < :cursorId))
              ORDER BY m.createdAt DESC, m.id DESC
             """)
-    List<MessageEntity> buscarPaginaDoHistorico(
+    List<MessageEntity> buscarPaginaAnteriorDoHistorico(
             @Param("tenantId") UUID tenantId,
             @Param("conversationId") UUID conversationId,
             @Param("cursorCriadoEm") Instant cursorCriadoEm,

@@ -14,10 +14,13 @@ import br.com.pnp.crm.shared.api.DomainException;
 public class EnvioDeMensagemException extends DomainException {
 
     private final boolean permanente;
+    private final java.time.Duration tentarNovamenteEm;
 
-    private EnvioDeMensagemException(String motivoSanitizado, boolean permanente) {
+    private EnvioDeMensagemException(String motivoSanitizado, boolean permanente,
+                                     java.time.Duration tentarNovamenteEm) {
         super("ENVIO_DE_MENSAGEM_FALHOU", motivoSanitizado);
         this.permanente = permanente;
+        this.tentarNovamenteEm = tentarNovamenteEm;
     }
 
     /**
@@ -26,7 +29,7 @@ public class EnvioDeMensagemException extends DomainException {
      * retentar só gastaria cota do provedor e atrasaria a fila.
      */
     public static EnvioDeMensagemException permanente(String motivoSanitizado) {
-        return new EnvioDeMensagemException(motivoSanitizado, true);
+        return new EnvioDeMensagemException(motivoSanitizado, true, null);
     }
 
     /**
@@ -34,10 +37,24 @@ public class EnvioDeMensagemException extends DomainException {
      * com backoff exponencial.
      */
     public static EnvioDeMensagemException temporaria(String motivoSanitizado) {
-        return new EnvioDeMensagemException(motivoSanitizado, false);
+        return new EnvioDeMensagemException(motivoSanitizado, false, null);
+    }
+
+    /** Falha temporaria com espera exigida pelo provedor (por exemplo, 429). */
+    public static EnvioDeMensagemException temporaria(
+            String motivoSanitizado, java.time.Duration tentarNovamenteEm) {
+        if (tentarNovamenteEm == null || tentarNovamenteEm.isNegative()
+                || tentarNovamenteEm.isZero()) {
+            return temporaria(motivoSanitizado);
+        }
+        return new EnvioDeMensagemException(motivoSanitizado, false, tentarNovamenteEm);
     }
 
     public boolean isPermanente() {
         return permanente;
+    }
+
+    public java.util.Optional<java.time.Duration> tentarNovamenteEm() {
+        return java.util.Optional.ofNullable(tentarNovamenteEm);
     }
 }

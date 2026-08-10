@@ -71,8 +71,8 @@ class FilaDeSaidaWorker {
                 // Uma mensagem problemática não pode interromper o lote. A
                 // tentativa já foi contabilizada na reserva, então ela volta no
                 // próximo ciclo — e depois do teto, para de voltar.
-                log.error("Falha inesperada ao entregar mensagem. messageId={}",
-                        reservada.messageId(), e);
+                log.error("Falha sanitizada ao entregar mensagem. messageId={} tipo={}",
+                        reservada.messageId(), e.getClass().getSimpleName());
             }
             return null;
         });

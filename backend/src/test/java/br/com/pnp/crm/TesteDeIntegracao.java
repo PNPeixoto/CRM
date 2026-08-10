@@ -41,9 +41,15 @@ import java.lang.annotation.Target;
         // intermitente. Quem testar o worker o invoca diretamente.
         "app.fila-de-saida.habilitada=false",
         "app.entrada-de-webhook.habilitada=false",
+        "app.retencao-de-webhook.habilitada=false",
+        "app.automation.worker-enabled=false",
+        "app.providers.telegram.reconciliation-enabled=false",
+        "app.providers.telegram.media-retention-enabled=false",
         // 32 bytes em base64, exigidos pelo AES-256 do cofre de credenciais.
         "app.security.channel-secret-key=dGVzdGUtY2hhbm5lbC1rZXktMzItYnl0ZXMtb2shISE=",
         "app.security.mfa-secret-key=dGVzdC1tZmEta2V5LXNlcGFyYXRlLTMyLWJ5dGVzISE=",
+        "app.security.media-signing-key=dGVzdC1tZWRpYS1rZXktc2VwYXJhdGUtMzItYnl0ZXMh",
+        "app.security.http-connector-secret-key=dGVzdC1odHRwLWNvbm5lY3Rvci1rZXktMzItYnl0ZXM=",
         "app.security.password-reset-delivery-enabled=false"
 })
 public @interface TesteDeIntegracao {

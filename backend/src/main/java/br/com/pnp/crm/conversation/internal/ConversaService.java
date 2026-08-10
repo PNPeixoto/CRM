@@ -31,18 +31,44 @@ class ConversaService {
 
     private final ConversationRepository conversas;
     private final MessageRepository mensagens;
+    private final EventoTempoRealService eventos;
 
-    ConversaService(ConversationRepository conversas, MessageRepository mensagens) {
+    ConversaService(ConversationRepository conversas, MessageRepository mensagens,
+                    EventoTempoRealService eventos) {
         this.conversas = conversas;
         this.mensagens = mensagens;
+        this.eventos = eventos;
     }
 
     @Transactional(readOnly = true)
-    List<ConversationDtos.ConversaResumo> listar() {
+    ConversationDtos.PaginaConversas listar(
+            Instant cursorEm, UUID cursorId, int limite, String busca) {
+        if (limite < 1 || limite > 100) {
+            throw new RequisicaoInvalidaException("O limite deve estar entre 1 e 100.");
+        }
+        if ((cursorEm == null) != (cursorId == null)) {
+            throw new RequisicaoInvalidaException(
+                    "O cursor exige o instante e o identificador da conversa.");
+        }
+        String buscaNormalizada = normalizarBusca(busca);
         UUID tenantId = TenantContext.obrigatorio();
-        return conversas.findByTenantIdAndDeletedAtIsNullOrderByLastMessageAtDesc(tenantId).stream()
+        PageRequest pagina = PageRequest.of(0, limite + 1);
+        List<ConversationEntity> encontradas = new ArrayList<>(cursorEm == null
+                ? conversas.buscarPrimeiraPagina(tenantId, buscaNormalizada, pagina)
+                : conversas.buscarDepoisDoCursor(
+                        tenantId, buscaNormalizada, cursorEm, cursorId, pagina));
+        boolean temMais = encontradas.size() > limite;
+        if (temMais) encontradas = new ArrayList<>(encontradas.subList(0, limite));
+        ConversationEntity ultima = encontradas.isEmpty() ? null : encontradas.getLast();
+        List<ConversationDtos.ConversaResumo> itens = encontradas.stream()
                 .map(ConversaService::paraResumo)
                 .toList();
+        return new ConversationDtos.PaginaConversas(
+                itens,
+                ultima == null ? null : momentoDaOrdem(ultima),
+                ultima == null ? null : ultima.getId(),
+                temMais,
+                eventos.sequenciaAtual());
     }
 
     /**
@@ -52,7 +78,7 @@ class ConversaService {
      * esteve desconectado.
      */
     @Transactional(readOnly = true)
-    List<ConversationDtos.MensagemResposta> mensagensDa(
+    ConversationDtos.PaginaMensagens mensagensDa(
             UUID conversationId, Instant cursorCriadoEm, UUID cursorId, int limite) {
         ConversationEntity conversa = carregar(conversationId);
         if (limite < 1 || limite > 100) {
@@ -63,13 +89,32 @@ class ConversaService {
                     "O cursor exige o instante e o identificador da mensagem.");
         }
 
-        List<MessageEntity> pagina = new ArrayList<>(mensagens.buscarPaginaDoHistorico(
-                TenantContext.obrigatorio(), conversa.getId(), cursorCriadoEm, cursorId,
-                PageRequest.of(0, limite)));
+        PageRequest tamanhoDaPagina = PageRequest.of(0, limite + 1);
+        List<MessageEntity> pagina = new ArrayList<>(cursorCriadoEm == null
+                ? mensagens
+                        .findByTenantIdAndConversationIdAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(
+                                TenantContext.obrigatorio(), conversa.getId(), tamanhoDaPagina)
+                : mensagens.buscarPaginaAnteriorDoHistorico(
+                        TenantContext.obrigatorio(), conversa.getId(), cursorCriadoEm, cursorId,
+                        tamanhoDaPagina));
+        boolean temMais = pagina.size() > limite;
+        if (temMais) pagina = new ArrayList<>(pagina.subList(0, limite));
+        MessageEntity maisAntiga = pagina.isEmpty() ? null : pagina.getLast();
         Collections.reverse(pagina);
-        return pagina.stream()
+        List<ConversationDtos.MensagemResposta> itens = pagina.stream()
                 .map(ConversaService::paraResposta)
                 .toList();
+        return new ConversationDtos.PaginaMensagens(
+                itens,
+                maisAntiga == null ? null : maisAntiga.getCreatedAt(),
+                maisAntiga == null ? null : maisAntiga.getId(),
+                temMais,
+                eventos.sequenciaAtual());
+    }
+
+    @Transactional(readOnly = true)
+    ConversationDtos.PaginaEventos eventosDepoisDe(long apos, int limite) {
+        return eventos.listarDepois(apos, limite);
     }
 
     /**
@@ -111,8 +156,10 @@ class ConversaService {
                 autorId,
                 idempotencyKey);
 
-        mensagens.save(mensagem);
+        mensagens.saveAndFlush(mensagem);
         conversa.registrarAtividade(Instant.now());
+        eventos.registrar("MESSAGE_CREATED", conversa.getId(), mensagem.getId(),
+                mensagem.getVersion(), mensagem.getCreatedAt());
 
         return paraResposta(mensagem);
     }
@@ -151,7 +198,9 @@ class ConversaService {
                 entity.getContactDisplayName(),
                 entity.getStatus(),
                 entity.getAssignedUserId(),
-                entity.getLastMessageAt());
+                entity.getLastMessageAt(),
+                entity.getDueAt(),
+                entity.getVersion());
     }
 
     private static ConversationDtos.MensagemResposta paraResposta(MessageEntity entity) {
@@ -162,6 +211,21 @@ class ConversaService {
                 entity.getTextContent(),
                 entity.getStatus(),
                 entity.getAuthorUserId(),
-                entity.getCreatedAt());
+                entity.getCreatedAt(),
+                entity.getVersion());
+    }
+
+    private static Instant momentoDaOrdem(ConversationEntity conversa) {
+        return conversa.getLastMessageAt() == null
+                ? conversa.getCreatedAt() : conversa.getLastMessageAt();
+    }
+
+    private static String normalizarBusca(String busca) {
+        if (busca == null || busca.isBlank()) return null;
+        String limpa = busca.trim().toLowerCase(java.util.Locale.ROOT);
+        if (limpa.length() > 120) {
+            throw new RequisicaoInvalidaException("A busca deve ter no maximo 120 caracteres.");
+        }
+        return '%' + limpa.replace("%", "\\%").replace("_", "\\_") + '%';
     }
 }

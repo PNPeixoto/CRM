@@ -8,6 +8,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -43,6 +44,16 @@ class ConversationEntity {
 
     @Column(name = "last_message_at")
     private Instant lastMessageAt;
+
+    @Version
+    @Column(nullable = false)
+    private long version;
+
+    @Column(name = "due_at")
+    private Instant dueAt;
+
+    @Column(name = "sla_started_at")
+    private Instant slaStartedAt;
 
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private Instant createdAt;
@@ -107,6 +118,22 @@ class ConversationEntity {
         return lastMessageAt;
     }
 
+    Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    long getVersion() {
+        return version;
+    }
+
+    Instant getDueAt() {
+        return dueAt;
+    }
+
+    Instant getSlaStartedAt() {
+        return slaStartedAt;
+    }
+
     /**
      * O nome vindo do provedor pode mudar a qualquer momento — o interlocutor
      * troca o nome de exibição no Telegram, por exemplo. Sobrescrever com
@@ -140,5 +167,21 @@ class ConversationEntity {
         if (status == StatusConversa.PENDING) {
             this.status = StatusConversa.OPEN;
         }
+    }
+
+    boolean iniciarSla(Instant iniciadoEm, Instant venceEm) {
+        if (dueAt == null) {
+            this.slaStartedAt = iniciadoEm;
+            this.dueAt = venceEm;
+            return true;
+        }
+        return false;
+    }
+
+    Instant concluirSla() {
+        Instant prazoAnterior = dueAt;
+        this.dueAt = null;
+        this.slaStartedAt = null;
+        return prazoAnterior;
     }
 }

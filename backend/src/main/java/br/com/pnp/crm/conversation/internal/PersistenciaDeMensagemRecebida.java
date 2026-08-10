@@ -18,15 +18,21 @@ class PersistenciaDeMensagemRecebida {
     private final ConversationRepository conversations;
     private final MessageRepository messages;
     private final ApplicationEventPublisher events;
+    private final EventoTempoRealService eventosTempoReal;
+    private final SlaDeConversaService sla;
     private final EntityManager entityManager;
 
     PersistenciaDeMensagemRecebida(ConversationRepository conversations,
                                    MessageRepository messages,
                                    ApplicationEventPublisher events,
+                                   EventoTempoRealService eventosTempoReal,
+                                   SlaDeConversaService sla,
                                    EntityManager entityManager) {
         this.conversations = conversations;
         this.messages = messages;
         this.events = events;
+        this.eventosTempoReal = eventosTempoReal;
+        this.sla = sla;
         this.entityManager = entityManager;
     }
 
@@ -42,11 +48,15 @@ class PersistenciaDeMensagemRecebida {
         conversation.atualizarNomeExibicao(input.contactDisplayName());
         conversation.registrarAtividade(input.ocorridoEm());
         conversation.reabrirParaAtendimento();
+        sla.iniciarSeNecessario(conversation, input.ocorridoEm());
 
         MessageEntity message = MessageEntity.recebida(
                 tenantId, conversation.getId(), input.channelConnectionId(), input.externalId(),
                 input.tipoConteudo(), input.texto(), input.ocorridoEm(), input.payload());
-        messages.save(message);
+        messages.saveAndFlush(message);
+
+        eventosTempoReal.registrar("MESSAGE_CREATED", conversation.getId(), message.getId(),
+                message.getVersion(), input.ocorridoEm());
 
         events.publishEvent(new MensagemRecebidaEvent(
                 tenantId, conversation.getId(), message.getId(), input.channelConnectionId(),

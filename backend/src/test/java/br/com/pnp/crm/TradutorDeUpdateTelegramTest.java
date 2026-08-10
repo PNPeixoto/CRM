@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,6 +28,22 @@ class TradutorDeUpdateTelegramTest {
     private static final UUID CONEXAO = UUID.randomUUID();
 
     private final Object tradutor = instanciarTradutor();
+
+    @Test
+    @DisplayName("fixture versionada do Bot API 10.2 respeita o contrato normalizado")
+    void fixtureOficialVersionada() throws Exception {
+        String payload;
+        try (var stream = getClass().getResourceAsStream(
+                "/fixtures/telegram/bot-api-10.2/update-message.json")) {
+            assertThat(stream).isNotNull();
+            payload = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+
+        InboundMessage mensagem = traduzir(payload).orElseThrow();
+        assertThat(mensagem.externalId()).isEqualTo("501");
+        assertThat(mensagem.externalContactId()).isEqualTo("123456789");
+        assertThat(mensagem.texto()).isEqualTo("Preciso de atendimento");
+    }
 
     @Test
     @DisplayName("mensagem de texto vira InboundMessage completo")

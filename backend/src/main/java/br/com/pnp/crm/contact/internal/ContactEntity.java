@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -38,6 +39,9 @@ class ContactEntity {
 
     @Column(name = "owner_user_id")
     private UUID ownerUserId;
+
+    @Column(name = "idempotency_key", length = 128)
+    private String idempotencyKey;
 
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private Instant createdAt;
@@ -70,7 +74,7 @@ class ContactEntity {
     void aplicar(ContactKind kind, String name, String email, String phone, String companyName,
                  String notes, UUID ownerUserId, UUID autorId) {
         this.kind = kind == null ? ContactKind.PERSON : kind;
-        this.name = name;
+        this.name = name.trim();
         // Normaliza para vazio→null: string em branco no banco vira um valor
         // que parece preenchido em toda consulta e não é.
         this.email = normalizar(email);
@@ -79,6 +83,20 @@ class ContactEntity {
         this.notes = normalizar(notes);
         this.ownerUserId = ownerUserId;
         this.updatedBy = autorId;
+    }
+
+    void definirChaveDeIdempotencia(String chave) {
+        this.idempotencyKey = chave;
+    }
+
+    boolean correspondeA(ContactDtos.ContatoRequest requisicao, UUID responsavelId) {
+        return kind == (requisicao.tipo() == null ? ContactKind.PERSON : requisicao.tipo())
+                && Objects.equals(name, requisicao.nome().trim())
+                && Objects.equals(email, normalizar(requisicao.email()))
+                && Objects.equals(phone, normalizar(requisicao.telefone()))
+                && Objects.equals(companyName, normalizar(requisicao.empresa()))
+                && Objects.equals(notes, normalizar(requisicao.observacoes()))
+                && Objects.equals(ownerUserId, responsavelId);
     }
 
     /** Exclusão lógica: o histórico de conversas e negócios continua existindo. */

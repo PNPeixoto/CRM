@@ -30,8 +30,29 @@ class InboundEventEntity {
     // Guardado como texto cru convertido para jsonb pelo banco. Não passa por
     // desserialização e reserialização: o valor precisa ser o que chegou.
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(nullable = false, columnDefinition = "jsonb")
+    @Column(columnDefinition = "jsonb")
     private String payload;
+
+    @Column(name = "payload_ciphertext")
+    private String payloadCiphertext;
+
+    @Column(name = "payload_sha256", length = 64)
+    private String payloadSha256;
+
+    @Column(name = "payload_retain_until", nullable = false, insertable = false, updatable = false)
+    private Instant payloadRetainUntil;
+
+    @Column(name = "payload_purged_at")
+    private Instant payloadPurgedAt;
+
+    @Column(name = "lease_owner")
+    private String leaseOwner;
+
+    @Column(name = "lease_until")
+    private Instant leaseUntil;
+
+    @Column(name = "dead_lettered_at")
+    private Instant deadLetteredAt;
 
     @Column(name = "received_at", nullable = false, insertable = false, updatable = false)
     private Instant receivedAt;
@@ -62,13 +83,15 @@ class InboundEventEntity {
     }
 
     static InboundEventEntity novo(UUID tenantId, UUID channelConnectionId,
-                                   String externalEventId, String payload) {
+                                   String externalEventId, String payloadCiphertext,
+                                   String payloadSha256) {
         InboundEventEntity entity = new InboundEventEntity();
         entity.id = UuidV7.gerar();
         entity.tenantId = tenantId;
         entity.channelConnectionId = channelConnectionId;
         entity.externalEventId = externalEventId;
-        entity.payload = payload;
+        entity.payloadCiphertext = payloadCiphertext;
+        entity.payloadSha256 = payloadSha256;
         return entity;
     }
 
@@ -84,13 +107,22 @@ class InboundEventEntity {
         return channelConnectionId;
     }
 
-    String getPayload() {
-        return payload;
+    String payloadParaProcessamento(CofreDeCredenciais cofre) {
+        if (payloadCiphertext != null) {
+            return cofre.decifrar(payloadCiphertext);
+        }
+        if (payload != null) {
+            return payload;
+        }
+        throw new IllegalStateException("Payload do evento ja foi expurgado.");
     }
 
     void marcarProcessado() {
         this.processedAt = Instant.now();
         this.failureReason = null;
+        this.leaseOwner = null;
+        this.leaseUntil = null;
+        this.deadLetteredAt = null;
     }
 
     void marcarFalha(String motivo) {

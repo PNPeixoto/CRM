@@ -1,24 +1,20 @@
 package br.com.pnp.crm.channel.internal;
 
+import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.UUID;
 
-/**
- * Grava o evento cru vindo do webhook.
- *
- * <p>Faz o mínimo possível dentro do request: extrai o identificador do evento
- * e persiste. Toda interpretação — descobrir se é mensagem, de quem, com que
- * conteúdo — acontece depois, no worker. Interpretar aqui é o erro clássico:
- * um payload inesperado derrubaria o request, o provedor não receberia 200,
- * reenviaria, e depois de algumas falhas desativaria o webhook.
- */
+/** Persiste os bytes do webhook antes de confirmar o recebimento. */
 @Service
 class RegistroDeEventoRecebido {
 
@@ -26,45 +22,68 @@ class RegistroDeEventoRecebido {
 
     private final InboundEventRepository repository;
     private final ObjectMapper json;
+    private final CofreDeCredenciais cofre;
+    private final EntityManager entityManager;
 
-    RegistroDeEventoRecebido(InboundEventRepository repository, ObjectMapper json) {
+    RegistroDeEventoRecebido(InboundEventRepository repository, ObjectMapper json,
+                             CofreDeCredenciais cofre, EntityManager entityManager) {
         this.repository = repository;
         this.json = json;
+        this.cofre = cofre;
+        this.entityManager = entityManager;
     }
 
     @Transactional
-    void gravar(UUID tenantId, UUID channelConnectionId, String corpoCru) {
-        String eventoId = extrairUpdateId(corpoCru);
+    void gravar(UUID tenantId, UUID channelConnectionId, byte[] corpoCru) {
+        String hash = sha256(corpoCru);
+        String corpoUtf8 = new String(corpoCru, StandardCharsets.UTF_8);
+        String eventoId = extrairIdDoEvento(corpoUtf8, hash);
 
-        try {
-            repository.saveAndFlush(InboundEventEntity.novo(
-                    tenantId, channelConnectionId, eventoId, corpoCru));
-        } catch (DataIntegrityViolationException e) {
-            // Reentrega do mesmo update. Barrada pela constraint, tratada como
-            // sucesso: o provedor precisa do 200, senão continua reenviando.
+        // Serializa somente a mesma chave em todas as instancias. Capturar uma
+        // violacao unica depois do INSERT deixaria a transacao PostgreSQL abortada.
+        String chave = "inbound:" + tenantId + ':' + channelConnectionId + ':' + eventoId;
+        entityManager.createNativeQuery(
+                        "SELECT pg_advisory_xact_lock(hashtextextended(CAST(:key AS text), 0))")
+                .setParameter("key", chave)
+                .getSingleResult();
+
+        if (repository.findByTenantIdAndChannelConnectionIdAndExternalEventId(
+                tenantId, channelConnectionId, eventoId).isPresent()) {
             log.debug("Evento reentregue e ignorado. connectionId={} eventoId={}",
                     channelConnectionId, eventoId);
+            return;
         }
+
+        repository.saveAndFlush(InboundEventEntity.novo(
+                tenantId, channelConnectionId, eventoId,
+                cofre.cifrar(corpoUtf8), hash));
     }
 
-    /**
-     * O {@code update_id} é o identificador de idempotência do Telegram.
-     *
-     * <p>Quando ausente — payload malformado ou tipo de evento inesperado — o
-     * evento ainda é gravado, com um identificador sintético. Descartar
-     * significaria perder justamente o caso que precisa ser investigado, e é
-     * para isso que a tabela de entrada existe.
-     */
-    private String extrairUpdateId(String corpoCru) {
+    private String extrairIdDoEvento(String corpoCru, String hash) {
         try {
             JsonNode raiz = json.readTree(corpoCru);
             JsonNode updateId = raiz.path("update_id");
             if (!updateId.isMissingNode() && !updateId.isNull()) {
                 return updateId.asString();
             }
+            JsonNode messageId = raiz.path("data").path("key").path("id");
+            if (!messageId.isMissingNode() && !messageId.isNull()
+                    && !messageId.asString().isBlank()) {
+                return messageId.asString();
+            }
         } catch (RuntimeException e) {
-            log.warn("Payload de webhook não é JSON válido; gravado assim mesmo para diagnóstico.");
+            // Conteudo de cliente nunca entra no log.
+            log.warn("Payload de webhook nao e JSON valido; retido cifrado para diagnostico.");
         }
-        return "sem-update-id:" + UUID.randomUUID();
+        // Replays malformados identicos tambem convergem.
+        return "sha256:" + hash;
+    }
+
+    private String sha256(byte[] corpoCru) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(corpoCru));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 indisponivel no runtime.", e);
+        }
     }
 }

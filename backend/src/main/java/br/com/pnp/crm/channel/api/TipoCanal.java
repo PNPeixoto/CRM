@@ -16,5 +16,8 @@ public enum TipoCanal {
 
     WHATSAPP_CLOUD,
 
+    /** Ponte local de testes. Nunca representa a Cloud API oficial. */
+    WHATSAPP_EVOLUTION,
+
     INSTAGRAM
 }

@@ -28,7 +28,7 @@ class TenantPresentationController {
     }
 
     @GetMapping("/apresentacao")
-    ResponseEntity<TenantProfileDtos.ApresentacaoResponse> obter() {
+    ResponseEntity<TenantProfileDtos.ApresentacaoResponse> obterApresentacao() {
         // Metadado de bootstrap necessário a todo membro do tenant. Não é
         // permissão de mutação e não concede acesso a nenhuma ação do menu.
         autorizacao.exigirMembershipVigente();
@@ -42,6 +42,16 @@ class TenantPresentationController {
         autorizacao.exigirNoTenant(Permissao.ORGANIZATION_MANAGE);
         return ResponseEntity.ok(TenantProfileDtos.ApresentacaoResponse.de(
                 presentation.concluirPerfilInicial(
+                        request.segmento(), UUID.fromString(jwt.getSubject()))));
+    }
+
+    @PutMapping("/apresentacao")
+    ResponseEntity<TenantProfileDtos.ApresentacaoResponse> alterarApresentacao(
+            @Valid @RequestBody TenantProfileDtos.PerfilInicialRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        autorizacao.exigirNoTenant(Permissao.ORGANIZATION_MANAGE);
+        return ResponseEntity.ok(TenantProfileDtos.ApresentacaoResponse.de(
+                presentation.alterarApresentacao(
                         request.segmento(), UUID.fromString(jwt.getSubject()))));
     }
 }

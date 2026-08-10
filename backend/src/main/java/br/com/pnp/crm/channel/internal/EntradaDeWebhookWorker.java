@@ -58,8 +58,8 @@ class EntradaDeWebhookWorker {
                     // Um evento problemático não interrompe o lote. A tentativa
                     // já foi contada na reserva; depois do teto, ele para de
                     // voltar e fica em inbound_event para investigação.
-                    log.error("Falha ao processar evento de webhook. eventId={}",
-                            reservado.eventId(), e);
+                    log.error("Falha sanitizada ao processar webhook. eventId={} tipo={}",
+                            reservado.eventId(), e.getClass().getSimpleName());
                 }
                 return null;
             });
@@ -79,15 +79,24 @@ class EntradaDeWebhookWorker {
         private final InboundEventRepository eventos;
         private final ChannelConnectionLookupImpl conexoes;
         private final TradutorDeUpdateTelegram tradutorTelegram;
+        private final TradutorDeWebhookEvolution tradutorEvolution;
+        private final CofreDeCredenciais cofre;
+        private final TelegramMediaService midiasTelegram;
         private final ApplicationEventPublisher publicador;
 
         ProcessamentoDeEvento(InboundEventRepository eventos,
                               ChannelConnectionLookupImpl conexoes,
                               TradutorDeUpdateTelegram tradutorTelegram,
+                              TradutorDeWebhookEvolution tradutorEvolution,
+                              CofreDeCredenciais cofre,
+                              TelegramMediaService midiasTelegram,
                               ApplicationEventPublisher publicador) {
             this.eventos = eventos;
             this.conexoes = conexoes;
             this.tradutorTelegram = tradutorTelegram;
+            this.tradutorEvolution = tradutorEvolution;
+            this.cofre = cofre;
+            this.midiasTelegram = midiasTelegram;
             this.publicador = publicador;
         }
 
@@ -113,7 +122,15 @@ class EntradaDeWebhookWorker {
                 return;
             }
 
-            Optional<InboundMessage> normalizada = traduzir(tipo, evento);
+            String payloadCru = evento.payloadParaProcessamento(cofre);
+            Optional<InboundMessage> normalizada = traduzir(tipo, evento, payloadCru);
+            if (tipo == TipoCanal.TELEGRAM && normalizada.isPresent()) {
+                Optional<UUID> mediaId = midiasTelegram.ingerir(
+                        evento.getChannelConnectionId(), payloadCru);
+                if (mediaId.isPresent()) {
+                    normalizada = Optional.of(comMidia(normalizada.get(), mediaId.get()));
+                }
+            }
 
             // Evento que não vira mensagem — edição, entrada em grupo, enquete
             // — é sucesso, não falha. Tratar como erro encheria o log de ruído
@@ -124,14 +141,29 @@ class EntradaDeWebhookWorker {
             evento.marcarProcessado();
         }
 
-        private Optional<InboundMessage> traduzir(TipoCanal tipo, InboundEventEntity evento) {
+        private Optional<InboundMessage> traduzir(TipoCanal tipo, InboundEventEntity evento,
+                                                  String payloadCru) {
             return switch (tipo) {
                 case TELEGRAM -> tradutorTelegram.traduzir(
-                        evento.getChannelConnectionId(), evento.getPayload());
+                        evento.getChannelConnectionId(), payloadCru);
+                case WHATSAPP_EVOLUTION -> tradutorEvolution.traduzir(
+                        evento.getChannelConnectionId(), payloadCru);
                 // Chat ao vivo não passa por webhook, e os canais da Meta ainda
                 // não existem. Chegar aqui é sinal de configuração incoerente.
                 case LIVE_CHAT, WHATSAPP_CLOUD, INSTAGRAM -> Optional.empty();
             };
+        }
+
+        private InboundMessage comMidia(InboundMessage original, UUID mediaId) {
+            java.util.Map<String, Object> diagnostico =
+                    new java.util.LinkedHashMap<>(original.payload());
+            diagnostico.put("media_id", mediaId.toString());
+            diagnostico.put("media_status", "QUARANTINED");
+            return new InboundMessage(
+                    original.channelConnectionId(), original.externalId(),
+                    original.externalContactId(), original.contactDisplayName(),
+                    original.tipoConteudo(), original.texto(), original.ocorridoEm(),
+                    diagnostico);
         }
     }
 }

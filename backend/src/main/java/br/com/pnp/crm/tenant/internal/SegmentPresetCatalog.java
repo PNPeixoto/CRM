@@ -21,7 +21,7 @@ class SegmentPresetCatalog {
 
     private static final Map<String, RouteDefault> ROUTES = defaults();
 
-    private final Map<BusinessSegment, Preset> presets = Map.of(
+    private static final Map<BusinessSegment, Preset> PRESETS_V1 = Map.of(
             BusinessSegment.GENERAL_SERVICES, new Preset(
                     Map.of("contacts", "Contatos", "pipelines", "Oportunidades"),
                     List.of("dashboard", "inbox", "contacts", "pipelines", "tasks", "calendar",
@@ -56,7 +56,14 @@ class SegmentPresetCatalog {
                             stage("Aguardando confirmação"), stage("Reservado"),
                             stage("Entregue"), won("Concluído"), lost("Perdido")))));
 
+    private static final Map<Integer, Map<BusinessSegment, Preset>> PRESETS_BY_VERSION =
+            Map.of(1, PRESETS_V1);
+
     TenantPresentation resolve(BusinessSegment segment, int version, boolean onboardingCompleted) {
+        Map<BusinessSegment, Preset> presets = PRESETS_BY_VERSION.get(version);
+        if (presets == null) {
+            throw new IllegalStateException("Versão de preset desconhecida: " + version);
+        }
         Preset preset = presets.get(segment);
         if (preset == null) {
             throw new IllegalArgumentException("Segmento sem preset: " + segment);

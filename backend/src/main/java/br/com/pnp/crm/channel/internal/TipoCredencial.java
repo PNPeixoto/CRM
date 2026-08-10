@@ -21,5 +21,8 @@ enum TipoCredencial {
 
     META_ACCESS_TOKEN,
 
-    META_APP_SECRET
+    META_APP_SECRET,
+
+    /** Segredo enviado pela Evolution no header do webhook desta conexao. */
+    EVOLUTION_WEBHOOK_SECRET
 }

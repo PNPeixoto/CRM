@@ -1,6 +1,7 @@
 package br.com.pnp.crm.organization.internal;
 
 import br.com.pnp.crm.organization.api.Autorizacao;
+import br.com.pnp.crm.organization.api.AcessoOrganizacionalNegado;
 import br.com.pnp.crm.organization.api.OrganizationAccess;
 import br.com.pnp.crm.organization.api.Permissao;
 import br.com.pnp.crm.shared.api.AcessoNegadoException;
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.annotation.RequestScope;
 
@@ -34,14 +36,16 @@ class AutorizacaoService implements Autorizacao {
     private static final Logger log = LoggerFactory.getLogger(AutorizacaoService.class);
 
     private final OrganizationAccess acessos;
+    private final ApplicationEventPublisher events;
 
     /** Memoização por permissão dentro da requisição. */
     private final Map<Permissao, Alcance> resolvidas = new HashMap<>();
 
     private Map<String, OrganizationAccess.ScopeType> escopoPorPermissao;
 
-    AutorizacaoService(OrganizationAccess acessos) {
+    AutorizacaoService(OrganizationAccess acessos, ApplicationEventPublisher events) {
         this.acessos = acessos;
+        this.events = events;
     }
 
     @Override
@@ -56,6 +60,7 @@ class AutorizacaoService implements Autorizacao {
         } catch (AcessoNegadoException e) {
             log.warn("Acesso negado. motivo=membership ausente ou sem vigência usuario={}",
                     usuarioCorrente());
+            publicarNegacao(AcessoOrganizacionalNegado.Motivo.MEMBERSHIP_INVALID);
             throw e;
         }
     }
@@ -63,7 +68,7 @@ class AutorizacaoService implements Autorizacao {
     @Override
     public void exigirNoTenant(Permissao permissao) {
         if (alcanceDe(permissao) != Alcance.TENANT) {
-            throw negar(permissao, "recurso exige alcance de tenant");
+            throw negar(permissao, AcessoOrganizacionalNegado.Motivo.SCOPE_DENIED);
         }
     }
 
@@ -80,7 +85,7 @@ class AutorizacaoService implements Autorizacao {
         // Alcance próprio: só o responsável age. Registro sem responsável não
         // é de ninguém — negar é a leitura segura.
         if (responsavelId == null || !responsavelId.equals(usuarioCorrente())) {
-            throw negar(permissao, "registro fora do alcance próprio");
+            throw negar(permissao, AcessoOrganizacionalNegado.Motivo.SCOPE_DENIED);
         }
     }
 
@@ -96,7 +101,7 @@ class AutorizacaoService implements Autorizacao {
     private Alcance resolver(Permissao permissao) {
         OrganizationAccess.ScopeType escopo = carregarEscopos().get(permissao.codigo());
         if (escopo == null) {
-            throw negar(permissao, "permissão ausente no membership vigente");
+            throw negar(permissao, AcessoOrganizacionalNegado.Motivo.PERMISSION_MISSING);
         }
         return switch (escopo) {
             case TENANT -> Alcance.TENANT;
@@ -105,7 +110,7 @@ class AutorizacaoService implements Autorizacao {
             // enquanto nenhuma tabela declarar unidade — ADR-0008. Falha
             // fechada: conceder o tenant inteiro aqui seria ampliar
             // silenciosamente quem foi restrito de propósito.
-            default -> throw negar(permissao, "escopo sem decisão de domínio: " + escopo);
+            default -> throw negar(permissao, AcessoOrganizacionalNegado.Motivo.SCOPE_DENIED);
         };
     }
 
@@ -136,9 +141,23 @@ class AutorizacaoService implements Autorizacao {
      * um inventário do que existe — que é justamente o que uma tentativa de
      * IDOR quer descobrir.
      */
-    private AcessoNegadoException negar(Permissao permissao, String motivo) {
+    private AcessoNegadoException negar(Permissao permissao,
+                                         AcessoOrganizacionalNegado.Motivo motivo) {
         log.warn("Acesso negado. permissao={} motivo={} usuario={}",
                 permissao.codigo(), motivo, usuarioCorrente());
+        publicarNegacao(motivo);
         return new AcessoNegadoException();
+    }
+
+    private void publicarNegacao(AcessoOrganizacionalNegado.Motivo motivo) {
+        try {
+            events.publishEvent(new AcessoOrganizacionalNegado(
+                    TenantContext.obrigatorio(), usuarioCorrente(), motivo));
+        } catch (RuntimeException e) {
+            // A politica para negacao e best effort: uma falha de auditoria nao
+            // pode transformar o 403 correto em indisponibilidade do endpoint.
+            log.warn("Evento de negacao indisponivel. motivo={} tenant={} usuario={}",
+                    motivo, TenantContext.obrigatorio(), usuarioCorrente());
+        }
     }
 }

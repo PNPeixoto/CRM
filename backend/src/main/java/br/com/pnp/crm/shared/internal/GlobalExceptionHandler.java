@@ -83,7 +83,8 @@ class GlobalExceptionHandler {
     ResponseEntity<ErroResponse> missingTenant(
             TenantNaoDefinidoException exception, HttpServletRequest request) {
         String correlationId = correlation(request);
-        log.error("Tenant ausente em operação protegida. correlacaoId={}", correlationId, exception);
+        log.error("Tenant ausente em operação protegida. correlacaoId={} tipo={}",
+                correlationId, exception.getClass().getSimpleName());
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, correlationId,
                 ErroResponse.de(500, "Erro interno", "ERRO_INTERNO", INTERNAL_DETAIL,
                         correlationId, instance(request)));
@@ -102,7 +103,10 @@ class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     ResponseEntity<ErroResponse> unexpected(Exception exception, HttpServletRequest request) {
         String correlationId = correlation(request);
-        log.error("Erro não tratado. correlacaoId={}", correlationId, exception);
+        // Exceções de provedores podem carregar corpo e credencial na mensagem.
+        // O log conserva correlação e tipo, nunca mensagem ou objeto bruto.
+        log.error("Erro não tratado. correlacaoId={} tipo={}",
+                correlationId, exception.getClass().getSimpleName());
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, correlationId,
                 ErroResponse.de(500, "Erro interno", "ERRO_INTERNO", INTERNAL_DETAIL,
                         correlationId, instance(request)));
@@ -132,6 +136,9 @@ class GlobalExceptionHandler {
         }
         if ("REQUISICAO_INVALIDA".equals(exception.getCodigo())) {
             return HttpStatus.BAD_REQUEST;
+        }
+        if ("QUOTA_AUTOMACAO_EXCEDIDA".equals(exception.getCodigo())) {
+            return HttpStatus.TOO_MANY_REQUESTS;
         }
         if (exception.getCodigo().endsWith("_NAO_ENCONTRADA")) {
             return HttpStatus.NOT_FOUND;
