@@ -38,6 +38,104 @@ services:
       timeout: 3s
       retries: 10
 
+  evolution-postgres:
+    image: postgres:17-alpine
+    profiles: ["evolution"]
+    environment:
+      POSTGRES_DB: evolution
+      POSTGRES_USER: evolution
+      # Credencial descartavel, acessivel apenas na rede local do Compose.
+      POSTGRES_PASSWORD: evolution_db_dev_local
+    volumes:
+      - evolution_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution -d evolution"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  evolution-redis:
+    image: redis:7-alpine
+    profiles: ["evolution"]
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - evolution_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  evolution-api:
+    # Versao estavel fixada para o laboratorio local. A 2.4 ainda e RC e
+    # introduz ativacao de licenca; nenhuma imagem latest entra aqui.
+    image: evoapicloud/evolution-api:v2.3.7
+    profiles: ["evolution"]
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
+      evolution-redis:
+        condition: service_healthy
+    environment:
+      SERVER_NAME: crm-pnp-evolution
+      SERVER_TYPE: http
+      SERVER_PORT: 8080
+      SERVER_URL: http://localhost:8081
+      TELEMETRY_ENABLED: "false"
+      CORS_ORIGIN: http://localhost:5174,http://localhost:8081
+      CORS_METHODS: GET,POST,PUT,DELETE
+      CORS_CREDENTIALS: "true"
+      LOG_LEVEL: ERROR,WARN,INFO
+      LOG_COLOR: "false"
+      LOG_BAILEYS: error
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:evolution_db_dev_local@evolution-postgres:5432/evolution?schema=evolution_api
+      DATABASE_CONNECTION_CLIENT_NAME: crm_pnp_dev
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "true"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "true"
+      DATABASE_SAVE_DATA_HISTORIC: "false"
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://evolution-redis:6379/6
+      CACHE_REDIS_PREFIX_KEY: crm-pnp-evolution
+      CACHE_REDIS_SAVE_INSTANCES: "false"
+      CACHE_LOCAL_ENABLED: "false"
+      WEBHOOK_GLOBAL_ENABLED: "false"
+      WEBSOCKET_ENABLED: "false"
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-evolution_api_dev_local_change_me}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false"
+      CONFIG_SESSION_PHONE_CLIENT: CRM PNP
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      QRCODE_LIMIT: 30
+      LANGUAGE: pt-BR
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - evolution_instances:/evolution/instances
+    restart: unless-stopped
+
+  media-init:
+    image: alpine:3.23
+    # O volume nasce como root. Este init efemero entrega somente a pasta de
+    # quarentena ao UID sem privilegio usado pela aplicacao.
+    command: ["sh", "-c", "chown -R 10001:10001 /media && chmod 700 /media"]
+    volumes:
+      - telegram_media_quarantine:/media
+    restart: "no"
+
+  telegram-tunnel:
+    # Quick Tunnel oficial, somente para desenvolvimento. A versao e fixa
+    # porque "latest" mudaria o ambiente sem revisao.
+    image: cloudflare/cloudflared:2026.7.3
+    command: ["tunnel", "--no-autoupdate", "--url", "http://app:8080"]
+    depends_on:
+      app:
+        condition: service_healthy
+    profiles: ["telegram"]
+    restart: unless-stopped
+
   app:
     image: crm-pnp-backend:${APP_IMAGE_TAG:-0.0.1-dev}
     build:
@@ -51,6 +149,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      media-init:
+        condition: service_completed_successfully
     environment:
       SPRING_PROFILES_ACTIVE: dev
       DB_URL: jdbc:postgresql://postgres:5432/crm
@@ -63,12 +163,24 @@ services:
       DB_MIGRATION_PASSWORD: crm_migrator_dev_local
       REDIS_URL: redis://redis:6379
       CORS_ALLOWED_ORIGINS: http://localhost:5174
+      # Volume privado e gravavel; a imagem e o restante do filesystem seguem read-only.
+      TELEGRAM_MEDIA_STORAGE_PATH: /var/lib/crm/media-quarantine
+      TELEGRAM_RECONCILIATION_ENABLED: ${TELEGRAM_RECONCILIATION_ENABLED:-false}
+      TELEGRAM_PUBLIC_BASE_URL: ${TELEGRAM_PUBLIC_BASE_URL:-}
+      # Ponte experimental local; producao permanece na Cloud API oficial.
+      EVOLUTION_ENABLED: ${EVOLUTION_ENABLED:-true}
+      EVOLUTION_API_BASE_URL: http://evolution-api:8080
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-evolution_api_dev_local_change_me}
+      EVOLUTION_API_ORIGIN: http://localhost:8081
+      EVOLUTION_WEBHOOK_BASE_URL: http://app:8080/api/webhooks/evolution
     ports:
       - "127.0.0.1:8080:8080"
     init: true
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
+    volumes:
+      - telegram_media_quarantine:/var/lib/crm/media-quarantine
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -85,3 +197,7 @@ services:
 
 volumes:
   postgres_data:
+  telegram_media_quarantine:
+  evolution_postgres_data:
+  evolution_redis_data:
+  evolution_instances:
