@@ -40,14 +40,17 @@ titular quando for o caso, e a Meta acrescentada ao inventário.
 Implementar sem isso produz um sistema que vaza dado com aparência de
 integração.
 
-### 0.3 Hierarquia exige destravar o ADR-0008
+### 0.3 Hierarquia: qual é o alcance intermediário
 
-O item 6 pede visibilidade por posição na hierarquia. Hoje o alcance `UNIT`
-**não decide sobre registro de domínio**: nenhuma tabela de domínio declara
-unidade, e o ADR-0008 registra a recusa deliberada de inferi-la.
+O item 6 é papel personalizável — e o modelo de dados para isso **já está
+pronto e sob RLS** desde a V10. Falta a API, a interface, e a regra que impede
+alguém conceder mais do que possui.
 
-Não dá para entregar o item 6 sem migration aditiva de `unit_id` e um ADR novo
-substituindo o 0008. Isso está detalhado na Fase 4.
+A única decisão de desenho é o alcance do meio, o *"o gerente vê o que a equipe
+dele faz"*: por **unidade** (geografia, franquia) ou por **equipe**
+(subordinação). Para uma hierarquia de Atendente, SDR, Closer, Gestor e
+Gerente, equipe é mais barato e mais fiel — detalhado na Fase 4, com a
+comparação lado a lado.
 
 ---
 
@@ -59,15 +62,16 @@ parênteses são os itens do pedido.
 ```
 FASE 1 — Base do funil e do lead          (1, 2)
    │        pipeline editável + campos do lead
-   ├──────────────► FASE 2 — Ligação e história   (4, 8)
-   │                   conversa↔oportunidade + linha do tempo
-   │                          │
-   │                          ├──────► FASE 5 — Métrica  (9, 5)
-   │                          │           KPI configurável + dashboard
-   │                          │
-   │                          └──────► FASE 4 — Hierarquia (6)
-   │                                      unit_id + ADR novo
-   │
+   └──────────────► FASE 2 — Ligação e história   (4, 8)
+                       conversa↔oportunidade + linha do tempo
+                              │
+                              └──────► FASE 5 — Métrica  (9, 5)
+                                          KPI configurável + dashboard
+
+FASE 4 — Papéis e visibilidade            (6)          ← independente
+           CRUD de papel + guarda de escalonamento + equipe
+           (só a "timeline por posição" espera a Fase 2)
+
 FASE 3 — Canal oficial Meta               (7, 10-Instagram)
    │        WhatsApp Cloud API + Instagram
    ├──────────────► (3) Conversions API
@@ -79,9 +83,13 @@ FASE 7 — Independentes                    (10-e-mail, 11)
 ```
 
 **Por que esta ordem.** A Fase 2 é a chave: a linha do tempo do lead alimenta
-métrica (5, 9) e hierarquia (6). Construir dashboard configurável antes de ter
-o evento do lead produz gráfico sobre dado que não existe. E a Fase 3 destrava
-três itens de uma vez, então adiá-la empurra 3, 10 e 12 juntos.
+métrica (5 e 9). Construir dashboard configurável antes de ter o evento do lead
+produz gráfico sobre dado que não existe. A Fase 3 destrava três itens de uma
+vez, então adiá-la empurra 3, 10 e 12 juntos.
+
+A Fase 4 é a exceção útil: como o modelo de papéis já existe, ela não depende de
+nenhuma outra e pode correr em paralelo desde o primeiro dia — inclusive
+enquanto se espera a aprovação da Meta.
 
 ---
 
@@ -532,39 +540,215 @@ private static String hashear(String valor) {
 
 ---
 
-## FASE 4 — Hierarquia (item 6)
+## FASE 4 — Papéis personalizáveis e visibilidade por posição (item 6)
 
-**Está bloqueado por ADR aceito.** O `Alcance` decide `TENANT` e `PROPRIO`;
-`UNIT` falha fechado porque nenhuma tabela de domínio declara unidade.
+### O que realmente existe hoje
 
-**Trabalho real:**
+Duas correções de fato, porque elas mudam o custo do item nas duas direções.
 
-```sql
--- V28: unidade nos registros de domínio.
-ALTER TABLE contact      ADD COLUMN unit_id uuid;
-ALTER TABLE deal         ADD COLUMN unit_id uuid;
-ALTER TABLE task         ADD COLUMN unit_id uuid;
-ALTER TABLE conversation ADD COLUMN unit_id uuid;
--- FK composta em cada uma, contra organizational_unit (tenant_id, id).
+**O modelo de dados está completo, e isso é a boa notícia.** `app_role` é por
+tenant, com `code`, `name`, `description`, `system_role`, `active` e exclusão
+lógica. `role_permission` guarda os códigos com `CHECK` de formato.
+`membership_scope` liga associação, papel e alcance, com janela de vigência
+(`valid_from`/`valid_until`) e `status`. As três estão sob RLS `ENABLE + FORCE`
+desde a V10.
+
+**O alcance é por atribuição, não por papel** — e esse desenho é melhor do que
+parece: o mesmo papel "Closer" pode ser concedido a um usuário com alcance
+`OWN` e a outro com `TENANT`, sem duplicar papel.
+
+**Mas os papéis da lista não existem.** Semeados há só dois, e apenas no
+profile de desenvolvimento: `OWNER` (`system_role = true`) e `ATTENDANT`.
+Não há SDR, Closer, Gestor nem Gerente em lugar nenhum do código — as
+ocorrências no repositório são uma linha de threat model sobre "gestor de
+unidade" e o nome de um fixture de teste.
+
+**E não existe nenhuma API de papéis.** `OrganizationController` tem exatamente
+dois endpoints, ambos `GET`: `/contextos` e `/permissoes`. Nada cria papel,
+nada concede permissão, nada atribui alcance. Fora do serviço de resolução,
+nenhuma classe Java sequer menciona `app_role`.
+
+Então o item 6 é **API e interface**, sobre um modelo pronto. **Zero migration**
+para o núcleo. É consideravelmente mais barato do que eu estimei antes — e o
+risco mudou de lugar: saiu da modelagem e foi para a regra de escalonamento.
+
+### O núcleo: não conceder o que não se tem
+
+"Personalizar as funções dentro das opções concedidas dentro do seu privilégio"
+é, em termos de segurança, a **invariante de não escalonamento**. Ela é o item
+inteiro; o CRUD em volta é formulário.
+
+Três regras, e a terceira é a que quase todo mundo esquece:
+
+1. **Conceder exige possuir.** O conjunto de permissões de um papel precisa ser
+   subconjunto do que o autor possui.
+2. **Conceder exige alcance ao menos igual.** Quem tem `deals.read` só em
+   `OWN` não pode atribuir um papel que conceda `deals.read` em `TENANT`.
+   Comparação **por permissão**, nunca pelo conjunto — é aqui que a
+   implementação ingênua vaza.
+3. **Editar exige conter.** Só se edita papel cujas permissões atuais já são
+   subconjunto das suas. Sem isto, um gestor pega um papel poderoso que ele não
+   poderia criar, renomeia, e atribui a si mesmo — escalonamento sem nunca ter
+   concedido nada que não tivesse.
+
+Junto, isso dá uma propriedade que vale enunciar e testar: **o conjunto de
+privilégios do tenant nunca cresce por delegação**. Subconjunto de subconjunto
+é subconjunto. Quem entrar depois não pode exceder quem concedeu.
+
+`OrganizationAccess.permissionScopes(tenantId, userId)` já devolve exatamente
+`Map<String, ScopeType>` com o alcance mais amplo por permissão. Foi criado
+para o menu; serve inteiro como base da guarda.
+
+```java
+/**
+ * Recusa concessão que exceda o privilégio de quem concede.
+ *
+ * <p>A comparação é por permissão, não por conjunto: quem tem `deals.read`
+ * apenas em OWN e `contacts.read` em TENANT não pode conceder `deals.read`
+ * em TENANT só porque tem *alguma* coisa em TENANT.
+ */
+private void exigirNaoEscalonamento(Map<String, ScopeType> pedido) {
+    Map<String, ScopeType> proprias = access.permissionScopes(
+            TenantContext.obrigatorio(), autorizacao.usuarioCorrente());
+
+    for (var entrada : pedido.entrySet()) {
+        ScopeType minha = proprias.get(entrada.getKey());
+        if (minha == null) {
+            // Sem citar qual permissao faltou: a mensagem viraria um mapa do
+            // que o autor nao tem, util para quem esta sondando.
+            throw new ConcessaoAcimaDoPrivilegioException();
+        }
+        // ordinal: TENANT(0) < UNIT(1) < OWN(2) — menor e mais amplo.
+        if (minha.ordinal() > entrada.getValue().ordinal()) {
+            throw new ConcessaoAcimaDoPrivilegioException();
+        }
+    }
+}
 ```
 
-**A regra de preenchimento é a decisão difícil, e o ADR-0008 já avisou por quê.**
-A unidade é gravada **na criação**, a partir da unidade ativa de quem criou, e
-é **imutável** depois. Inferi-la na leitura, pela unidade atual do criador,
-faria a autorização reescrever o passado toda vez que alguém fosse transferido.
+### API
 
-**Backfill do que já existe: assuma nulo e diga isso.** Não há como saber a
-unidade de um registro criado antes da coluna existir. `unit_id NULL` significa
-"pertence ao tenant, não a uma unidade" e é visível por quem tem alcance de
-tenant. Inventar a unidade do dono atual seria inventar história.
+```
+GET,POST     /api/organizacao/papeis
+PUT,DELETE   /api/organizacao/papeis/{id}
+PUT          /api/organizacao/papeis/{id}/permissoes
+GET,POST     /api/organizacao/membros/{id}/papeis
+DELETE       /api/organizacao/membros/{id}/papeis/{atribuicaoId}
+```
 
-Depois: `Alcance.UNIDADE` no enum, resolução em `AutorizacaoService`, recorte
-nas consultas de listagem, e **ADR novo referenciando o 0008** — decisão aceita
-não se reescreve, ela é substituída.
+Todas exigem `ORGANIZATION_MANAGE`, **e a guarda acima por cima disso** —
+`organization.manage` diz que a pessoa pode administrar, não que pode
+administrar tudo.
 
-**Timeline por hierarquia** passa a ser a timeline filtrada pelo alcance: quem
-tem `PROPRIO` vê os próprios leads, `UNIDADE` vê a unidade, `TENANT` vê tudo.
-Nada de tela nova — é o mesmo endpoint com recorte diferente.
+`GET /api/organizacao/papeis` devolve, junto, o catálogo de permissões
+**marcando quais o autor pode conceder**. A tela desabilita o resto em vez de
+deixar tentar e falhar. Isso é conveniência: a decisão continua no backend.
+
+### Quatro recusas obrigatórias
+
+1. **Papel de sistema é imutável.** `system_role = true` não se edita nem se
+   apaga. `OWNER` é a saída de emergência do tenant.
+2. **Não remover o último `OWNER` ativo.** Lockout é irreversível sem acesso ao
+   banco, e acontece exatamente no dia em que alguém "organiza os acessos".
+3. **Não apagar papel com atribuição viva.** Encerre as atribuições primeiro, ou
+   recuse com a contagem — apagar em cascata revoga acesso de gente que está
+   trabalhando, sem aviso.
+4. **Auditar toda mudança.** Papel é superfície de privilégio: `ROLE_CREATED`,
+   `ROLE_PERMISSIONS_CHANGED`, `ROLE_ASSIGNED`, `ROLE_REVOKED` em `audit_event`,
+   que é append-only desde a V22. Registre código do papel e códigos de
+   permissão — nunca dado pessoal do alvo.
+
+### Revogação não é instantânea, e isso precisa ser dito
+
+O JWT vive 15 minutos e carrega o contexto. Revogar um papel **não** derruba a
+sessão em curso: o usuário continua com o acesso antigo até o token expirar.
+Para o MVP isso é aceitável, desde que a tela diga "em até 15 minutos" em vez de
+sugerir efeito imediato. Prometer imediato e entregar 15 minutos é pior que
+avisar.
+
+Revogação que precise valer na hora exige lista de negação em Redis consultada
+por requisição — custo real, e há o `SEC-011` em aberto sobre assinatura de
+WebSocket que sobrevive à revogação.
+
+### A visibilidade intermediária: o que de fato falta
+
+Aqui está a única lacuna estrutural do item, e ela é específica.
+
+Hoje há dois alcances úteis: `TENANT` (vê tudo) e `OWN` (vê o meu). **Não existe
+o meio**, que é justamente o que uma hierarquia com Gerente e Gestor pede: *"o
+gerente vê o que os SDRs dele fazem"*. `UNIT` existe na tabela mas não decide
+sobre registro de domínio — é o que o ADR-0008 registrou.
+
+Duas saídas, e **a segunda é melhor para esta hierarquia**:
+
+| | Unidade (`unit_id`) | Equipe (subordinação) |
+|---|---|---|
+| Migration | `unit_id` em 4 tabelas de domínio + backfill sem resposta | uma tabela de composição de equipe |
+| Recorte | `unit_id = :unidade` | `owner_user_id IN (:equipe)` |
+| Colunas novas em domínio | 4 | **nenhuma** |
+| Casa com | franquia, filial, geografia | **cargo, gestão de pessoas** |
+
+`contact`, `deal` e `task` **já têm `owner_user_id`** com FK composta e índice
+por responsável desde a V5. Recorte por equipe é filtro sobre coluna existente:
+sem coluna nova em tabela de domínio, sem backfill inventado, sem conflito com
+o ADR-0008 — que fala de unidade, não de equipe.
+
+```sql
+-- V28: quem responde por quem. Só isto.
+CREATE TABLE team_member
+(
+    tenant_id   uuid NOT NULL REFERENCES tenant (id),
+    manager_user_id uuid NOT NULL,
+    member_user_id  uuid NOT NULL,
+    valid_from  timestamptz NOT NULL DEFAULT now(),
+    valid_until timestamptz,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    created_by  uuid,
+    PRIMARY KEY (tenant_id, manager_user_id, member_user_id),
+    -- Ninguém é gestor de si mesmo: a auto-referência abriria um ciclo de um
+    -- nó só e faria "minha equipe" incluir quem não deveria.
+    CONSTRAINT team_member_sem_autogestao CHECK (manager_user_id <> member_user_id),
+    FOREIGN KEY (tenant_id, manager_user_id) REFERENCES app_user (tenant_id, id),
+    FOREIGN KEY (tenant_id, member_user_id)  REFERENCES app_user (tenant_id, id)
+);
+```
+
+Depois: `Alcance.EQUIPE` no enum, resolução em `AutorizacaoService` para o
+conjunto de ids, e recorte **na consulta** — nunca filtrando a página depois de
+buscar, que vaza contagem e paginação.
+
+**Mantenha a equipe plana no MVP.** Hierarquia recursiva (gerente de gestores)
+pede `WITH RECURSIVE` e um guarda de ciclo; um nível cobre Gerente→SDR/Closer,
+que é o pedido. Se depois precisar de níveis, a tabela já suporta e a mudança é
+só na resolução.
+
+**ADR novo** registrando a escolha de equipe em vez de unidade, referenciando o
+ADR-0008 — decisão aceita não se reescreve, é substituída.
+
+### Timeline por posição
+
+Com o acima, é o mesmo endpoint do item 8 com recorte diferente: `OWN` vê os
+próprios leads, `EQUIPE` vê os da equipe, `TENANT` vê tudo. Nenhuma tela nova, e
+nenhum parâmetro de filtro vindo do cliente — o alcance vem do token, não da
+requisição.
+
+### Papéis semeados
+
+Crie-os como **preset editável**, não como `system_role`. Só `OWNER` é de
+sistema; SDR, Closer, Atendente, Gestor e Gerente nascem como papéis comuns do
+tenant, para que o cliente possa renomear e ajustar — que é literalmente o
+pedido. Sugestão de partida:
+
+| Papel | Permissões | Alcance típico |
+|---|---|---|
+| Atendente | `conversations.*`, `contacts.read` | `OWN` |
+| SDR | `contacts.*`, `deals.read/write`, `tasks.*`, `conversations.*` | `OWN` |
+| Closer | idem SDR + `reports.read` | `OWN` |
+| Gestor | idem Closer + `dashboard.read` | `EQUIPE` |
+| Gerente | tudo menos `organization.manage`, `audit.read`, `privacy.manage` | `TENANT` |
+
+Números e recortes exatos são decisão de produto; o que o código garante é que
+ninguém consegue conceder além do que tem.
 
 ---
 
@@ -721,7 +905,7 @@ renovação agendada. Sem isso, funciona por uma semana e para em silêncio.
 | 2 | 4, 8 | V26, V27 | baixo — a timeline é o ativo mais reusado |
 | 3 | 7, 10-Instagram | nenhuma | **alto, e fora do código**: aprovação da Meta |
 | 3b | 3 | nenhuma | **alto**: precisa de base legal antes |
-| 4 | 6 | V28 | médio — exige ADR novo e backfill declarado |
+| 4 | 6 | V28 (só a equipe) | médio — o risco é escalonamento de privilégio, não modelagem |
 | 5 | 9, 5 | V29 | médio — o filtro livre é a armadilha |
 | 6 | 12 | V30 | **o maior**: conta banida é irreversível |
 | 7 | 10-email, 11 | V31 | médio — OAuth e renovação de canal |
@@ -737,9 +921,11 @@ Dito com franqueza, porque MVP com doze itens costuma virar zero itens prontos:
 
 - **Item 12 (disparo em massa)** é o que mais pode dar errado e o que menos
   prova o produto. Um CRM que atende bem vale mais que um que dispara mal.
-- **Item 6 (hierarquia)** é caro e só faz sentido com várias unidades reais em
-  operação. Antes disso, alcance `TENANT` e `PROPRIO` resolvem.
 - **Item 11 (Google Agenda)** é isolado e pode entrar depois sem retrabalho.
+- **Item 3 (Conversions API)** só depois de a base legal estar definida — não
+  por ser difícil, mas porque implementar antes produz transferência de dado
+  pessoal sem hipótese.
 
-Cortando os três, sobram nove itens com dependência clara e um caminho crítico
-que já começa hoje.
+O item 6 **não** entra nesta lista: com o modelo já pronto, ele é dos mais
+baratos da lista, e é o que dá ao cliente a sensação de que o CRM é dele.
+Vale entregar cedo.
