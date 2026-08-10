@@ -24,6 +24,8 @@ caber em uma branch/PR revisável.
 
 Consulte sob demanda:
 
+- `contexto/guia-onboarding-novos-devs.md` — setup, tour do código e gates;
+- `contexto/diagramas/` — contexto, containers e fluxos arquiteturais;
 - `contexto/decisoes/` — ADRs individuais vigentes;
 - `contexto/03-decisoes.md` — arquivo histórico legado, somente leitura;
 - `contexto/04-glossario.md` — termos do domínio;

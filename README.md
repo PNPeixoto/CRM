@@ -8,6 +8,10 @@ O contexto completo do projeto — produto, padrões técnicos, decisões e esta
 atual — está em [`contexto/`](contexto/). **Comece por
 [`CLAUDE.md`](CLAUDE.md)**, que define a ordem de leitura.
 
+Para preparar uma máquina e entender a árvore do código, use o
+[`guia de onboarding`](contexto/guia-onboarding-novos-devs.md). A visão visual
+fica no [`índice de diagramas`](contexto/diagramas/README.md).
+
 ## Stack
 
 | Camada | Tecnologia |
@@ -23,7 +27,7 @@ atual — está em [`contexto/`](contexto/). **Comece por
   `release version 25 not supported`
 - **Docker** — imagem da aplicação, Postgres e Redis de desenvolvimento, além
   dos testes de integração (Testcontainers)
-- **Node 20+**
+- **Node 24.x** — o `frontend/package.json` restringe a linha aceita
 
 > **No Linux (Nobara/Fedora), siga o [`SETUP-LINUX.md`](SETUP-LINUX.md)** —
 > guia completo do zero, com as pegadinhas do dnf5, SELinux e Testcontainers

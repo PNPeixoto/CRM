@@ -4,7 +4,8 @@
 
 - Tenant: `tenant`, `app_user`, `refresh_token`, `channel_connection`,
   `conversation`, `message`, `channel_credential`, `inbound_event`, `contact`,
-  `pipeline`, `pipeline_stage`, `deal`, `task` e `tenant_profile`. Todas usam
+  `pipeline`, `pipeline_stage`, `deal`, `task`, `tenant_profile`, `usage_event`,
+  `channel_media`, tabelas `automation_*` e `http_connector*`. Todas usam
   RLS `ENABLE + FORCE`; V10 acrescenta `organizational_unit`,
   `organization_membership`, `app_role`, `role_permission` e
   `membership_scope`; V11 acrescenta `password_reset_token`,
@@ -22,7 +23,8 @@ classificação reprova o gate.
 ## Papéis
 
 O migrador aplica DDL e nunca é datasource da aplicação. O runtime possui
-somente conexão, uso do schema, DML e as seis funções listadas em V9. Ele não
+somente conexão, uso do schema, DML e apenas as funções explicitamente
+concedidas pelas migrations. Ele não
 tem `SUPERUSER`, `BYPASSRLS`, `CREATEDB`, `CREATEROLE`, `CREATE` ou `TRUNCATE`.
 Funções novas nascem sem `EXECUTE` para `PUBLIC` e exigem grant explícito.
 
@@ -41,10 +43,16 @@ ao pool sempre zera a variável.
 4. Valide catálogo, RLS, grants e papel conectado antes de liberar tráfego.
 5. Só então promova a mesma imagem da aplicação.
 
-V9 a V13 preservam as estruturas anteriores; V10 adiciona o modelo
+V9 a V21 preservam as estruturas anteriores; V10 adiciona o modelo
 organizacional, V11 adiciona sessões endurecidas, recuperação e MFA, V12
 atribui registros históricos ao autor quando estavam órfãos e V13 adiciona a
-chave idempotente de mensagens de saída.
+chave idempotente de mensagens de saída. V14 torna a criação manual de contato
+repetível com segurança por tenant. V15 adiciona leases, dead letter,
+idempotência cifrada de entrada e medição append-only. V16 persiste o estado
+sanitizado da reconciliação Telegram. V17 adiciona a quarentena tenant-scoped
+de mídia, sua retenção e medição. V18 adiciona a ponte Evolution de laboratório,
+V19 a Inbox em tempo real e SLA, V20 o motor de automações e V21 os conectores
+HTTP aprovados, segredos cifrados e tentativas sanitizadas.
 Portanto o rollback do binário não exige rollback de schema. Migrations aplicadas não são editadas nem
 revertidas por script `down`; uma reversão de dados usa restauração testada ou
 uma migration compensatória revisada.

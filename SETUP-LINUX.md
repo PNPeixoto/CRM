@@ -88,19 +88,20 @@ sudo alternatives --config java
 
 ---
 
-## 4. Node 20+
+## 4. Node 24
 
 ```bash
 sudo dnf install -y nodejs npm
-node -v   # precisa ser 20 ou maior
+node -v   # precisa mostrar 24.x
 ```
 
-Se a versão do repositório for antiga, use o nvm:
+Se a versão do repositório não for 24.x, use o nvm:
 
 ```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 source ~/.bashrc
-nvm install 22
+nvm install 24
+nvm use 24
 ```
 
 ---

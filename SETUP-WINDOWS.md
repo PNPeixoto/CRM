@@ -8,7 +8,7 @@ Docker é autocontido: backend, PostgreSQL 17 e Redis 7.
 - Git;
 - Docker Desktop com containers Linux;
 - JDK 25 para testes ou execução local do backend;
-- Node.js 20+ para o frontend.
+- Node.js 24.x para o frontend; o `package.json` recusa outra linha.
 
 Confirme no PowerShell:
 
