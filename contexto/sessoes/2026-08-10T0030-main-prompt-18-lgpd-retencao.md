@@ -111,8 +111,9 @@ semanticamente certo — auditoria e operação devem confirmar juntas.
   expurgo não liga.
 - **Papel por finalidade, hipótese legal e quem declara legal hold**: pedem
   validação competente.
-- **V23 não aplicada** no ambiente local — o banco segue na V22.
+- **V23 aplicada** em 2026-08-10; ver a seção final.
 - Backup e réplica: documentados, não implementados. Prompt 23.
+- `LGPD-005`: revogar `DELETE` do runtime em `legal_hold`.
 
 ## Aplicação da V23 — 2026-08-10
 
