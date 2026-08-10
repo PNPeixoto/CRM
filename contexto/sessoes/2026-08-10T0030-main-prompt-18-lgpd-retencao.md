@@ -113,3 +113,45 @@ semanticamente certo — auditoria e operação devem confirmar juntas.
   validação competente.
 - **V23 não aplicada** no ambiente local — o banco segue na V22.
 - Backup e réplica: documentados, não implementados. Prompt 23.
+
+## Aplicação da V23 — 2026-08-10
+
+Mesmo procedimento da V22: leitura da migration, backup, linha de base, e só
+então aplicar.
+
+**Verificação prévia.** Um `grep` cru acusou seis comandos destrutivos, e a
+conferência mostrou que todos os `DELETE FROM` estão **dentro** dos corpos das
+funções de expurgo — que só apagam com corte explícito. Fora de função:
+**zero**. A distinção importa, e conferi em vez de assumir.
+
+**Backup** de 5,0 MB antes de qualquer coisa.
+
+| Verificação | Resultado |
+|---|---|
+| Flyway | `now at version v23` |
+| App | healthy em ~40 s |
+| Dados | 2 tenants, 3 usuários, 1 contato, 20 conversas, 1324 mensagens, 5 canais, 1324 eventos de uso, 5 de auditoria — **idênticos à linha de base** |
+| `legal_hold` | RLS `true/true` |
+| `contact.anonymized_at` | criada |
+| Funções de expurgo | 8, todas executáveis pelo runtime |
+| **Worker de retenção** | **não subiu** — nenhuma menção no log, nenhum expurgo executado |
+| Endpoints de privacidade | servidos |
+| Log do app | zero erros |
+
+O worker não ter subido é o resultado mais importante: nenhum prazo foi
+decidido, e o `@ConditionalOnProperty` impediu o componente de existir. O
+expurgo está pronto e inerte.
+
+### Achado da verificação — `LGPD-005`
+
+`legal_hold` concede `INSERT, SELECT, UPDATE, DELETE` ao runtime, herdado do
+`ALTER DEFAULT PRIVILEGES` da V9. O mesmo papel que executa o expurgo pode
+remover a trava que deveria impedi-lo.
+
+O contraste denuncia: `audit_event` teve `UPDATE` e `DELETE` revogados na V22
+justamente por ser superfície de controle. `legal_hold` é da mesma natureza e
+não recebeu o mesmo cuidado.
+
+Não é exploração hoje — nenhum endpoint apaga hold, e o desenho pretendido é
+revogação lógica por `deleted_at`. O risco é de caminho futuro: quem escrever a
+gestão de hold vai encontrar `DELETE` disponível.

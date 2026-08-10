@@ -1,7 +1,7 @@
 # Estado atual
 
 > Reescrito ao fim de cada sessão. Máximo 150 linhas.
-> Última atualização: 2026-08-10 00:30 (America/Montevideo)
+> Última atualização: 2026-08-10 04:45 (America/Montevideo)
 
 ## Onde parei
 
@@ -10,25 +10,24 @@ fechou em **193 testes, zero falhas**, o que encerrou a revisão do Prompt 17.
 Os Gates A, B e D estão fechados. O Gate C ainda aguarda a jornada crítica E2E
 reproduzível.
 
-O ambiente local está na **V22**, aplicada em 2026-08-09 com backup prévio e
-sem perda de dado. `frontend:F9` depende de evidência real de volume e não deve
+O ambiente local está na **V23**, aplicada em 2026-08-10 com backup prévio e
+sem perda de dado. O expurgo permanece **desligado**: nenhum prazo foi
+decidido, e o worker não sobe sem eles. `frontend:F9` depende de evidência real de volume e não deve
 ser executado somente por ordem numérica.
 
 ## Produto e segurança implementados
 
-- PostgreSQL 17 e Redis 7, imagem Temurin 25 não privilegiada, profiles
-  separados e produção fail-closed. Papéis de migração/runtime, RLS
-  `ENABLE + FORCE`, integridade composta e tenant derivado só da identidade.
+- PostgreSQL 17 e Redis 7, imagem Temurin 25 não privilegiada, produção
+  fail-closed. Papéis de migração/runtime, RLS `ENABLE + FORCE` e tenant
+  derivado só da identidade autenticada.
 - Modelo organizacional com memberships temporais, papéis, permissões e
-  alcances; a UI identifica o responsável de contato, tarefa e oportunidade.
-- Argon2id com pepper, JWT curto, refresh rotativo com detecção de reuso, reset
-  de senha e MFA TOTP para papéis privilegiados.
+  alcances. Argon2id com pepper, JWT curto, refresh rotativo com detecção de
+  reuso, reset de senha e MFA TOTP para papéis privilegiados.
 - Autorização central por ação e registro; alcance aplicado antes da paginação,
   e recurso coletivo exige `TENANT`.
-- Onboarding atômico por segmento materializa um funil só, sem reescrever dado
-  personalizado.
-- OpenAPI 3.1 determinístico, erros RFC 9457, correlação, limite de corpo,
-  CORS, CSRF e rate limit nas superfícies públicas.
+- Onboarding atômico por segmento materializa um funil só. OpenAPI 3.1
+  determinístico, erros RFC 9457, correlação, limite de corpo, CORS, CSRF e
+  rate limit nas superfícies públicas.
 - Frontend com token só em memória, refresh single-flight, cache segregado por
   contexto e formulários acessíveis.
 
@@ -50,10 +49,9 @@ ser executado somente por ordem numérica.
 
 - `WHATSAPP_EVOLUTION` é laboratório local e não substitui o `WHATSAPP_CLOUD`
   de produção. Compose fixa a 2.3.7 com banco, Redis e volumes próprios.
-- Entrada `MESSAGES_UPSERT`, saída de texto, webhook e reconciliação usam o
-  mesmo pipeline idempotente do CRM.
-- `pnp-teste` está **pareada e `HEALTHY`**: entrada e saída provadas na Inbox em
-  2026-08-09, uma tentativa cada, sem retry nem dead letter.
+- Entrada, saída, webhook e reconciliação usam o pipeline idempotente do CRM.
+  `pnp-teste` está pareada e `HEALTHY`, com entrada e saída provadas na Inbox
+  em 2026-08-09, uma tentativa cada, sem retry nem dead letter.
 - `POST /api/canais/{id}/pareamento` cria a instância se faltar, devolve QR e
   código, exige `CHANNELS_WRITE`, audita como credencial e recusa reparear
   sessão já aberta. Implantado em 2026-08-09.
@@ -92,11 +90,9 @@ ser executado somente por ordem numérica.
 ## Auditoria — backend 17; privacidade e retenção — backend 18
 
 - V22: `audit_event` append-only, RLS forçado, catálogo versionado e hash
-  verificável. Aplicada em 2026-08-09.
+  verificável.
 - Runtime só consulta e insere na trilha — confirmado no banco. `UPDATE` e
   `DELETE` são revogados e bloqueados por gatilho.
-- API interna tipada não aceita texto livre; token, segredo, payload e mensagem
-  não existem no schema.
 - Credencial, configuração, role e exportação são fail-closed; negação é best
   effort e preserva o `403`. `/auditoria` exige `audit.read` e audita a própria
   leitura. Decisão: `ADR-0013`.
@@ -106,8 +102,9 @@ ser executado somente por ordem numérica.
 - `/api/privacidade` exporta o dado do titular dizendo a origem, a finalidade e
   o prazo de cada seção, e anonimiza sob demanda. Legal hold produz recusa
   fundamentada, nunca falha silenciosa. Exige `privacy.manage`.
-- O inventário de tratamento e a política de backup estão em
-  `contexto/privacidade/`.
+- Inventário de tratamento e política de backup em `contexto/privacidade/`. A
+  API de auditoria é tipada: token, segredo, payload e mensagem não existem no
+  schema.
 
 ## Migrations atuais
 
@@ -127,26 +124,27 @@ ser executado somente por ordem numérica.
 - Evolution, retenção, direitos do titular, OpenAPI, fronteira de módulos e
   caminho de migração: todos verdes.
 - Frontend: 130 testes, typecheck e lint verdes; três avisos conhecidos.
-- CRM local saudável na **V22**. A aplicação da migration preservou todos os
-  contadores (2 tenants, 3 usuários, 4 canais, 3 conversas, 32 mensagens, 1
-  contato, 18 eventos) e `audit_event` recebeu apenas INSERT/SELECT no runtime.
+- CRM local saudável na **V23**, aplicada sem perda: todos os contadores
+  idênticos à linha de base, `legal_hold` com RLS forçado e o worker de
+  retenção sem subir, por não haver prazo definido.
 - Telegram tunnel, Evolution API e dependências seguem ativos; `pnp-teste`
   permaneceu `open` durante o deploy.
 
 ## Próximo passo
 
-1. Aplicar a V23 no ambiente local, com backup prévio, como foi feito na V22.
-2. Decidir os prazos de retenção por categoria para poder ligar o expurgo.
+1. Decidir os prazos de retenção por categoria para poder ligar o expurgo.
+2. Revogar `DELETE` do runtime em `legal_hold` — `LGPD-005`.
 3. Manter F9 adiado até haver medição representativa.
 
 ## Riscos restantes
 
-- Evolution é ponte experimental baseada em sessão WhatsApp Web; produção deve
-  usar o adaptador oficial e credenciais próprias.
-- O scanner antimalware é uma fronteira externa; sem promoção, a mídia continua
-  indisponível por desenho.
-- Alcance por unidade ainda não decide registros de domínio; UNIT permanece
-  oculto até migration e backfill próprios.
-- Broker STOMP em memória impede escala horizontal e será revisto no Prompt 28.
-- O Gate E depende ainda de backup/restore medido, SLOs e CI/CD rastreável.
+- Evolution é ponte experimental de sessão WhatsApp Web; produção exige o
+  adaptador oficial.
+- `legal_hold` concede DELETE ao runtime — a trava contra expurgo pode ser
+  removida pelo mesmo papel que expurga (`LGPD-005`).
+- Sem promoção pelo scanner externo, a mídia continua indisponível por desenho.
+- Alcance por unidade ainda não decide registro de domínio; UNIT fica oculto
+  até migration e backfill próprios.
+- Broker STOMP em memória impede escala horizontal; revisto no Prompt 28.
+- Gate E depende de backup/restore medido, SLOs e CI/CD rastreável.
 - Gate C aguarda runner E2E reproduzível (`frontend:F12`).

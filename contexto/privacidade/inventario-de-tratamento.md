@@ -190,6 +190,7 @@ um jeito que schema quebrado não é.
 | `LGPD-002` | **Mecanismo pronto**, prazos pendentes de decisão |
 | `LGPD-003` | **Corrigido.** Exportação com procedência, anonimização e recusa fundamentada |
 | `LGPD-004` | **Documentado** em `politica-de-backup-e-replica.md`; execução no Prompt 23 |
+| `LGPD-005` | **Aberto.** Runtime pode apagar o próprio legal hold |
 
 ### O que o `LGPD-002` entregou, e o que falta
 
@@ -222,3 +223,26 @@ registrados separadamente, e respondem `no-store`.
 
 A exportação não inclui dado de terceiro: numa conversa, a identidade do
 atendente aparece como função, porque ele é outro titular.
+
+---
+
+### `LGPD-005` — Runtime pode apagar o próprio legal hold
+
+- **Severidade:** média · **Descoberto em 2026-08-10**, ao verificar a V23 já
+  aplicada
+- **O fato:** `legal_hold` concede `INSERT, SELECT, UPDATE, DELETE` ao runtime,
+  herdado do `ALTER DEFAULT PRIVILEGES` da V9. Ou seja, o mesmo papel que
+  executa o expurgo pode remover a trava que deveria impedi-lo.
+- **O contraste:** `audit_event` teve `UPDATE` e `DELETE` revogados
+  explicitamente na V22, justamente por ser superfície de controle. `legal_hold`
+  é da mesma natureza — existe para dizer "não apague isto" — e não recebeu o
+  mesmo cuidado.
+- **Por que não é exploração hoje:** nenhum endpoint apaga hold. A tabela tem
+  `deleted_at`, e o desenho pretendido é revogação lógica, não remoção física.
+  O risco é de caminho futuro: quem escrever a tela de gestão de hold vai
+  encontrar `DELETE` disponível e pode usá-lo sem perceber a diferença.
+- **Correção proposta:** revogar `DELETE` e restringir `UPDATE` às colunas de
+  encerramento, deixando a revogação de hold como escrita em `deleted_at` e
+  `valid_until`. Exige migration nova.
+- **Responsável:** PNPeixoto · **Prazo:** antes de existir gestão de legal hold
+  na interface
