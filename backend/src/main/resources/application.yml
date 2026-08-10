@@ -69,7 +69,7 @@ app:
   schema:
     # Atualizado junto com toda migration estrutural. Readiness compara este
     # valor ao histórico realmente aplicado e detecta inclusive imagem antiga.
-    expected-version: "23"
+    expected-version: "24"
   security:
     # Sem valor padrão, de propósito: a aplicação não sobe sem estes segredos.
     # Um default aqui seria herdado silenciosamente em produção, e um pepper

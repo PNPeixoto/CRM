@@ -27,9 +27,9 @@ class MigracaoDeAtualizacaoTest {
             assertThat(ateV8.migrate().migrationsExecuted).isEqualTo(8);
 
             Flyway atual = configuracao(postgres).load();
-            assertThat(atual.migrate().migrationsExecuted).isEqualTo(15);
+            assertThat(atual.migrate().migrationsExecuted).isEqualTo(16);
             atual.validate();
-            assertThat(atual.info().current().getVersion().getVersion()).isEqualTo("23");
+            assertThat(atual.info().current().getVersion().getVersion()).isEqualTo("24");
         }
     }
 

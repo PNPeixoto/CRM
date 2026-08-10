@@ -156,3 +156,46 @@ não recebeu o mesmo cuidado.
 Não é exploração hoje — nenhum endpoint apaga hold, e o desenho pretendido é
 revogação lógica por `deleted_at`. O risco é de caminho futuro: quem escrever a
 gestão de hold vai encontrar `DELETE` disponível.
+
+## Correção do `LGPD-005` — V24
+
+O achado da verificação da V23 foi corrigido no mesmo dia.
+
+**Duas camadas, e a segunda existe porque a primeira é reversível.**
+
+1. **Privilégio.** `DELETE` revogado do runtime e `UPDATE` restrito por coluna
+   a `valid_until`, `deleted_at`, `updated_at` e `updated_by`.
+2. **Gatilho `legal_hold_imutavel`.** Vale para qualquer papel, inclusive o de
+   migração. Privilégio é concedido e revogado; gatilho é propriedade da
+   tabela, e sobrevive a um `GRANT` distraído feito seis meses depois.
+
+**Duas formas de neutralizar um hold, ambas fechadas.** Apagar o registro leva
+junto a prova de por que o dado foi retido. Reescrever `target_type` seria
+pior: o hold continuaria na tabela, aparentemente intacto, e deixaria de cobrir
+o que cobria — falha que não aparece em nenhuma listagem. Escopo, motivo e
+origem passaram a ser imutáveis.
+
+**Encerrar continua possível**, por `deleted_at` ou `valid_until`. Um hold que
+ninguém consegue encerrar congelaria o dado para sempre, o que também viola o
+titular — e há teste fechando esse ciclo: hold encerrado deixa de bloquear.
+
+`TRUNCATE` não dispara gatilho de linha, então a limpeza de teste continua
+funcionando. Conferi isso antes de escrever a migration, não depois.
+
+### Verificação no banco vivo
+
+| Item | Resultado |
+|---|---|
+| Flyway | `now at version v24` |
+| Privilégios de tabela do runtime | `INSERT, SELECT` — nada além |
+| Colunas com `UPDATE` | `deleted_at, updated_at, updated_by, valid_until` |
+| Gatilho | `legal_hold_imutavel` ativo |
+| Dados | contato intacto; mensagens subiram de 1535 para 1607, porque o WhatsApp seguiu recebendo durante o deploy — crescimento, não perda |
+| Suíte | 218 testes, 0 falhas |
+
+### Nota operacional
+
+O Docker Desktop caiu pela terceira vez nesta sequência, no meio do trabalho.
+A pilha voltou incompleta e o `evolution-api` entrou em laço de reinício por
+uma corrida: tentou migrar antes do próprio PostgreSQL ficar pronto. Estabilizou
+sozinho depois que o banco ficou saudável. É mais uma ocorrência do `SEC-012`.

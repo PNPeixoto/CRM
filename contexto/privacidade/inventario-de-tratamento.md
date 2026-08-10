@@ -190,7 +190,7 @@ um jeito que schema quebrado não é.
 | `LGPD-002` | **Mecanismo pronto**, prazos pendentes de decisão |
 | `LGPD-003` | **Corrigido.** Exportação com procedência, anonimização e recusa fundamentada |
 | `LGPD-004` | **Documentado** em `politica-de-backup-e-replica.md`; execução no Prompt 23 |
-| `LGPD-005` | **Aberto.** Runtime pode apagar o próprio legal hold |
+| `LGPD-005` | **Corrigido.** V24 revoga DELETE, restringe UPDATE por coluna e torna o escopo imutável |
 
 ### O que o `LGPD-002` entregou, e o que falta
 
@@ -226,10 +226,9 @@ atendente aparece como função, porque ele é outro titular.
 
 ---
 
-### `LGPD-005` — Runtime pode apagar o próprio legal hold
+### `LGPD-005` — Runtime pode apagar o próprio legal hold — **CORRIGIDO**
 
-- **Severidade:** média · **Descoberto em 2026-08-10**, ao verificar a V23 já
-  aplicada
+- **Severidade:** média · Descoberto e corrigido em 2026-08-10
 - **O fato:** `legal_hold` concede `INSERT, SELECT, UPDATE, DELETE` ao runtime,
   herdado do `ALTER DEFAULT PRIVILEGES` da V9. Ou seja, o mesmo papel que
   executa o expurgo pode remover a trava que deveria impedi-lo.
@@ -241,8 +240,18 @@ atendente aparece como função, porque ele é outro titular.
   `deleted_at`, e o desenho pretendido é revogação lógica, não remoção física.
   O risco é de caminho futuro: quem escrever a tela de gestão de hold vai
   encontrar `DELETE` disponível e pode usá-lo sem perceber a diferença.
-- **Correção proposta:** revogar `DELETE` e restringir `UPDATE` às colunas de
-  encerramento, deixando a revogação de hold como escrita em `deleted_at` e
-  `valid_until`. Exige migration nova.
-- **Responsável:** PNPeixoto · **Prazo:** antes de existir gestão de legal hold
-  na interface
+- **Correção aplicada na V24**, em duas camadas:
+  1. **Privilégio.** `DELETE` revogado e `UPDATE` restrito por coluna a
+     `valid_until`, `deleted_at`, `updated_at` e `updated_by`. Verificado no
+     banco: o runtime tem `INSERT, SELECT` na tabela e escreve em quatro
+     colunas, nada além.
+  2. **Gatilho `legal_hold_imutavel`.** Vale para qualquer papel, inclusive o
+     de migração. Privilégio é concedido e revogado; gatilho é propriedade da
+     tabela e sobrevive a um `GRANT` distraído.
+- **Duas formas de neutralizar, ambas fechadas.** Apagar o registro leva junto
+  a prova de por que o dado foi retido. Reescrever `target_type` seria pior:
+  o hold continuaria existindo, aparentemente intacto, e deixaria de cobrir o
+  que cobria. Escopo, motivo e origem passaram a ser imutáveis.
+- **Encerrar continua possível**, por `deleted_at` ou `valid_until` — um hold
+  que ninguém consegue encerrar congelaria o dado para sempre, o que também
+  viola o titular. `LegalHoldImutavelTest` prova os dois lados em 6 casos.

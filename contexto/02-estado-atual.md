@@ -1,7 +1,7 @@
 # Estado atual
 
 > Reescrito ao fim de cada sessão. Máximo 150 linhas.
-> Última atualização: 2026-08-10 04:45 (America/Montevideo)
+> Última atualização: 2026-08-10 18:45 (America/Montevideo)
 
 ## Onde parei
 
@@ -10,7 +10,7 @@ fechou em **193 testes, zero falhas**, o que encerrou a revisão do Prompt 17.
 Os Gates A, B e D estão fechados. O Gate C ainda aguarda a jornada crítica E2E
 reproduzível.
 
-O ambiente local está na **V23**, aplicada em 2026-08-10 com backup prévio e
+O ambiente local está na **V24**, aplicada em 2026-08-10 com backup prévio e
 sem perda de dado. O expurgo permanece **desligado**: nenhum prazo foi
 decidido, e o worker não sobe sem eles. `frontend:F9` depende de evidência real de volume e não deve
 ser executado somente por ordem numérica.
@@ -89,8 +89,8 @@ ser executado somente por ordem numérica.
 
 ## Auditoria — backend 17; privacidade e retenção — backend 18
 
-- V22: `audit_event` append-only, RLS forçado, catálogo versionado e hash
-  verificável.
+- V22: `audit_event` append-only, RLS forçado e hash verificável. V24 dá o
+  mesmo tratamento ao `legal_hold`: escopo imutável e sem DELETE no runtime.
 - Runtime só consulta e insere na trilha — confirmado no banco. `UPDATE` e
   `DELETE` são revogados e bloqueados por gatilho.
 - Credencial, configuração, role e exportação são fail-closed; negação é best
@@ -114,6 +114,7 @@ ser executado somente por ordem numérica.
 - V18–V21: adaptador Evolution, Inbox paginada com SLA, motor de automações e
   conector HTTP seguro.
 - V22: auditoria append-only. V23: retenção, legal hold e direitos do titular.
+- V24: legal hold imutável.
 - Seeds e dados demonstrativos existem somente no profile `dev`.
 
 ## Verificado nesta máquina
@@ -124,24 +125,21 @@ ser executado somente por ordem numérica.
 - Evolution, retenção, direitos do titular, OpenAPI, fronteira de módulos e
   caminho de migração: todos verdes.
 - Frontend: 130 testes, typecheck e lint verdes; três avisos conhecidos.
-- CRM local saudável na **V23**, aplicada sem perda: todos os contadores
-  idênticos à linha de base, `legal_hold` com RLS forçado e o worker de
-  retenção sem subir, por não haver prazo definido.
+- CRM local saudável na **V24**. `legal_hold` tem RLS forçado, o runtime só
+  insere e consulta, e o worker de retenção não sobe por não haver prazo.
 - Telegram tunnel, Evolution API e dependências seguem ativos; `pnp-teste`
   permaneceu `open` durante o deploy.
 
 ## Próximo passo
 
 1. Decidir os prazos de retenção por categoria para poder ligar o expurgo.
-2. Revogar `DELETE` do runtime em `legal_hold` — `LGPD-005`.
+2. Executar `backend:19` — entitlements e medição.
 3. Manter F9 adiado até haver medição representativa.
 
 ## Riscos restantes
 
 - Evolution é ponte experimental de sessão WhatsApp Web; produção exige o
   adaptador oficial.
-- `legal_hold` concede DELETE ao runtime — a trava contra expurgo pode ser
-  removida pelo mesmo papel que expurga (`LGPD-005`).
 - Sem promoção pelo scanner externo, a mídia continua indisponível por desenho.
 - Alcance por unidade ainda não decide registro de domínio; UNIT fica oculto
   até migration e backfill próprios.
