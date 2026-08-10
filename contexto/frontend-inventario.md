@@ -89,7 +89,7 @@ Critério deste relatório: **pronta** conclui integralmente seu objetivo atual;
 | `/equipes` | `em_producao` | placeholder | Apenas `EmProducao`. |
 | `/automacoes` | `em_producao` | placeholder | Apenas `EmProducao`. |
 | `/campanhas` | `em_producao` | placeholder | Apenas `EmProducao`. |
-| `/auditoria` | `em_producao` | placeholder | Apenas `EmProducao`. |
+| `/auditoria` | `pronto` | real | Eventos auditáveis com filtros, paginação keyset no servidor, IDs mascarados e integridade verificada. |
 | `/configuracoes` | `em_producao` | placeholder | Apenas `EmProducao`. |
 
 As rotas `/` e desconhecidas redirecionam para o primeiro caminho visível; não

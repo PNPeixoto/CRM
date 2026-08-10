@@ -9,8 +9,8 @@ e o resultado observado nesta execução ou registrado em sessão anterior;
 comportamento observado. A diferença importa: inspeção não pega
 comportamento em runtime que contradiz o que o código parece dizer.
 
-Baseline atualizado no Prompt 08: suíte backend com 123 testes verdes e
-frontend com 101.
+Baseline atualizado no Prompt 16: suíte backend com 187 testes verdes e
+frontend com 128.
 
 ---
 
@@ -59,17 +59,16 @@ frontend com 101.
 | Exposição do contrato | sim | Snapshot fica no build; API docs e Swagger UI estão desabilitados no profile de produção | `ProductionConfigurationTest` | execução |
 | Idempotência de escrita repetível | sim | Envio de mensagem aceita chave opaca persistida; replay devolve o mesmo recurso e conteúdo divergente retorna conflito | `ContratosTransversaisTest` | execução |
 | Histórico extenso | sim | Mensagens usam keyset `(createdAt,id)`, lote máximo de 100 e preservam ordem cronológica do contrato | `ContratosTransversaisTest` | execução |
+| Requisição HTTP de saída | sim | Conectores aprovados; HTTPS, anti-SSRF A/AAAA, DNS pinning, redirects/cookies/retry automático desativados, timeout e teto de resposta | `PoliticaAntiSsrfTest`, `ClienteHttpSeguroTest` | execução |
 
 ## V5 — File Handling
 
 | Controle | Aplicável | Implementação | Teste | Evidência |
 |---|---|---|---|---|
-| Upload, tipo, tamanho, varredura, armazenamento | **não — superfície inexistente** | Nenhum endpoint recebe ou serve arquivo. Mídia de canal ainda não foi construída | — | inspeção |
+| Upload, tipo, tamanho, varredura, armazenamento | parcial | Mídia de canal fica em quarentena privada, limitada a 20 MiB e validada por magic bytes; promoção depende de scanner externo | `QuarentenaDeMidiaTest`, `AssinaturaDeMidiaTest` | execução |
 
-O capítulo inteiro fica **em aberto por ausência de superfície**. Quando mídia
-entrar (Prompt 13), V5 precisa ser reavaliado por completo: tipo declarado
-versus conteúdo real, tamanho, nome, caminho de armazenamento fora da raiz web
-e varredura. Registrado como `SEC-010`.
+O scanner antimalware permanece uma fronteira externa. Sem promoção explícita,
+o arquivo continua indisponível; este é o risco residual de V5.
 
 ## V6 — Authentication
 
@@ -153,13 +152,14 @@ SSO corporativo dispara revisão por novo ADR, conforme ADR-0006.
 | Contêiner endurecido | sim | Não-root (UID 10001), `read_only`, `cap_drop: ALL`, `no-new-privileges`, tmpfs limitada | — | inspeção |
 | Segredo em imagem | sim | Nenhum; varredura do repositório sem vazamento | gitleaks sobre 25 commits | execução |
 | Deriva entre ambiente e código | sim | Readiness `schemaVersion` compara a versão esperada pela imagem à maior migration estrutural aplicada e falha nos dois sentidos | `SchemaVersionHealthIndicatorTest`, `ContratosTransversaisTest` | execução |
+| Action de CI imutável | sim | Toda entrada `uses:` está fixada por SHA completo; Dependabot acompanha `github-actions` | inspeção de `ci.yml` | inspeção |
 
 ## V14 — Data Protection
 
 | Controle | Aplicável | Implementação | Teste | Evidência |
 |---|---|---|---|---|
 | Isolamento de dado por cliente | sim **(nível 3)** | RLS forçado mais integridade composta entre tenants; segundo tenant povoado nos testes para que vazamento seja visível | `IsolamentoEntreTenantsTest`, `ReferenciasMultiTenantTest` | execução |
-| Credencial de integração | sim | Resposta write-only: a API nunca devolve o segredo do canal | `BancoSegurancaTest` | execução |
+| Credencial de integração | sim | Resposta write-only; segredos de canal e conector HTTP usam chaves AES-GCM distintas e nunca entram em preview/diagnóstico | `BancoSegurancaTest`, `ConectorHttpSeguroIntegracaoTest` | execução |
 | Dado pessoal em log | sim | Log registra identificador, nunca conteúdo de mensagem, senha ou token — 17 arquivos com log auditados | inspeção dos 17 pontos de log | inspeção |
 | Retenção e expurgo | **não — pertence ao Prompt 18** | Sem política de retenção implementada | — | inspeção |
 
@@ -170,7 +170,7 @@ SSO corporativo dispara revisão por novo ADR, conforme ADR-0006.
 | Fronteira de módulo | sim | Spring Modulith; `api` exposta por `@NamedInterface`, `internal` fechada; nenhum módulo injeta repositório de outro | `FronteiraDeModulosTest` | execução |
 | Ausência de `null` em API pública | sim | `Optional`, coleção vazia ou exceção de domínio nomeada | — | inspeção |
 | Função de banco com privilégio | sim **(nível 3)** | Cinco funções `SECURITY DEFINER` com `search_path` fixo | `BancoSegurancaTest` | execução |
-| Concorrência | sim | `FOR UPDATE SKIP LOCKED` na fila de saída e na entrada de webhook, com backoff exponencial e teto de tentativas | `FilaDeSaidaTest`, `IngestaoTransacionalTest` | execução |
+| Concorrência | sim | `SKIP LOCKED` nas filas e automações; conector HTTP possui semáforo por tenant e orçamento distribuído no Redis | `FilaDeSaidaTest`, `MotorDeAutomacoesTest`, `ConectorHttpSeguroIntegracaoTest` | execução |
 
 ## V16 — Security Logging and Error Handling
 
@@ -179,9 +179,9 @@ SSO corporativo dispara revisão por novo ADR, conforme ADR-0006.
 | Erro sem detalhe interno | sim | RFC 9457; exceção de domínio nomeada; stack trace não vai para a resposta | `GlobalExceptionHandlerTest` | execução |
 | Correlação | sim | UUID confiável é criado antes da cadeia, fica no MDC e no cabeçalho de toda resposta; entrada forjada é substituída sem ser refletida | `GlobalExceptionHandlerTest`, `HttpProtectionFilterTest` | execução |
 | Log de negação | sim | Registra permissão e usuário e **não** o id do recurso alvo, para o log não virar inventário do que existe | inspeção de `AutorizacaoService.negar` | inspeção |
-| Log de evento de segurança | **parcial** | Reuso de refresh token, negação de autorização e SUBSCRIBE recusado são registrados. Não há trilha consultável | — | inspeção |
-| Trilha de auditoria | **não — ausente** | O módulo `audit` não existe. É `AUDIT-001`, P0 do produto, e bloqueia o Gate E | — | execução |
-| Log com objeto de exceção | **achado menor** | Alguns pontos registram a exceção do provedor, que pode carregar corpo de resposta — ver `SEC-009` | — | inspeção |
+| Log de evento de segurança | sim | Reuso de refresh, negação e SUBSCRIBE permanecem em log; negação e ações críticas também entram em trilha consultável e sanitizada | `AuditoriaCorporativaTest` criado; reexecução backend pendente | inspeção + execução pendente |
+| Trilha de auditoria | **implementada; revalidação pendente** | V22 append-only, RLS forçado, permissão `audit.read`, leitura auditada, catálogo versionado e integridade verificada | `AuditoriaCorporativaTest`, `AuditPage.test.tsx` | frontend executado; backend pendente |
+| Log com objeto de exceção | sim | Workers e handler global registram somente correlação, IDs técnicos e tipo; nunca mensagem ou objeto bruto do provedor | inspeção dos pontos `log.error/warn` | inspeção |
 
 ---
 
@@ -190,8 +190,8 @@ SSO corporativo dispara revisão por novo ADR, conforme ADR-0006.
 | Situação | Capítulos |
 |---|---|
 | Atendido no nível 2 ou acima | V1, V2, V3, V4, V6, V7, V8, V11, V12, V13, V14, V15 |
-| Não aplicável por ausência de superfície | V5, V10 |
-| Atendido parcialmente | V9 (`SEC-002`), V16 (auditoria ausente) |
+| Não aplicável por ausência de superfície | V10 |
+| Atendido parcialmente | V5 (scanner externo), V9 (`SEC-002`), V16 (revalidação V22 pendente) |
 
 Nível 3 aplicado deliberadamente em: isolamento entre tenants, decisão por
 registro, MFA, rotação de refresh com detecção de reuso, cifra em repouso,

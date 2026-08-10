@@ -31,9 +31,9 @@ documentação memorizada, conforme o protocolo do prompt.
 
 ## Método e limites
 
-O escopo é o que existe hoje: 30 rotas HTTP, um endpoint WebSocket, dois
-workers e um webhook de provedor. Fluxo que o produto ainda não tem — mídia,
-automação, conector, exportação, billing, agente privado — aparece nos threat
+O baseline original foi ampliado conforme os prompts seguintes. Mídia,
+automação e conector HTTP agora possuem controles e testes próprios; fluxo que
+o produto ainda não tem — exportação, billing e agente privado — aparece nos threat
 models **declarado como inexistente**, com a fronteira que precisará ser
 tratada quando for construído. Um modelo de ameaça sobre componente imaginário
 descreve o sistema que gostaríamos de ter, e é pior que a ausência dele porque
@@ -58,8 +58,8 @@ riscos altos encontrados foram tratados nesta execução:
 - `CVE-2026-59889` em `jackson-databind`, *Incorrect Authorization*, CVSS 6.5,
   no caminho de desserialização de toda requisição — **corrigido** por bump
   para 3.1.5 e 2.21.5;
-- `GHSA-qwww-vcr4-c8h2` em `react-router` — **não aplicável**, comprovado pelo
-  aviso oficial, com exceção nomeada, responsável e prazo.
+- `GHSA-qwww-vcr4-c8h2` em `react-router` — **corrigido** em 2026-08-08 com
+  `react-router-dom` 7.18.2; a exceção temporária foi removida.
 
 Do lado frontend, o F4A e o F4 fecharam a metade que faltava. O detalhe da
 superfície de navegador está em `frontend/SEGURANCA-NAVEGADOR.md`, inclusive o
@@ -68,6 +68,6 @@ como cabeçalho, mais `frame-ancestors`, que o navegador ignora quando vem em
 `<meta>`. Enquanto esse servidor não existir no repositório, o clickjacking
 depende de configuração externa não versionada — está registrado como limite.
 
-Riscos médios e baixos estão no backlog com responsável e prazo. Nenhum foi
-aceito informalmente — a exceção de dependência é verificada por máquina e
-reprova o CI quando o prazo vence.
+Riscos médios e baixos estão no backlog com responsável e prazo. A única
+exceção vigente é o parser YAML usado somente pelo gerador OpenAPI sobre JSON
+local versionado; o verificador reprova qualquer outra alta/crítica e prazo vencido.

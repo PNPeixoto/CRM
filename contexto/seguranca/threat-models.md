@@ -115,6 +115,21 @@ publica é a aplicação, e o broker não conhece banco.
 | Imagem base desatualizada | CVE herdada do sistema | Dependabot acompanha `docker`; imagem escaneada | `docker scout`: 0 críticas, 0 altas, 9 médias | execução | Baixo |
 | Falha de infraestrutura confundida com falha de código | Diagnóstico errado, tempo perdido | Preflight único do Docker antes da suíte; gate rápido explicitamente isento | Mensagem única com instrução de recuperação | gate completo com 123 testes | Baixo |
 
+## F7 — Automação e conector HTTP
+
+**Ativo:** credenciais de integração, rede interna e integridade do efeito
+externo. **Fronteira:** definição aprovada → DNS/egress → sistema externo.
+
+| Abuso | Impacto | Preventivo | Detectivo | Teste | Residual |
+|---|---|---|---|---|---|
+| URL aponta para rede privada ou metadata | SSRF e furto de credencial de infraestrutura | Origem HTTPS estática; todos os A/AAAA privados, reservados, locais e metadata bloqueados | `HTTP_DESTINATION_BLOCKED` sem URL | `PoliticaAntiSsrfTest` | Baixo |
+| DNS muda após validação | Rebinding para rede interna | Snapshot DNS aprovado é fixado no resolver da conexão; produção exige proxy que repita a política | Falha sanitizada de DNS/egress | `fixaPrimeiraResolucaoEImpedeDnsRebinding` | Baixo; configuração incorreta do proxy é risco operacional |
+| Redirect salta para alvo proibido | Contorno da política inicial | Redirect desativado | `HTTP_REDIRECT_BLOCKED` | `ClienteHttpSeguroTest.naoSegueRedirect` | Baixo |
+| Template executa classe, arquivo ou rede | Execução remota | Substituição finita de identificadores técnicos; sem SpEL, JS, shell ou reflexão | Rejeição antes de publicar/executar | `TemplateHttpSeguroTest` | Baixo |
+| Retry duplica efeito | Mutação repetida no sistema remoto | Métodos mutáveis exigem header e chave determinística; tentativa concluída converge | Hash e status sanitizados | `ConectorHttpSeguroIntegracaoTest` | Baixo quando o destino honra idempotência |
+| Segredo aparece em preview ou trilha | Exposição de API key | AES-GCM, resposta write-only, resolução só no envio; diagnóstico sem request/response | — | `ConectorHttpSeguroIntegracaoTest` | Baixo |
+| Resposta lenta/grande esgota recursos | Indisponibilidade | Timeout, limite de bytes, concorrência e orçamento Redis por tenant/conector | Códigos e duração sanitizados | `ClienteHttpSeguroTest` | Baixo |
+
 ---
 
 ## Fluxos ainda inexistentes
@@ -124,8 +139,6 @@ a fronteira que precisará ser tratada no prompt correspondente.
 
 | Fluxo | Situação | Fronteira a tratar quando existir | Prompt |
 |---|---|---|---|
-| **Mídia** | Nenhum endpoint recebe ou serve arquivo | Tipo declarado versus conteúdo real, tamanho, nome, caminho fora da raiz web, varredura, URL assinada com expiração. V5 inteiro do ASVS | 13 |
-| **Automação e conector HTTP** | Motor não existe | SSRF é a ameaça central: destino escolhido pelo cliente permite alcançar rede interna e metadata de nuvem. Exige allowlist de destino, bloqueio de faixas privadas e limite de redirecionamento | 15, 16 |
 | **Exportação** | Nenhum endpoint exporta | Autorização revalidada **na execução**, não só na criação; o arquivo gerado é um segundo canal de vazamento e precisa de escopo e expiração | 21 |
 | **Job agendado** | Não existe | Job roda sem usuário; precisa de identidade própria e de revalidar autorização a cada execução, porque quem o criou pode ter perdido o acesso | 21 |
 | **Billing** | Não existe | Manipulação de valor, replay de webhook de pagamento, idempotência de cobrança | 20 |

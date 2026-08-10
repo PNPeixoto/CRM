@@ -1,158 +1,149 @@
 # Estado atual
 
 > Reescrito ao fim de cada sessão. Máximo 150 linhas.
-> Última atualização: 2026-08-03 23:42 (America/Montevideo)
+> Última atualização: 2026-08-09 14:20 (America/Montevideo)
 
 ## Onde parei
 
-Os Prompts backend 00–08 e frontend F0–F4 estão concluídos. Os Gates A e B
-estão **fechados**; o Gate B foi revalidado após corrigir a jornada de MFA,
-o scanner de dependências, o contrato gerado e a imagem local divergente.
+Os Prompts backend 00–17 e frontend F0–F6/F8 estão concluídos. A suíte backend
+fechou em **193 testes, zero falhas**, o que encerrou a revisão do Prompt 17.
+Os Gates A, B e D estão fechados. O Gate C ainda aguarda a jornada crítica E2E
+reproduzível.
 
-O backend está na migration V13 com 123 testes verdes; o frontend tem 101.
-A conta máxima da empresa tem visão `TENANT` de contatos, tarefas, funil,
-conversas, canais e relatórios; contatos, tarefas e oportunidades identificam
-nome e login do responsável. Próximo passo canônico é `backend:09`.
+O ambiente local está na **V22**, aplicada em 2026-08-09 com backup prévio e
+sem perda de dado. `frontend:F9` depende de evidência real de volume e não deve
+ser executado somente por ordem numérica.
 
-## Implementado
+## Produto e segurança implementados
 
-- Imagem multi-stage Temurin 25, runtime UID/GID 10001, filesystem somente
-  leitura, health checks e profiles dev/test/prod separados.
-- PostgreSQL 17 e Redis 7 em desenvolvimento; produção exige configuração e
-  segredos externos e falha fechada.
-- Política de testes com gates rápidos, integração real, carga opt-in,
-  quarentena governada e fixtures isoladas.
-- Papéis `crm_migrator`/`crm_runtime`, RLS `ENABLE + FORCE`, privilégios mínimos,
-  tenant derivado apenas de credencial e integridade composta entre tenants.
-- Modelo organizacional com unidade, membership temporal, papéis, permissões e
-  escopos; contato B2B/B2C; presets e onboarding por segmento.
-- Argon2id com pepper externo, login uniforme e rate limit por
-  tenant/login/origem mais limite global de origem sem lock global da vítima.
-- Access token de 15 minutos; refresh por hash, rotação/família/reuso, uma hora
-  de inatividade, 24 horas absolutas, logout e revogação de todos os dispositivos.
-- Reset de senha uniforme, token único de 256 bits/15 minutos armazenado por
-  hash, política atual e revogação de todas as sessões.
-- MFA TOTP obrigatório para OWNER/ADMIN/SUPERADMIN, segredo AES-256-GCM, replay
-  bloqueado e dez códigos de recuperação de uso único armazenados por hash. A
-  SPA cobre cadastro inicial, TOTP e recovery code sem persistir segredo.
-- **Autorização por ação e por registro em ponto único (`Autorizacao`), aplicada
-  a todas as superfícies HTTP atuais.** Alcance vem do membership vigente; o recorte por
-  responsável entra na consulta, não sobre a página. Atualização verifica antes
-  e depois de aplicar, para impedir tanto editar registro alheio quanto
-  transferir o próprio para fora do alcance. Usuário sem membership vigente
-  perde acesso na requisição seguinte, sem esperar o token expirar.
-- Recursos sem responsável e compartilhados pelo tenant — canais, caixa de
-  entrada, relatórios e mutação do onboarding — exigem explicitamente alcance
-  `TENANT`; `OWN` nunca é promovido a acesso coletivo.
-- Referências entre contato, oportunidade e tarefa são autorizadas no registro
-  relacionado, e a permissão da ação é verificada antes de buscar o id alvo.
-- **Inscrição em tópico de tempo real revalida permissão e alcance `TENANT`**,
-  além de aceitar somente destinos STOMP conhecidos, pela porta
-  `AutorizacaoDeEscuta`.
-- `GET /api/organizacao/permissoes` devolve permissão → alcance, para o menu
-  esconder o que não se usa sem que esconder seja a proteção.
-- OpenAPI 3.1 determinístico via springdoc 3.0.3 e snapshot versionado.
-- Erro RFC 9457 com status, código, campos, instância e correlation id; detalhes
-  internos não são apresentados pelo frontend.
-- Filtro HTTP transversal atribui correlação antes da autenticação, limita todo
-  corpo a 1 MiB inclusive em transferência chunked e limita por origem as
-  portas públicas de autenticação e webhook.
-- Histórico de mensagens usa página keyset de até 100 itens; envio da SPA usa
-  `Idempotency-Key`, replay devolve a mesma mensagem e reutilização com outro
-  conteúdo falha em conflito.
-- Readiness compara a versão estrutural esperada pela imagem com o histórico do
-  Flyway, detectando banco atrasado e imagem antiga. OpenAPI fica desabilitado
-  no profile de produção.
-- `openapi-typescript` 7.13.0 fixo e saída gerada versionada. Apenas o adaptador
-  importa o contrato; páginas usam modelos próprios.
-- Cliente HTTP central com cookies, token em memória, CSRF, timeout,
-  `AbortSignal`, correlação, paginação e retry limitado. Escrita só repete com
-  chave e contrato de idempotência explícitos.
-- CI verifica backend, snapshot OpenAPI, geração TypeScript sem diff, lint,
-  testes e build do frontend.
-- Job de segurança no CI: gitleaks no histórico completo, auditoria de
-  dependência do frontend e Trivy sobre a imagem final do backend; exceção
-  vencida, scanner incompleto ou vulnerabilidade alta/crítica **reprova**.
-  Dependabot acompanha maven, npm, github-actions e docker.
-- Baseline ASVS 5.0.0 nível 2, threat models e backlog em `contexto/seguranca/`.
-- CSP no documento da SPA, verificada no navegador em modo `enforce`; sem
-  `eval`, `innerHTML` nem HTML arbitrário, com teste de contrato que reprova a
-  regressão. Cadeia de build fixada e source map de produção não publicado.
-- Access token só em memória; retorno pós-login validado contra
-  redirecionamento aberto; refresh single-flight provado com dez requisições
-  concorrentes; saída anunciada entre abas por `BroadcastChannel`, com verbo e
-  nunca com token.
+- PostgreSQL 17 e Redis 7, imagem Temurin 25 não privilegiada, profiles
+  separados e produção fail-closed. Papéis de migração/runtime, RLS
+  `ENABLE + FORCE`, integridade composta e tenant derivado só da identidade.
+- Modelo organizacional com memberships temporais, papéis, permissões e
+  alcances; a UI identifica o responsável de contato, tarefa e oportunidade.
+- Argon2id com pepper, JWT curto, refresh rotativo, detecção de reuso, logout,
+  reset de senha e MFA TOTP/recovery code para papéis privilegiados.
+- Autorização central por ação e registro; listagens aplicam alcance antes da
+  paginação. Recursos coletivos exigem alcance `TENANT`.
+- Onboarding atômico por segmento materializa um funil só e não reescreve dado
+  personalizado quando a apresentação muda.
+- OpenAPI 3.1 determinístico, erros RFC 9457, correlação, limite de corpo,
+  CORS, CSRF e rate limit nas superfícies públicas.
+- Frontend com access token somente em memória, refresh single-flight, cache
+  remoto segregado, formulários acessíveis e identificação do responsável.
+
+## Omnichannel — backend 12 a 14 e frontend F8
+
+- V15 adiciona leases, recuperação, dead letter, payload cifrado e retenção;
+  `usage_event` é tenant-scoped e append-only.
+- Telegram Bot API 10.2 tem timeout, classificação de falha, respeito a 429,
+  limite Redis, webhook secreto e reconciliação sem descarte.
+- V17 mantém mídia Telegram em quarentena privada, valida magic bytes e limita
+  a 20 MiB. Somente `AVAILABLE` recebe URL HMAC curta e autenticada.
+- V19 adiciona paginação keyset, versão otimista, stream recuperável e SLA de
+  primeira resposta idempotente.
+- WebSocket valida origem, CONNECT, sessão e SUBSCRIBE e encerra o transporte
+  em logout, revogação ou expiração. Push nunca carrega texto do cliente.
+- O runbook operacional está em `backend/OPERACAO-OMNICHANNEL.md`.
+
+## Evolution API experimental — V18
+
+- `WHATSAPP_EVOLUTION` é exclusivo do laboratório local e não substitui o
+  `WHATSAPP_CLOUD` de produção. Compose fixa a 2.3.7 com PostgreSQL, Redis e
+  volumes próprios em `127.0.0.1:8081`.
+- Entrada `MESSAGES_UPSERT`, saída de texto, webhook e reconciliação usam o
+  mesmo pipeline idempotente do CRM.
+- `pnp-teste` está **pareada e `HEALTHY`**: entrada e saída provadas na Inbox em
+  2026-08-09, uma tentativa cada, sem retry nem dead letter.
+- O pareamento passou a existir no CRM: `POST /api/canais/{id}/pareamento` cria
+  a instância se faltar, devolve QR e código, exige `CHANNELS_WRITE`, audita
+  como credencial e recusa reparear sessão já aberta. **Ainda não implantado** —
+  subir exige aceitar a V22.
+- Um canal órfão (`teste` → instância inexistente `peixoto`) segue em `ERROR`
+  por decisão, reconciliando a cada dez segundos contra um nome que não existe.
+
+## Motor de automações — backend 15
+
+- V20 adiciona definições e versões imutáveis, execuções, passos, compensações
+  e transições append-only, todos tenant-scoped com RLS forçado.
+- Ações e gatilhos são versionados. Replay converge por chave idempotente e
+  recursão, loops e fan-out inválido são rejeitados antes da ativação.
+- Worker usa leases, limite de concorrência, quotas e deadline. Retry acontece
+  somente quando a ação declara segurança para repetição.
+- Pausa, retomada e cancelamento são idempotentes; dry-run não chama efeito
+  externo.
+- Efeitos reversíveis registram compensação; irreversíveis e efeitos em voo
+  ficam marcados. A trilha não guarda payload, mensagem nem segredo.
+  Semântica fixada em `ADR-0011`.
+
+## Conector HTTP seguro — backend 16
+
+- V21 adiciona conectores aprovados, segredos cifrados e tentativas
+  sanitizadas, todos tenant-scoped com RLS forçado.
+- A ação `HTTP_CONNECTOR_V1` recebe somente `connectorId`; origem, método,
+  caminho, corpo, headers e limites pertencem ao conector aprovado.
+- A/AAAA privados, reservados, locais e metadata são bloqueados. O snapshot DNS
+  é fixado durante a conexão e redirects ficam desativados.
+- Cliente dedicado usa TLS 1.2/1.3, timeout, teto de resposta, concorrência e
+  orçamento por tenant/conector. Produção não sobe sem proxy de egress.
+- Templates substituem só identificadores técnicos e não executam SpEL,
+  JavaScript, shell, classe, arquivo ou rede. Segredo é write-only,
+  AES-256-GCM e resolvido só no envio; request, response, token e URL
+  renderizada não entram no preview. Decisão: `ADR-0012`.
+
+## Auditoria corporativa — backend 17 em revisão, V22 aplicada
+
+- V22 adiciona `audit_event` sem `updated_at`, com RLS forçado, paginação
+  keyset, catálogo versionado e hash verificável. Aplicada em 2026-08-09.
+- Runtime só consulta e insere — confirmado no banco após a aplicação:
+  `INSERT, SELECT` e nada mais. `UPDATE`/`DELETE` é revogado e bloqueado por
+  gatilho; retenção e expurgo pertencem ao Prompt 18.
+- API interna tipada não aceita texto livre. Token, cookie, segredo, payload,
+  mensagem, arquivo e URL renderizada não existem no schema.
+- Credencial, configuração, role e exportação são fail-closed; negação é best
+  effort e preserva o `403`. `/auditoria` exige `audit.read`, audita a própria
+  leitura, mascara IDs e pagina no servidor. Decisão: `ADR-0013`.
 
 ## Migrations atuais
 
-- V1–V5: base do CRM, conversas, canais, fila e operações principais.
-- V6: registro de eventos do Spring Modulith.
-- V7: perfil e apresentação do tenant.
-- V8: referências compostas multi-tenant.
-- V9: privilégios mínimos de funções.
-- V10: modelo organizacional e escopos.
-- V11: sessão endurecida, recuperação e MFA.
-- V12: atribui ao autor registros históricos que estavam sem responsável.
-- V13: idempotência persistente do envio de mensagens.
-- Seeds e dados demonstrativos existem somente no profile `dev`. O seed mantém
-  contatos e tarefas do `ATTENDANT` em `OWN`; funil e caixa de entrada ficam no
-  papel `ATTENDANT_SHARED`, com alcance `TENANT`.
+- V1–V9: CRM/canais/fila, eventos, perfil, integridade e privilégios mínimos.
+- V10–V14: organização/escopos, sessão/MFA, responsáveis e idempotência.
+- V15–V17: fundação operacional omnichannel, Telegram e mídia em quarentena.
+- V18: adaptador experimental Evolution.
+- V19: Inbox paginada, stream recuperável e SLA.
+- V20: motor interno de automações.
+- V21: conector HTTP seguro.
+- V22: auditoria corporativa append-only.
+- Seeds e dados demonstrativos existem somente no profile `dev`.
 
 ## Verificado nesta máquina
 
-- Baseline `4901499` + working tree, branch `main`, Windows/JDK 25.0.4 e Docker Desktop 29.6.2.
-- Backend: 123 testes, 0 falhas, 0 erros, 0 ignorados; PostgreSQL/Redis reais com
-  runtime restrito `crm_runtime_test`.
-- Flyway limpo até V13, caminho de atualização e os 17 artefatos do conjunto de
-  migrations + seeds `dev` verificados.
-- Frontend: 101 testes em 22 arquivos, todos verdes.
-- `npm run api:check` e build passaram em 2026-08-03; sem source map público.
-- Lint frontend sem erros; permanecem três avisos conhecidos de Fast Refresh.
-- Backend local reconstruído como `0.0.1-dev`, readiness `UP`; volume preservado.
-  Na empresa PNP, 1 contato, 9 oportunidades e 1 tarefa ficaram atribuídos a
-  `peixoto`, sem registro órfão. As migrations V12 e V13 estão aplicadas.
-
-## Governança
-
-- `contexto/prompts/manifest.yaml` v3 é a trilha backend canônica.
-- `contexto/prompts/frontend/manifest.yaml` v4 é a trilha frontend companheira.
-- Prompts 00–08 e F0–F4 estão concluídos; a revisão corretiva do
-  Prompt 06 está registrada na sessão de 2026-08-03.
-- ADRs individuais registram banco, modelo organizacional, autenticação e o
-  alcance de autorização (ADR-0008).
-- A revalidação vigente do Gate B está em
-  `contexto/revisao-tecnica/resultados/2026-08-03-revisao-gate-b-revalidacao.md`.
-- O acervo acumulado foi versionado em 2026-08-03 na `main`, em cinco commits
-  por área (infra/CI, backend, frontend, documentação, contexto), sobre
-  `793777d`. Ambas as suítes estavam verdes no momento do commit. Nenhum
-  segredo foi versionado: o único arquivo de ambiente rastreado é
-  `.env.example`, que contém apenas nomes.
+- Branch observada `main`; Windows, JDK 25.0.4, Node 24 e Docker disponíveis.
+- Backend: **193 testes, 0 falhas**, com PostgreSQL e Redis reais. O lambda
+  `void` que impedia a compilação foi corrigido em 2026-08-09.
+- Evolution: 7 testes de contrato, OpenAPI, fronteira de módulos e
+  `MigracaoDeAtualizacaoTest` verdes.
+- Frontend: 130 testes, typecheck e lint verdes; três avisos conhecidos.
+- CRM local saudável na **V22**. A aplicação da migration preservou todos os
+  contadores (2 tenants, 3 usuários, 4 canais, 3 conversas, 32 mensagens, 1
+  contato, 18 eventos) e `audit_event` recebeu apenas INSERT/SELECT no runtime.
+- Telegram tunnel, Evolution API e dependências seguem ativos; `pnp-teste`
+  permaneceu `open` durante o deploy.
 
 ## Próximo passo
 
-1. Conferir no GitHub a primeira execução do novo scan Trivy — o repositório é
-   privado e o resultado externo não é observável daqui (`SEC-016`).
-2. Seguir para `backend:09` e `frontend:F5`.
+1. Executar `backend:18` — LGPD e retenção. A V22 está aplicada, o Prompt 17
+   fechou e o pareamento pelo CRM está no ar.
+2. Manter F9 adiado até haver medição representativa.
 
 ## Riscos restantes
 
-- Alcance por unidade não decide sobre registro de domínio: nenhuma tabela de
-  domínio declara unidade. Falha fechada por decisão registrada em ADR-0008; a
-  saída é migration aditiva com regra de backfill.
-- O frontend já consome `/api/organizacao/permissoes` para ocultar módulos sem
-  acesso e bloquear a rota antes da chamada protegida. O seletor de contexto
-  ainda usa uma lista fabricada; `/api/organizacao/contextos` segue sem consumidor.
-- `frame-ancestors` é ignorada em `<meta>` e exige cabeçalho do servidor de
-  estáticos, que não existe no repositório: a proteção contra clickjacking do
-  documento depende hoje de configuração externa não versionada.
-- Auditoria — classificada P0 pelo próprio produto — não existe (AUDIT-001);
-  bloqueia o Gate E.
-- Dois riscos médios permanecem: inscrição WebSocket já ativa após revogação
-  (`SEC-011`) e confirmação externa da primeira execução do CI (`SEC-016`).
-- Herdados de autenticação: blocklist inicial, reset por provedor externo,
-  TOTP sem resistência a phishing, e janela de até 15 min na revogação.
-- As duas altas do `npm audit` são de RSC no `react-router`, que este frontend
-  não usa. A exceção expira em 2026-11-30 e o gate reprova quando vencer.
-- O broker STOMP em memória ainda impede escala horizontal.
-- Exportação e job não existem; a revalidação exigida pelo Prompt 06 é herdada
-  por `Autorizacao` e comprovada no Prompt 21.
+- Evolution é ponte experimental baseada em sessão WhatsApp Web; produção deve
+  usar o adaptador oficial e credenciais próprias.
+- O scanner antimalware é uma fronteira externa; sem promoção, a mídia continua
+  indisponível por desenho.
+- Alcance por unidade ainda não decide registros de domínio; UNIT permanece
+  oculto até migration e backfill próprios.
+- Broker STOMP em memória impede escala horizontal e será revisto no Prompt 28.
+- O Gate E depende ainda de backup/restore medido, SLOs e CI/CD rastreável.
+- Gate C aguarda runner E2E reproduzível (`frontend:F12`).

@@ -79,7 +79,7 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 
 ---
 
-## Aceitos com prazo
+## Resolvidos
 
 ### `SEC-A01` — `GHSA-qwww-vcr4-c8h2` em `react-router`
 
@@ -97,6 +97,23 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 - **Reavaliado no F4A, 2026-08-03:** mantido. O F4A varreu o código e confirmou
   que nenhum arquivo importa API de RSC ou de framework mode; o roteador segue
   em modo declarativo com `BrowserRouter`. O prazo não foi estendido.
+- **Resolvido em 2026-08-08:** `react-router-dom` 7.18.2 saiu da faixa afetada;
+  `npm audit` passou com zero vulnerabilidades e a exceção foi removida.
+
+## Aceitos com prazo
+
+### `SEC-A02` — `GHSA-5p4m-2wfm-xmqj` em `js-yaml`
+
+- **Severidade reportada:** alta · **Exposição real:** build/CI, entrada local
+- **Responsável:** PNPeixoto · **Prazo:** 2026-11-30
+- **Fundamento:** chega por `openapi-typescript` → `@redocly/openapi-core` e não
+  entra no bundle/runtime. O comando recebe `backend/openapi/openapi.json`,
+  artefato JSON local e versionado, não YAML externo. A falha exige `!!omap`.
+- **Compatibilidade medida:** `js-yaml` 5.2.3 quebra Redocly 1.x; Redocly 2.46
+  quebra o subpath usado por openapi-typescript 7.13.0. `api:check` detectou os
+  dois, e ambos foram revertidos. `nanoid` foi corrigido separadamente.
+- **Gatilho:** remover assim que openapi-typescript publicar linha compatível.
+- **Mecânica:** exceção nomeada em `.github/security/excecoes-de-dependencia.json`.
 
 ### `SEC-007` — CSP com `style-src 'unsafe-inline'`
 
@@ -223,7 +240,7 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 - **Responsável:** PNPeixoto · **Prazo:** gatilho, não data — o primeiro
   serviço adicional que precise verificar token
 
-### `SEC-009` — Log pode carregar corpo de resposta do provedor
+### `SEC-009` — Log pode carregar corpo de resposta do provedor — **RESOLVIDO**
 
 - **Capítulo:** V14, V16 · **Severidade:** baixa
 - **Situação:** os 17 pontos de log foram auditados e registram identificador,
@@ -232,6 +249,10 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 - **Correção mínima:** registrar tipo e código do erro do provedor, não a
   exceção inteira.
 - **Responsável:** PNPeixoto · **Prazo:** Prompt 17, junto com auditoria
+- **Correção aplicada:** workers de webhook, fila e tempo real e o handler
+  global registram correlação, IDs técnicos e classe da falha, sem mensagem,
+  stack ou objeto bruto que possa incorporar resposta do provedor.
+- **Evidência:** inspeção de todos os usos `log.error/warn` no backend.
 
 ### `SEC-010` — Capítulo V5 inteiro em aberto quando mídia chegar
 
@@ -243,13 +264,18 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
   assinada com expiração.
 - **Responsável:** PNPeixoto · **Prazo:** Prompt 13
 
-### `SEC-013` — Ações de CI referenciadas por tag móvel
+### `SEC-013` — Ações de CI referenciadas por tag móvel — **RESOLVIDO**
 
 - **Capítulo:** V13 · **Severidade:** baixa
 - **Situação:** o workflow usa `@v4` e `@v2`, que são tags móveis. Quem
   controla a tag controla o que roda no pipeline.
 - **Correção mínima:** fixar por SHA, com Dependabot mantendo a atualização.
 - **Responsável:** PNPeixoto · **Prazo:** Prompt 24, que trata CI/CD
+- **Correção aplicada:** todas as entradas `uses:` do workflow estão fixadas
+  por SHA completo; o comentário preserva a versão humana e o ecossistema
+  `github-actions` do Dependabot continua responsável pelas atualizações.
+- **Evidência:** `.github/workflows/ci.yml` sem referência móvel e consulta das
+  referências oficiais dos repositórios das actions em 2026-08-05.
 
 ---
 
@@ -257,7 +283,7 @@ permaneceu aberto. Os dois altos foram tratados no Prompt 07, e o médio
 
 | Id | Descrição | Bloqueia | Prompt |
 |---|---|---|---|
-| `AUDIT-001` | Trilha de auditoria não existe; é P0 do produto | Gate E | 17 |
+| `AUDIT-001` — **EM REVISÃO** | V22, backend e interface implementados; falta reexecução backend consolidada | Gate E | 17 |
 | `AUTZ-002` (resíduo) | Permissões já dirigem menu e guardas; `/organizacao/contextos` segue sem consumidor e o seletor usa lista fabricada | Gate C | trilha frontend |
 | ADR-0008 | Escopo por unidade depende de `unit_id` nas tabelas de domínio | — | migration futura |
 
