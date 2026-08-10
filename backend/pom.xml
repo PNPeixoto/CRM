@@ -43,7 +43,7 @@
 		<!-- O BOM do Spring Boot não gerencia o BouncyCastle. Sem versão fixa
 		     aqui, o build não resolve a dependência. -->
 		<bouncycastle.version>1.85</bouncycastle.version>
-		<springdoc.version>3.0.3</springdoc.version>
+		<springdoc.version>3.1.0</springdoc.version>
 		<!-- A suíte normal cobre unitários + integração e deixa carga fora do
 		     caminho cotidiano. Os profiles abaixo tornam cada corte reproduzível. -->
 		<testes.grupos.incluidos></testes.grupos.incluidos>
