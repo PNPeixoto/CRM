@@ -27,7 +27,7 @@ class BancoSegurancaTest {
             "automation_execution", "automation_execution_step",
             "automation_compensation", "automation_transition",
             "http_connector", "http_connector_secret", "http_connector_attempt",
-            "audit_event");
+            "audit_event", "legal_hold");
 
     private static final Set<String> TABELAS_OPERACIONAIS = Set.of(
             "event_publication", "flyway_schema_history");
@@ -49,6 +49,13 @@ class BancoSegurancaTest {
             "reservar_midias_expiradas",
             "next_realtime_sequence",
             "reservar_slas_vencidos",
+            "ha_legal_hold",
+            "expurgar_conversas_encerradas",
+            "anonimizar_contatos",
+            "expurgar_telemetria",
+            "expurgar_eventos_tempo_real",
+            "expurgar_tentativas_de_conector",
+            "expurgar_auditoria",
             "reservar_execucoes_automacao");
 
     @Autowired JdbcTemplate jdbc;
@@ -132,7 +139,14 @@ class BancoSegurancaTest {
                 "reservar_canais_evolution_para_reconciliar",
                 "reservar_midias_expiradas",
                 "reservar_slas_vencidos",
-                "reservar_execucoes_automacao");
+                "ha_legal_hold",
+            "expurgar_conversas_encerradas",
+            "anonimizar_contatos",
+            "expurgar_telemetria",
+            "expurgar_eventos_tempo_real",
+            "expurgar_tentativas_de_conector",
+            "expurgar_auditoria",
+            "reservar_execucoes_automacao");
 
         List<String> executaveis = jdbc.queryForList("""
                 SELECT p.proname
@@ -155,7 +169,7 @@ class BancoSegurancaTest {
     }
 
     @Test
-    void flywayValidaHistoricoLimpoAteV22() {
+    void flywayValidaHistoricoLimpoAteV23() {
         flyway.validate();
         List<String> versoes = jdbc.queryForList("""
                 SELECT version
@@ -164,6 +178,6 @@ class BancoSegurancaTest {
                  ORDER BY installed_rank
                 """, String.class);
         assertThat(versoes).containsExactly(
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22");
+                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23");
     }
 }

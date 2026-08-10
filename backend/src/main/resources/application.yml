@@ -69,7 +69,7 @@ app:
   schema:
     # Atualizado junto com toda migration estrutural. Readiness compara este
     # valor ao histórico realmente aplicado e detecta inclusive imagem antiga.
-    expected-version: "22"
+    expected-version: "23"
   security:
     # Sem valor padrão, de propósito: a aplicação não sobe sem estes segredos.
     # Um default aqui seria herdado silenciosamente em produção, e um pepper
@@ -122,6 +122,30 @@ app:
   retencao-de-webhook:
     habilitada: true
     intervalo-ms: 3600000
+
+  # Retenção por categoria — LGPD-002.
+  #
+  # DESLIGADA POR PADRÃO, e isso não é conservadorismo decorativo: os prazos
+  # abaixo são placeholders que ninguém validou juridicamente. Ligar o expurgo
+  # com prazo errado apaga dado de cliente de forma irreversível, e o erro só
+  # aparece quando alguém procura o que já não existe.
+  #
+  # Antes de `habilitada: true`, cada prazo precisa de decisão registrada em
+  # `contexto/privacidade/inventario-de-tratamento.md`, com hipótese legal e
+  # responsável. Zero desliga a categoria individualmente.
+  privacidade:
+    retencao:
+      habilitada: ${PRIVACIDADE_RETENCAO_HABILITADA:false}
+      intervalo-ms: ${PRIVACIDADE_RETENCAO_INTERVALO_MS:3600000}
+      tamanho-do-lote: 200
+      dias:
+        # A VALIDAR — nenhum destes números foi decidido.
+        conversas-encerradas: ${RETENCAO_CONVERSAS_DIAS:0}
+        contatos-excluidos: ${RETENCAO_CONTATOS_DIAS:0}
+        telemetria: ${RETENCAO_TELEMETRIA_DIAS:0}
+        eventos-tempo-real: ${RETENCAO_TEMPO_REAL_DIAS:0}
+        tentativas-de-conector: ${RETENCAO_CONECTOR_DIAS:0}
+        auditoria: ${RETENCAO_AUDITORIA_DIAS:0}
 
   websocket:
     max-connections-per-user: 3
