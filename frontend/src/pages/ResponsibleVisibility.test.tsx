@@ -1,9 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { contatosApi, funilApi, tarefasApi } from '@/shared/crm/api';
 import { ContactsPage } from './contacts/ContactsPage';
 import { PipelinesPage } from './pipelines/PipelinesPage';
 import { TasksPage } from './tasks/TasksPage';
+import { renderComEstadoServidor } from '@/test/estadoServidor';
 
 vi.mock('@/shared/crm/api', () => ({
   contatosApi: { listar: vi.fn(), criar: vi.fn(), atualizar: vi.fn(), excluir: vi.fn() },
@@ -95,7 +97,11 @@ describe('visão consolidada por responsável', () => {
   });
 
   it('identifica donos diferentes na lista consolidada de contatos', async () => {
-    render(<ContactsPage />);
+    renderComEstadoServidor(
+      <MemoryRouter>
+        <ContactsPage />
+      </MemoryRouter>,
+    );
 
     expect(await screen.findByText('Maria')).toBeInTheDocument();
     expect(screen.getByText('Peixoto (@peixoto)')).toBeInTheDocument();
@@ -103,14 +109,14 @@ describe('visão consolidada por responsável', () => {
   });
 
   it('identifica o responsável da tarefa', async () => {
-    render(<TasksPage />);
+    renderComEstadoServidor(<TasksPage />);
 
     expect(await screen.findByText('Retornar para Maria')).toBeInTheDocument();
     expect(screen.getByText('Responsável: Atendente (@atendente)')).toBeInTheDocument();
   });
 
   it('identifica o responsável no card do funil', async () => {
-    render(<PipelinesPage />);
+    renderComEstadoServidor(<PipelinesPage />);
 
     expect(await screen.findByText('Contrato Maria')).toBeInTheDocument();
     expect(screen.getByText('Responsável: Peixoto (@peixoto)')).toBeInTheDocument();

@@ -1,23 +1,16 @@
-import { Client, type IMessage } from '@stomp/stompjs';
+import { Client, ReconnectionTimeMode, type IMessage } from '@stomp/stompjs';
 import { useEffect, useRef, useState } from 'react';
 import { obterAccessToken, tentarRenovarSessao } from '@/lib/api';
+import { conversasApi } from './api';
 import type { MensagemPush } from './tipos';
 
 export type EstadoConexao = 'conectando' | 'conectado' | 'desconectado';
 
 interface Opcoes {
   readonly tenantId: string | null;
-  /** Conversa aberta na tela; `null` quando o usuário está só na lista. */
   readonly conversaAtiva: string | null;
+  readonly sequenciaInicial: number;
   readonly aoReceberMensagem: (push: MensagemPush) => void;
-  /**
-   * Chamado a cada (re)conexão. É aqui que a tela recarrega do REST.
-   *
-   * Enquanto o socket esteve caído, mensagens chegaram e não foram entregues —
-   * e não há como saber quantas. Tentar remendar o que faltou é reconstruir
-   * estado a partir de informação incompleta; recarregar é barato e sempre
-   * correto. Tempo real é otimização, o REST é a fonte da verdade.
-   */
   readonly aoSincronizar: () => void;
 }
 
@@ -26,69 +19,147 @@ const URL_WEBSOCKET = (() => {
   return `${protocolo}//${window.location.host}/ws`;
 })();
 
+export type DecisaoDeSequencia = 'duplicado' | 'proximo' | 'lacuna';
+
+/** Regra pura compartilhada pelos caminhos WebSocket e REST. */
+export function decidirSequencia(atual: number, recebida: number): DecisaoDeSequencia {
+  if (recebida <= atual) return 'duplicado';
+  if (recebida === atual + 1) return 'proximo';
+  return 'lacuna';
+}
+
+function lerPush(frame: IMessage): MensagemPush | null {
+  try {
+    const valor = JSON.parse(frame.body) as Partial<MensagemPush>;
+    if (
+      typeof valor.eventId !== 'string'
+      || typeof valor.sequence !== 'number'
+      || typeof valor.tipo !== 'string'
+      || typeof valor.conversationId !== 'string'
+      || (valor.messageId !== null && typeof valor.messageId !== 'string')
+      || typeof valor.versao !== 'number'
+      || typeof valor.ocorridoEm !== 'string'
+    ) return null;
+    return valor as MensagemPush;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Conexão STOMP com o backend.
- *
- * <p>O token vai no cabeçalho do frame CONNECT, não na URL. A API WebSocket do
- * navegador não deixa definir cabeçalho no handshake, e a saída comum — token
- * na query string — o despeja no log do proxy, no histórico e no `Referer`.
- * O `connectHeaders` do stompjs é enviado depois do handshake, dentro da
- * conexão já estabelecida.
+ * Mantém o socket como aceleração e o REST como fonte da verdade. Cada evento
+ * possui sequência monotônica por empresa; duplicatas são ignoradas e qualquer
+ * lacuna é recomposta pelo endpoint de eventos antes de atualizar a tela.
  */
 export function useTempoReal({
   tenantId,
   conversaAtiva,
+  sequenciaInicial,
   aoReceberMensagem,
   aoSincronizar,
 }: Opcoes): EstadoConexao {
   const [estado, setEstado] = useState<EstadoConexao>('desconectado');
   const clienteRef = useRef<Client | null>(null);
-
-  // Os callbacks entram por ref para que trocá-los não derrube e recrie a
-  // conexão. Sem isso, cada render do componente pai reconectaria o socket.
+  const cursorRef = useRef(sequenciaInicial);
+  const sequenciaInicialRef = useRef(sequenciaInicial);
+  const processarPushRef = useRef<(push: MensagemPush) => void>(() => undefined);
+  const recuperarRef = useRef<() => Promise<void>>(async () => undefined);
   const callbacksRef = useRef({ aoReceberMensagem, aoSincronizar });
   callbacksRef.current = { aoReceberMensagem, aoSincronizar };
+  sequenciaInicialRef.current = sequenciaInicial;
 
   useEffect(() => {
-    if (!tenantId) return;
+    cursorRef.current = Math.max(cursorRef.current, sequenciaInicial);
+  }, [sequenciaInicial, tenantId]);
+
+  useEffect(() => {
+    if (!tenantId) {
+      setEstado('desconectado');
+      return;
+    }
+
+    cursorRef.current = sequenciaInicialRef.current;
+    const abortador = new AbortController();
+    let recuperacaoEmCurso: Promise<void> | null = null;
+    let timerDePolling: ReturnType<typeof setTimeout> | null = null;
+    let encerrado = false;
+
+    const recuperar = (): Promise<void> => {
+      if (recuperacaoEmCurso) return recuperacaoEmCurso;
+
+      const tarefa = (async () => {
+        let houveMudanca = false;
+        do {
+          const pagina = await conversasApi.eventos(cursorRef.current, abortador.signal);
+          if (pagina.resetObrigatorio) {
+            cursorRef.current = pagina.ultimaSequencia;
+            callbacksRef.current.aoSincronizar();
+            return;
+          }
+
+          for (const evento of [...pagina.eventos].sort((a, b) => a.sequence - b.sequence)) {
+            const decisao = decidirSequencia(cursorRef.current, evento.sequence);
+            if (decisao === 'duplicado') continue;
+            if (decisao === 'lacuna') {
+              cursorRef.current = pagina.ultimaSequencia;
+              callbacksRef.current.aoSincronizar();
+              return;
+            }
+            cursorRef.current = evento.sequence;
+            houveMudanca = true;
+          }
+
+          if (!pagina.temMais) break;
+        } while (!abortador.signal.aborted);
+
+        if (houveMudanca) callbacksRef.current.aoSincronizar();
+      })().catch((erro: unknown) => {
+        if (!abortador.signal.aborted) {
+          // A próxima tentativa do socket ou do polling retoma do mesmo cursor.
+          console.warn('Não foi possível recuperar os eventos da Inbox.', erro);
+        }
+      });
+
+      recuperacaoEmCurso = tarefa.finally(() => {
+        recuperacaoEmCurso = null;
+      });
+      return recuperacaoEmCurso;
+    };
+    recuperarRef.current = recuperar;
+
+    processarPushRef.current = (push) => {
+      const decisao = decidirSequencia(cursorRef.current, push.sequence);
+      if (decisao === 'duplicado') return;
+      if (decisao === 'lacuna') {
+        void recuperar();
+        return;
+      }
+      cursorRef.current = push.sequence;
+      callbacksRef.current.aoReceberMensagem(push);
+    };
 
     const cliente = new Client({
       brokerURL: URL_WEBSOCKET,
-      reconnectDelay: 5000,
-      // Heartbeat nos dois sentidos. Sem ele, uma conexão morta por queda de
-      // rede permanece "aberta" para o navegador por minutos, e a tela fica
-      // silenciosamente desatualizada sem indicar nada ao usuário.
-      heartbeatIncoming: 10000,
-      heartbeatOutgoing: 10000,
-
-      // Executado a cada tentativa, inclusive nas reconexões — e é por isso
-      // que o token é lido aqui dentro e não capturado fora: depois de 15
-      // minutos o token da primeira conexão já expirou.
+      reconnectDelay: 1_000 + Math.floor(Math.random() * 500),
+      reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
+      maxReconnectDelay: 30_000,
+      heartbeatIncoming: 10_000,
+      heartbeatOutgoing: 10_000,
       beforeConnect: async () => {
-        if (!obterAccessToken()) {
-          await tentarRenovarSessao();
-        }
-        cliente.connectHeaders = {
-          Authorization: `Bearer ${obterAccessToken() ?? ''}`,
-        };
+        setEstado('conectando');
+        if (!obterAccessToken()) await tentarRenovarSessao();
+        cliente.connectHeaders = { Authorization: `Bearer ${obterAccessToken() ?? ''}` };
       },
-
       onConnect: () => {
         setEstado('conectado');
-
         cliente.subscribe(`/topic/tenant/${tenantId}/inbox`, (frame: IMessage) => {
-          callbacksRef.current.aoReceberMensagem(JSON.parse(frame.body) as MensagemPush);
+          const push = lerPush(frame);
+          if (push) processarPushRef.current(push);
         });
-
-        callbacksRef.current.aoSincronizar();
+        void recuperar();
       },
-
       onWebSocketClose: () => setEstado('desconectado'),
-
       onStompError: () => {
-        // O backend derruba a conexão quando o CONNECT ou o SUBSCRIBE são
-        // recusados. Token expirado é o caso comum: renovamos, e a política de
-        // reconexão do stompjs faz a próxima tentativa já autenticada.
         setEstado('desconectado');
         void tentarRenovarSessao();
       },
@@ -98,14 +169,33 @@ export function useTempoReal({
     setEstado('conectando');
     cliente.activate();
 
+    const agendarPolling = (imediato = false) => {
+      if (timerDePolling) clearTimeout(timerDePolling);
+      const intervalo = imediato ? 0 : document.hidden ? 30_000 : 5_000;
+      timerDePolling = setTimeout(async () => {
+        if (!encerrado && navigator.onLine && !cliente.connected) await recuperar();
+        if (!encerrado) agendarPolling();
+      }, intervalo);
+    };
+    const aoVoltar = () => agendarPolling(true);
+    const aoFicarOffline = () => setEstado('desconectado');
+    document.addEventListener('visibilitychange', aoVoltar);
+    window.addEventListener('online', aoVoltar);
+    window.addEventListener('offline', aoFicarOffline);
+    agendarPolling();
+
     return () => {
+      encerrado = true;
+      abortador.abort();
+      if (timerDePolling) clearTimeout(timerDePolling);
+      document.removeEventListener('visibilitychange', aoVoltar);
+      window.removeEventListener('online', aoVoltar);
+      window.removeEventListener('offline', aoFicarOffline);
       clienteRef.current = null;
       void cliente.deactivate();
     };
   }, [tenantId]);
 
-  // Inscrição na conversa aberta, separada da conexão: trocar de conversa não
-  // pode derrubar o socket.
   useEffect(() => {
     const cliente = clienteRef.current;
     if (!cliente || !cliente.connected || !tenantId || !conversaAtiva) return;
@@ -113,10 +203,10 @@ export function useTempoReal({
     const inscricao = cliente.subscribe(
       `/topic/tenant/${tenantId}/conversa/${conversaAtiva}`,
       (frame: IMessage) => {
-        callbacksRef.current.aoReceberMensagem(JSON.parse(frame.body) as MensagemPush);
+        const push = lerPush(frame);
+        if (push) processarPushRef.current(push);
       },
     );
-
     return () => inscricao.unsubscribe();
   }, [tenantId, conversaAtiva, estado]);
 

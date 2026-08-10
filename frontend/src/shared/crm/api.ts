@@ -1,6 +1,7 @@
 import type {
   CanalRequestWire,
   CanalWire,
+  PareamentoWire,
   ContatoRequestWire,
   ContatoWire,
   DealFunilWire,
@@ -12,10 +13,15 @@ import type {
 } from '@/adapters/http/contracts';
 import { obrigatorio, umDe } from '@/adapters/http/mapping';
 import { api } from '@/lib/api';
-import type { Canal, Contato, Funil, Oportunidade, Tarefa, VisaoGeral } from './tipos';
+import type {
+  Canal, Contato, Funil, Oportunidade, PareamentoCanal, Tarefa, VisaoGeral,
+} from './tipos';
 
 const STATUS_OPORTUNIDADE = ['OPEN', 'WON', 'LOST'] as const;
-const TIPOS_CANAL = ['LIVE_CHAT', 'TELEGRAM', 'WHATSAPP_CLOUD', 'INSTAGRAM'] as const;
+const TIPOS_CANAL = [
+  'LIVE_CHAT', 'TELEGRAM', 'WHATSAPP_CLOUD', 'WHATSAPP_EVOLUTION', 'INSTAGRAM',
+] as const;
+const ESTADOS_REMOTOS_CANAL = ['CHECKING', 'HEALTHY', 'DEGRADED', 'REPAIRED', 'ERROR'] as const;
 
 function mapearContato(dados: ContatoWire): Contato {
   return {
@@ -90,6 +96,12 @@ function mapearCanal(dados: CanalWire): Canal {
     ativo: obrigatorio(dados.ativo, 'canal.ativo'),
     temToken: obrigatorio(dados.temToken, 'canal.temToken'),
     temSegredoWebhook: obrigatorio(dados.temSegredoWebhook, 'canal.temSegredoWebhook'),
+    estadoRemoto: dados.estadoRemoto == null
+      ? null
+      : umDe(dados.estadoRemoto, ESTADOS_REMOTOS_CANAL, 'canal.estadoRemoto'),
+    pendenciasRemotas: dados.pendenciasRemotas ?? null,
+    ultimaReconciliacaoEm: dados.ultimaReconciliacaoEm ?? null,
+    ultimaFalhaRemotaEm: dados.ultimaFalhaRemotaEm ?? null,
   };
 }
 
@@ -126,22 +138,39 @@ function corpoContato(dados: Partial<Contato> & { nome: string }): ContatoReques
 }
 
 export const contatosApi = {
-  listar: async (busca?: string): Promise<Contato[]> =>
+  listar: async (
+    busca?: string,
+    signal?: AbortSignal,
+    pagina?: number,
+    tamanho?: number,
+  ): Promise<Contato[]> => {
+    const parametros = new URLSearchParams();
+    if (busca) parametros.set('busca', busca);
+    if (pagina !== undefined) parametros.set('pagina', String(pagina));
+    if (tamanho !== undefined) parametros.set('tamanho', String(tamanho));
+    if (pagina !== undefined || tamanho !== undefined) parametros.set('ordenarPor', 'nome');
+    const consulta = parametros.toString();
+    return (
     (await api.get<readonly ContatoWire[]>(
-      `/contatos${busca ? `?busca=${encodeURIComponent(busca)}` : ''}`,
-    )).map(mapearContato),
+      `/contatos${consulta ? `?${consulta}` : ''}`,
+      { signal },
+    )).map(mapearContato));
+  },
   criar: async (dados: Partial<Contato> & { nome: string }): Promise<Contato> =>
-    mapearContato(await api.post<ContatoWire>('/contatos', corpoContato(dados))),
+    mapearContato(await api.post<ContatoWire>('/contatos', corpoContato(dados), {
+      idempotencyKey: globalThis.crypto.randomUUID(),
+      retry: 'idempotent-write',
+    })),
   atualizar: async (id: string, dados: Partial<Contato> & { nome: string }): Promise<Contato> =>
     mapearContato(await api.put<ContatoWire>(`/contatos/${id}`, corpoContato(dados))),
   excluir: (id: string): Promise<void> => api.delete<void>(`/contatos/${id}`),
 };
 
 export const funilApi = {
-  listarFunis: async (): Promise<Funil[]> =>
-    (await api.get<readonly DealFunilWire[]>('/funis')).map(mapearFunil),
-  listarOportunidades: async (funilId: string): Promise<Oportunidade[]> =>
-    (await api.get<readonly OportunidadeWire[]>(`/funis/${funilId}/oportunidades`))
+  listarFunis: async (signal?: AbortSignal): Promise<Funil[]> =>
+    (await api.get<readonly DealFunilWire[]>('/funis', { signal })).map(mapearFunil),
+  listarOportunidades: async (funilId: string, signal?: AbortSignal): Promise<Oportunidade[]> =>
+    (await api.get<readonly OportunidadeWire[]>(`/funis/${funilId}/oportunidades`, { signal }))
       .map(mapearOportunidade),
   criar: async (dados: {
     titulo: string;
@@ -168,8 +197,8 @@ export const funilApi = {
 };
 
 export const tarefasApi = {
-  listar: async (apenasAbertas = false): Promise<Tarefa[]> =>
-    (await api.get<readonly TarefaWire[]>(`/tarefas?apenasAbertas=${apenasAbertas}`))
+  listar: async (apenasAbertas = false, signal?: AbortSignal): Promise<Tarefa[]> =>
+    (await api.get<readonly TarefaWire[]>(`/tarefas?apenasAbertas=${apenasAbertas}`, { signal }))
       .map(mapearTarefa),
   criar: async (dados: {
     titulo: string;
@@ -189,8 +218,8 @@ export const tarefasApi = {
 };
 
 export const canaisApi = {
-  listar: async (): Promise<Canal[]> =>
-    (await api.get<readonly CanalWire[]>('/canais')).map(mapearCanal),
+  listar: async (signal?: AbortSignal): Promise<Canal[]> =>
+    (await api.get<readonly CanalWire[]>('/canais', { signal })).map(mapearCanal),
   criar: async (dados: {
     tipo: string;
     nome: string;
@@ -205,9 +234,26 @@ export const canaisApi = {
     return mapearCanal(await api.post<CanalWire>('/canais', corpo));
   },
   alternarAtivacao: (id: string): Promise<void> => api.post<void>(`/canais/${id}/ativacao`),
+
+  /**
+   * Pede material de pareamento do WhatsApp Evolution.
+   *
+   * <p>O retorno é credencial de sessão e não entra em cache de servidor nem
+   * de cliente: a resposta vem `no-store` e esta função não é exposta como
+   * query, só como ação explícita de quem clicou.
+   */
+  parear: async (id: string): Promise<PareamentoCanal> => {
+    const dados = await api.post<PareamentoWire>(`/canais/${id}/pareamento`);
+    return {
+      estado: dados.estado ?? 'unknown',
+      qrCode: dados.qrCodeBase64 ?? null,
+      codigo: dados.codigoDeParear ?? null,
+      tentativa: dados.tentativa ?? 0,
+    };
+  },
 };
 
 export const relatoriosApi = {
-  visaoGeral: async (): Promise<VisaoGeral> =>
-    mapearVisao(await api.get<VisaoGeralWire>('/relatorios/visao-geral')),
+  visaoGeral: async (signal?: AbortSignal): Promise<VisaoGeral> =>
+    mapearVisao(await api.get<VisaoGeralWire>('/relatorios/visao-geral', { signal })),
 };

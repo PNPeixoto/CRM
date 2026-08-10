@@ -1,28 +1,19 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { relatoriosApi } from '@/shared/crm/api';
-import type { VisaoGeral } from '@/shared/crm/tipos';
 import { formatarMoeda, formatarNumero } from '@/shared/formato';
 import { EstadoDeConteudo } from '@/components/ui/content-state';
 import { Cartao, Carregando, Pagina } from '@/shared/components/Pagina';
+import { useVisaoGeral } from '@/shared/server-state/recursos';
 
 export function DashboardPage() {
-  const [dados, setDados] = useState<VisaoGeral | null>(null);
-  const [carregando, setCarregando] = useState(true);
-
-  useEffect(() => {
-    relatoriosApi
-      .visaoGeral()
-      .then(setDados)
-      .catch(() => setDados(null))
-      .finally(() => setCarregando(false));
-  }, []);
+  const dadosQuery = useVisaoGeral();
+  const dados = dadosQuery.data;
 
   return (
     <Pagina titulo="Visão geral" descricao="O que precisa da sua atenção agora">
-      {carregando ? (
+      {dadosQuery.isPending ? (
         <Carregando />
-      ) : !dados ? (
+      ) : dadosQuery.isError || !dados ? (
         <EstadoDeConteudo
           tipo="erro"
           titulo="Não foi possível carregar os indicadores"

@@ -16,6 +16,7 @@ describe('TenantOnboardingGuard', () => {
         navegacao: [], funilPadrao: { nome: 'Funil', etapas: [] },
       },
       permissoes: { 'organization.manage': 'TENANT' },
+      contextosNavegaveis: [],
       carregando: false,
       erroAoCarregar: false,
       recarregar: vi.fn(),
@@ -41,6 +42,7 @@ describe('TenantOnboardingGuard', () => {
     vi.mocked(useTenantPresentation).mockReturnValue({
       apresentacao: null,
       permissoes: null,
+      contextosNavegaveis: [],
       carregando: false,
       erroAoCarregar: true,
       recarregar: vi.fn(),

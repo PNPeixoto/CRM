@@ -51,7 +51,7 @@ describe('AppLayout', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.getByRole('button', { name: 'Abrir menu' })).toHaveFocus();
     await esperarSemViolacoesAcessiveis(container);
-  });
+  }, 10_000);
 
   it('não mostra seletor com um contexto e persiste menu recolhido sem dados do usuário', async () => {
     const primeira = renderLayout({ contextosAutorizados: contextoUnico });

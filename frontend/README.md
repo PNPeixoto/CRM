@@ -69,8 +69,23 @@ item é conveniência de interface, nunca autorização.
 A casca oferece skip link, disclosure mobile com foco inicial e Escape, menu
 desktop recolhível e estados 403/404 distintos. A preferência do menu grava
 somente `1` em chave v1 escopada por hash do usuário; sessão, tenant, login e
-autorização não são persistidos. O seletor de contexto só aparece com mais de
-uma opção autorizada e desmonta o conteúdo anterior durante a troca.
+autorização não são persistidos. Os contextos vêm de
+`/api/organizacao/contextos`; unidades não aparecem até o backend conseguir
+aplicar o recorte aos agregados. Um futuro seletor só pode aparecer com mais de
+uma opção realmente navegável e deve desmontar o conteúdo anterior na troca.
+
+## Estado de servidor
+
+Consultas e mutações passam pela fronteira `shared/server-state`, descrita em
+`ESTADO-SERVIDOR.md`. Toda chave inclui tenant, unidade, identidade, recurso e
+parâmetros; sessão nova e logout cancelam e limpam o cache em memória antes de
+alterar o usuário visível. Não existe cache persistente/offline. Páginas não
+importam TanStack Query diretamente, o que mantém a decisão reversível.
+
+## Formulários
+
+Validação local, erros RFC 9457 por campo, foco, submissão repetível e as
+fronteiras de data, horário, dinheiro e segredo estão em `FORMULARIOS.md`.
 
 ## Política
 

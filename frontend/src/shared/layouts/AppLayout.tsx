@@ -137,7 +137,7 @@ export function AppLayout({
     <div className="flex h-dvh flex-col overflow-hidden lg:flex-row">
       <a
         href="#conteudo-principal"
-        className="fixed left-3 top-3 z-50 -translate-y-20 rounded-[var(--radius-control)] bg-[var(--surface-raised)] px-3 py-2 text-sm font-medium text-[var(--text-strong)] focus:translate-y-0"
+        className="fixed left-3 top-3 z-50 inline-flex min-h-11 -translate-y-20 items-center rounded-[var(--radius-control)] bg-[var(--surface-raised)] px-3 py-2 text-sm font-medium text-[var(--text-strong)] focus:translate-y-0"
       >
         Pular para o conteúdo
       </a>
@@ -151,7 +151,7 @@ export function AppLayout({
           aria-expanded={menuMobileAberto}
           aria-label={menuMobileAberto ? 'Fechar menu' : 'Abrir menu'}
           onClick={() => setMenuMobileAberto((aberto) => !aberto)}
-          className="inline-flex size-10 items-center justify-center rounded-[var(--radius-control)] border border-[var(--border-control)]"
+          className="inline-flex size-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--border-control)]"
         >
           {menuMobileAberto ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
         </button>
@@ -175,7 +175,7 @@ export function AppLayout({
             type="button"
             onClick={alternarMenuRecolhido}
             aria-label={menuRecolhido ? 'Expandir menu' : 'Recolher menu'}
-            className="inline-flex size-9 items-center justify-center rounded-[var(--radius-control)] hover:bg-[var(--surface-shell-hover)]"
+            className="inline-flex size-11 items-center justify-center rounded-[var(--radius-control)] hover:bg-[var(--surface-shell-hover)]"
           >
             {menuRecolhido ? (
               <PanelLeftOpen aria-hidden="true" />
@@ -256,7 +256,7 @@ export function AppLayout({
             type="button"
             onClick={() => void sair()}
             className={cn(
-              'mt-2 w-full rounded-[var(--radius-control)] px-2 py-1.5 text-left text-sm hover:bg-[var(--surface-shell-hover)]',
+              'mt-2 min-h-11 w-full rounded-[var(--radius-control)] px-2 py-1.5 text-left text-sm hover:bg-[var(--surface-shell-hover)]',
               menuRecolhido && 'lg:text-center',
             )}
             aria-label="Sair"
@@ -316,7 +316,7 @@ function ItemDeNavegacao({
       title={recolhido ? rota.rotulo : undefined}
       className={({ isActive }) =>
         cn(
-          'flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-sm transition-colors',
+          'flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-sm transition-colors',
           recolhido ? 'lg:justify-center' : 'justify-between',
           isActive
             ? 'bg-[var(--brand)] font-medium text-[var(--text-on-brand)]'

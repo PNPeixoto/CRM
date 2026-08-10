@@ -99,7 +99,8 @@ export const ROTAS: readonly RotaApp[] = [
   },
   {
     id: 'audit', caminho: '/auditoria', rotulo: 'Auditoria',
-    icone: 'scroll-text', status: 'em_producao', grupo: 'plataforma',
+    icone: 'scroll-text', status: 'pronto', grupo: 'plataforma',
+    permissaoNecessaria: 'audit.read',
     componente: lazy(() => import('@/pages/audit').then((m) => ({ default: m.AuditPage }))),
   },
   {

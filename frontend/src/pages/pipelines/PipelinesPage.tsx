@@ -1,14 +1,19 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { AlertaErro } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { funilApi } from '@/shared/crm/api';
 import { formatarResponsavel } from '@/shared/crm/responsavel';
-import type { Etapa, Funil, Oportunidade } from '@/shared/crm/tipos';
+import type { Etapa, Oportunidade } from '@/shared/crm/tipos';
 import { formatarMoeda, paraCentavos } from '@/shared/formato';
 import { Carregando, Pagina } from '@/shared/components/Pagina';
+import {
+  useCriarOportunidade,
+  useFunis,
+  useMoverOportunidade,
+  useOportunidades,
+} from '@/shared/server-state/recursos';
 
 /**
  * Kanban do funil.
@@ -18,41 +23,31 @@ import { Carregando, Pagina } from '@/shared/components/Pagina';
  * daria para ter um card em "Ganho" que o relatório ainda conta como aberto.
  */
 export function PipelinesPage() {
-  const [funis, setFunis] = useState<readonly Funil[]>([]);
-  const [funilAtivo, setFunilAtivo] = useState<Funil | null>(null);
-  const [oportunidades, setOportunidades] = useState<readonly Oportunidade[]>([]);
-  const [carregando, setCarregando] = useState(true);
+  const [funilAtivoId, setFunilAtivoId] = useState<string | null>(null);
   const [formAberto, setFormAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-
-  useEffect(() => {
-    funilApi
-      .listarFunis()
-      .then((lista) => {
-        setFunis(lista);
-        setFunilAtivo(lista.find((f) => f.padrao) ?? lista[0] ?? null);
-      })
-      .catch(() => setErro('Não foi possível carregar os funis.'))
-      .finally(() => setCarregando(false));
-  }, []);
-
-  const carregarOportunidades = useCallback(async (funilId: string) => {
-    setOportunidades(await funilApi.listarOportunidades(funilId));
-  }, []);
-
-  useEffect(() => {
-    if (funilAtivo) void carregarOportunidades(funilAtivo.id);
-  }, [funilAtivo, carregarOportunidades]);
+  const funisQuery = useFunis();
+  const funis = funisQuery.data ?? [];
+  const funilAtivo = funis.find((funil) => funil.id === funilAtivoId)
+    ?? funis.find((funil) => funil.padrao)
+    ?? funis[0]
+    ?? null;
+  const oportunidadesQuery = useOportunidades(funilAtivo?.id ?? null);
+  const oportunidades = oportunidadesQuery.data ?? [];
+  const criarOportunidade = useCriarOportunidade();
+  const moverOportunidade = useMoverOportunidade();
 
   async function mover(oportunidadeId: string, etapaId: string) {
     if (!funilAtivo) return;
-    await funilApi.mover(oportunidadeId, etapaId);
-    // Recarrega em vez de mover o card localmente: o status é decidido no
-    // backend, e espelhar essa regra aqui duplicaria a máquina de estados.
-    await carregarOportunidades(funilAtivo.id);
+    try {
+      setErro(null);
+      await moverOportunidade.mutateAsync({ id: oportunidadeId, etapaId });
+    } catch {
+      setErro('Não foi possível mover a oportunidade.');
+    }
   }
 
-  if (carregando) {
+  if (funisQuery.isPending) {
     return (
       <Pagina titulo="Funil">
         <Carregando />
@@ -69,7 +64,7 @@ export function PipelinesPage() {
           {funis.length > 1 && (
             <Select
               value={funilAtivo?.id ?? ''}
-              onChange={(e) => setFunilAtivo(funis.find((f) => f.id === e.target.value) ?? null)}
+              onChange={(e) => setFunilAtivoId(e.target.value)}
               aria-label="Selecionar funil"
             >
               {funis.map((funil) => (
@@ -86,15 +81,21 @@ export function PipelinesPage() {
       }
     >
       <div className="space-y-4">
-        {erro && <AlertaErro>{erro}</AlertaErro>}
+        {(erro || funisQuery.isError || oportunidadesQuery.isError) && (
+          <AlertaErro>{erro ?? 'Não foi possível carregar o funil.'}</AlertaErro>
+        )}
 
         {formAberto && funilAtivo && (
           <FormularioDeOportunidade
             etapas={funilAtivo.etapas}
             aoSalvar={async (dados) => {
-              await funilApi.criar(dados);
-              setFormAberto(false);
-              await carregarOportunidades(funilAtivo.id);
+              try {
+                setErro(null);
+                await criarOportunidade.mutateAsync(dados);
+                setFormAberto(false);
+              } catch {
+                setErro('Não foi possível criar a oportunidade.');
+              }
             }}
           />
         )}

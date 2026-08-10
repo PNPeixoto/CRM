@@ -1,22 +1,27 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { AlertaErro } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import type { Canal, PareamentoCanal, TipoCanal } from '@/shared/crm/tipos';
 import { canaisApi } from '@/shared/crm/api';
-import type { Canal, TipoCanal } from '@/shared/crm/tipos';
+import { segredoOpcional } from '@/shared/forms/erros';
 import { Cartao, Carregando, Pagina, Vazio } from '@/shared/components/Pagina';
+import { useAlternarCanal, useCanais, useCriarCanal } from '@/shared/server-state/recursos';
 
 const ROTULO_TIPO: Record<TipoCanal, string> = {
   LIVE_CHAT: 'Chat ao vivo',
   TELEGRAM: 'Telegram',
   WHATSAPP_CLOUD: 'WhatsApp',
+  WHATSAPP_EVOLUTION: 'WhatsApp Evolution (teste)',
   INSTAGRAM: 'Instagram',
 };
 
 /** Só os canais que o backend sabe atender hoje. */
-const TIPOS_DISPONIVEIS: readonly TipoCanal[] = ['LIVE_CHAT', 'TELEGRAM'];
+const TIPOS_DISPONIVEIS: readonly TipoCanal[] = [
+  'LIVE_CHAT', 'TELEGRAM', 'WHATSAPP_EVOLUTION',
+];
 
 /**
  * Canais e números conectados.
@@ -27,27 +32,13 @@ const TIPOS_DISPONIVEIS: readonly TipoCanal[] = ['LIVE_CHAT', 'TELEGRAM'];
  * quem passar atrás do atendente.
  */
 export function IntegrationsPage() {
-  const [canais, setCanais] = useState<readonly Canal[]>([]);
-  const [carregando, setCarregando] = useState(true);
   const [formAberto, setFormAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-
-  const carregar = useCallback(async () => {
-    setCarregando(true);
-    try {
-      setErro(null);
-      setCanais(await canaisApi.listar());
-    } catch {
-      setCanais([]);
-      setErro('Não foi possível carregar os canais.');
-    } finally {
-      setCarregando(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void carregar();
-  }, [carregar]);
+  const canaisQuery = useCanais();
+  const criarCanal = useCriarCanal();
+  const alternarCanal = useAlternarCanal();
+  const canais = canaisQuery.data ?? [];
+  const erroExibido = erro ?? (canaisQuery.isError ? 'Não foi possível carregar os canais.' : null);
 
   return (
     <Pagina
@@ -60,16 +51,15 @@ export function IntegrationsPage() {
       }
     >
       <div className="space-y-4">
-        {erro && <AlertaErro>{erro}</AlertaErro>}
+        {erroExibido && <AlertaErro>{erroExibido}</AlertaErro>}
 
         {formAberto && (
           <FormularioDeCanal
             aoSalvar={async (dados) => {
               setErro(null);
               try {
-                await canaisApi.criar(dados);
+                await criarCanal.mutateAsync(dados);
                 setFormAberto(false);
-                await carregar();
               } catch {
                 setErro('Não foi possível conectar o canal.');
               }
@@ -77,12 +67,12 @@ export function IntegrationsPage() {
           />
         )}
 
-        {carregando ? (
+        {canaisQuery.isPending ? (
           <Carregando />
-        ) : erro && canais.length === 0 ? null : canais.length === 0 ? (
+        ) : erroExibido && canais.length === 0 ? null : canais.length === 0 ? (
           <Vazio
             titulo="Nenhum canal conectado"
-            descricao="Conecte o chat ao vivo ou um bot do Telegram para começar a receber mensagens."
+            descricao="Conecte chat ao vivo, Telegram ou WhatsApp Evolution para receber mensagens."
           />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -93,8 +83,7 @@ export function IntegrationsPage() {
                 aoAlternar={async () => {
                   setErro(null);
                   try {
-                    await canaisApi.alternarAtivacao(canal.id);
-                    await carregar();
+                    await alternarCanal.mutateAsync(canal.id);
                   } catch {
                     setErro('Não foi possível alterar o canal.');
                   }
@@ -115,7 +104,7 @@ function CartaoDeCanal({
   readonly canal: Canal;
   readonly aoAlternar: () => void;
 }) {
-  const precisaCredencial = canal.tipo === 'TELEGRAM';
+  const precisaCredencial = canal.tipo === 'TELEGRAM' || canal.tipo === 'WHATSAPP_EVOLUTION';
   const incompleto = precisaCredencial && (!canal.temToken || !canal.temSegredoWebhook);
 
   return (
@@ -142,17 +131,129 @@ function CartaoDeCanal({
 
       {incompleto && (
         <p className="mt-2 text-xs" style={{ color: 'var(--warning)' }}>
-          Falta {!canal.temToken ? 'o token do bot' : 'o segredo do webhook'}. O canal não recebe
+          Falta {!canal.temToken ? 'a credencial do provedor' : 'o segredo do webhook'}. O canal não recebe
           nem envia mensagem sem os dois.
         </p>
       )}
 
-      <div className="mt-3">
+      {!incompleto && (canal.tipo === 'TELEGRAM' || canal.tipo === 'WHATSAPP_EVOLUTION') && (
+        <EstadoDaSincronizacao canal={canal} />
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2">
         <Button variant="secundario" size="pequeno" onClick={aoAlternar}>
           {canal.ativo ? 'Desativar' : 'Ativar'}
         </Button>
+        {canal.tipo === 'WHATSAPP_EVOLUTION' && canal.ativo && <Pareamento canal={canal} />}
       </div>
     </Cartao>
+  );
+}
+
+/**
+ * Pareamento do WhatsApp Evolution.
+ *
+ * <p>Antes disto, conectar um número exigia chamar a Evolution na mão com a
+ * API key do servidor — a credencial mais ampla do laboratório distribuída
+ * para a tarefa mais corriqueira.
+ *
+ * <p>O QR não é guardado em lugar nenhum: vive no estado do componente e some
+ * ao fechar. Ele pareia uma sessão de WhatsApp, então persistir seria criar
+ * uma credencial durável a partir de algo que expira em segundos.
+ */
+function Pareamento({ canal }: { readonly canal: Canal }) {
+  const [material, setMaterial] = useState<PareamentoCanal | null>(null);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const jaConectado = canal.estadoRemoto === 'HEALTHY' || canal.estadoRemoto === 'REPAIRED';
+
+  async function pedir() {
+    setErro(null);
+    setCarregando(true);
+    try {
+      setMaterial(await canaisApi.parear(canal.id));
+    } catch {
+      setErro('Não foi possível obter o QR agora. Tente novamente em instantes.');
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  if (material) {
+    return (
+      <div className="w-full">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-xs font-medium">
+            {material.qrCode || material.codigo
+              ? 'Abra o WhatsApp → Dispositivos conectados → Conectar dispositivo.'
+              : 'Este número já está conectado.'}
+          </p>
+          <Button variant="secundario" size="pequeno" onClick={() => setMaterial(null)}>
+            Fechar
+          </Button>
+        </div>
+
+        {material.qrCode && (
+          <img
+            src={material.qrCode}
+            alt="QR Code para conectar o WhatsApp"
+            className="mt-2 h-48 w-48 rounded"
+            style={{ backgroundColor: 'var(--surface-base)' }}
+          />
+        )}
+
+        {material.codigo && (
+          <p className="mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+            Ou digite o código no aparelho:{' '}
+            <span className="font-mono font-medium">{material.codigo}</span>
+          </p>
+        )}
+
+        {(material.qrCode || material.codigo) && (
+          <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+            O código expira em cerca de um minuto. Se falhar, peça outro.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button variant="secundario" size="pequeno" onClick={pedir} disabled={carregando}>
+        {carregando ? 'Gerando…' : jaConectado ? 'Reconectar' : 'Conectar WhatsApp'}
+      </Button>
+      {erro && (
+        <span className="text-xs" style={{ color: 'var(--danger)' }}>
+          {erro}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function EstadoDaSincronizacao({ canal }: { readonly canal: Canal }) {
+  const saudavel = canal.estadoRemoto === 'HEALTHY' || canal.estadoRemoto === 'REPAIRED';
+  const falha = canal.estadoRemoto === 'ERROR' || canal.estadoRemoto === 'DEGRADED';
+  const provedor = canal.tipo === 'WHATSAPP_EVOLUTION' ? 'Evolution' : 'Telegram';
+  const texto = saudavel
+    ? `${provedor} sincronizado.`
+    : falha
+      ? `A ${provedor} ainda não confirmou esta conexão.`
+      : `Confirmando o webhook com a ${provedor}…`;
+  const pendencias = (canal.pendenciasRemotas ?? 0) > 0
+    ? ` ${canal.pendenciasRemotas} atualização(ões) aguardando no provedor.`
+    : '';
+
+  return (
+    <p
+      role="status"
+      className="mt-2 text-xs"
+      style={{ color: saudavel ? 'var(--success)' : falha ? 'var(--warning)' : 'var(--text-muted)' }}
+    >
+      {texto}{pendencias}
+    </p>
   );
 }
 
@@ -164,14 +265,12 @@ function FormularioDeCanal({
     nome: string;
     identificadorExterno?: string;
     token?: string;
-    segredoWebhook?: string;
   }) => Promise<void>;
 }) {
   const [tipo, setTipo] = useState<TipoCanal>('TELEGRAM');
   const [nome, setNome] = useState('');
   const [identificador, setIdentificador] = useState('');
   const [token, setToken] = useState('');
-  const [segredo, setSegredo] = useState('');
   const [enviando, setEnviando] = useState(false);
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
@@ -182,15 +281,13 @@ function FormularioDeCanal({
         tipo,
         nome: nome.trim(),
         identificadorExterno: identificador.trim() || undefined,
-        token: token.trim() || undefined,
-        segredoWebhook: segredo.trim() || undefined,
+        token: segredoOpcional(token),
       });
       // Limpa os segredos do estado assim que saem: manter em memória depois
       // do envio os deixa disponíveis a qualquer script que rode na página.
       setNome('');
       setIdentificador('');
       setToken('');
-      setSegredo('');
     } finally {
       setEnviando(false);
     }
@@ -253,29 +350,46 @@ function FormularioDeCanal({
               onChange={(e) => setToken(e.target.value)}
               autoComplete="off"
               placeholder="Obtido no @BotFather"
-            />
-          </div>
-
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="segredo">Segredo do webhook</Label>
-            <Input
-              id="segredo"
-              type="password"
-              value={segredo}
-              onChange={(e) => setSegredo(e.target.value)}
-              autoComplete="off"
-              placeholder="openssl rand -hex 32"
+              required
             />
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              Precisa ser o mesmo valor informado no <code>setWebhook</code>. Guardado cifrado e
-              nunca exibido de volta.
+              O CRM gera e protege o segredo do webhook automaticamente.
+            </p>
+          </div>
+        </>
+      )}
+
+      {tipo === 'WHATSAPP_EVOLUTION' && (
+        <>
+          <div className="space-y-1.5">
+            <Label htmlFor="identificador-evolution">Nome da instância</Label>
+            <Input
+              id="identificador-evolution"
+              value={identificador}
+              onChange={(e) => setIdentificador(e.target.value)}
+              placeholder="pnp-teste"
+              autoComplete="off"
+              required
+            />
+          </div>
+          <div className="space-y-1.5 self-end">
+            <p className="text-xs" style={{ color: 'var(--warning)' }}>
+              Uso experimental local por QR Code. Não substitui a API oficial da Meta.
             </p>
           </div>
         </>
       )}
 
       <div className="sm:col-span-2">
-        <Button type="submit" disabled={enviando || nome.trim().length === 0}>
+        <Button
+          type="submit"
+          disabled={
+            enviando
+            || nome.trim().length === 0
+            || (tipo === 'TELEGRAM' && !token.trim())
+            || (tipo === 'WHATSAPP_EVOLUTION' && !identificador.trim())
+          }
+        >
           {enviando ? 'Conectando…' : 'Conectar'}
         </Button>
       </div>

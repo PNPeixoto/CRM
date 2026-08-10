@@ -24,11 +24,11 @@ const buttonVariants = cva(
         destrutivo: 'bg-[var(--danger)] text-[var(--text-on-brand)] hover:opacity-90',
       },
       size: {
-        // 40px de altura: acima do mínimo de área de toque que o WCAG pede.
+        // 44px de altura: alvo confortável também em telas de toque.
         padrao: 'h-[var(--control-height)] px-4 py-2',
-        pequeno: 'h-9 px-3',
-        grande: 'h-11 px-6',
-        icone: 'h-10 w-10',
+        pequeno: 'h-11 px-3',
+        grande: 'h-12 px-6',
+        icone: 'h-11 w-11',
       },
     },
     defaultVariants: {

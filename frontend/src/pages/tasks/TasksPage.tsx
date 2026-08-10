@@ -1,31 +1,28 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
+import { AlertaErro } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { tarefasApi } from '@/shared/crm/api';
 import { formatarResponsavel } from '@/shared/crm/responsavel';
 import type { Tarefa } from '@/shared/crm/tipos';
-import { formatarDataHora } from '@/shared/formato';
+import { FUSO_DE_NEGOCIO, formatarDataHora, instanteDeHorarioLocal } from '@/shared/formato';
 import { Carregando, Pagina, Vazio } from '@/shared/components/Pagina';
+import {
+  useAlternarConclusaoDeTarefa,
+  useCriarTarefa,
+  useExcluirTarefa,
+  useTarefas,
+} from '@/shared/server-state/recursos';
 
 export function TasksPage() {
-  const [tarefas, setTarefas] = useState<readonly Tarefa[]>([]);
   const [apenasAbertas, setApenasAbertas] = useState(true);
-  const [carregando, setCarregando] = useState(true);
   const [formAberto, setFormAberto] = useState(false);
-
-  const carregar = useCallback(async (somenteAbertas: boolean) => {
-    setCarregando(true);
-    try {
-      setTarefas(await tarefasApi.listar(somenteAbertas));
-    } finally {
-      setCarregando(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void carregar(apenasAbertas);
-  }, [apenasAbertas, carregar]);
+  const [erro, setErro] = useState<string | null>(null);
+  const tarefasQuery = useTarefas(apenasAbertas);
+  const criarTarefa = useCriarTarefa();
+  const alternarConclusao = useAlternarConclusaoDeTarefa();
+  const excluirTarefa = useExcluirTarefa();
+  const tarefas = tarefasQuery.data ?? [];
 
   return (
     <Pagina
@@ -43,17 +40,24 @@ export function TasksPage() {
       }
     >
       <div className="space-y-4">
+        {(erro || tarefasQuery.isError) && (
+          <AlertaErro>{erro ?? 'Não foi possível carregar as tarefas.'}</AlertaErro>
+        )}
         {formAberto && (
           <FormularioDeTarefa
             aoSalvar={async (dados) => {
-              await tarefasApi.criar(dados);
-              setFormAberto(false);
-              await carregar(apenasAbertas);
+              try {
+                setErro(null);
+                await criarTarefa.mutateAsync(dados);
+                setFormAberto(false);
+              } catch {
+                setErro('Não foi possível criar a tarefa.');
+              }
             }}
           />
         )}
 
-        {carregando ? (
+        {tarefasQuery.isPending ? (
           <Carregando />
         ) : tarefas.length === 0 ? (
           <Vazio
@@ -68,13 +72,21 @@ export function TasksPage() {
                 key={tarefa.id}
                 tarefa={tarefa}
                 aoAlternar={async () => {
-                  await tarefasApi.alternarConclusao(tarefa.id);
-                  await carregar(apenasAbertas);
+                  try {
+                    setErro(null);
+                    await alternarConclusao.mutateAsync(tarefa.id);
+                  } catch {
+                    setErro('Não foi possível alterar a tarefa. A lista foi restaurada.');
+                  }
                 }}
                 aoExcluir={async () => {
                   if (!window.confirm(`Excluir a tarefa "${tarefa.titulo}"?`)) return;
-                  await tarefasApi.excluir(tarefa.id);
-                  await carregar(apenasAbertas);
+                  try {
+                    setErro(null);
+                    await excluirTarefa.mutateAsync(tarefa.id);
+                  } catch {
+                    setErro('Não foi possível excluir a tarefa.');
+                  }
                 }}
               />
             ))}
@@ -104,13 +116,15 @@ function ItemDeTarefa({
       className="flex items-start gap-3 rounded-[var(--radius-surface)] border p-3"
       style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--surface-raised)' }}
     >
-      <input
-        type="checkbox"
-        checked={concluida}
-        onChange={aoAlternar}
-        className="mt-1 size-4 shrink-0"
-        aria-label={concluida ? `Reabrir ${tarefa.titulo}` : `Concluir ${tarefa.titulo}`}
-      />
+      <label className="flex size-11 shrink-0 items-start justify-center pt-1">
+        <input
+          type="checkbox"
+          checked={concluida}
+          onChange={aoAlternar}
+          className="size-6"
+          aria-label={concluida ? `Reabrir ${tarefa.titulo}` : `Concluir ${tarefa.titulo}`}
+        />
+      </label>
 
       <div className="min-w-0 flex-1">
         <p
@@ -174,9 +188,11 @@ function FormularioDeTarefa({
       await aoSalvar({
         titulo: titulo.trim(),
         descricao: descricao.trim() || undefined,
-        // datetime-local devolve hora local sem fuso; o toISOString converte
-        // para UTC, que é como o backend guarda.
-        vencimentoEm: vencimento ? new Date(vencimento).toISOString() : null,
+        // datetime-local não carrega fuso. A fronteira usa explicitamente o
+        // fuso de negócio antes de transportar o instante em UTC.
+        vencimentoEm: vencimento
+          ? instanteDeHorarioLocal(vencimento, FUSO_DE_NEGOCIO)
+          : null,
       });
       setTitulo('');
       setDescricao('');

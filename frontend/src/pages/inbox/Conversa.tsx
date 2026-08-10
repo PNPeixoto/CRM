@@ -23,21 +23,32 @@ const STATUS_ENTREGA: Record<StatusMensagem, string> = {
 interface Props {
   readonly mensagens: readonly Mensagem[];
   readonly carregando: boolean;
+  readonly temMais: boolean;
+  readonly carregandoAnteriores: boolean;
+  readonly aoCarregarAnteriores: () => void;
   readonly aoEnviar: (texto: string) => Promise<void>;
 }
 
-export function Conversa({ mensagens, carregando, aoEnviar }: Props) {
+export function Conversa({
+  mensagens,
+  carregando,
+  temMais,
+  carregandoAnteriores,
+  aoCarregarAnteriores,
+  aoEnviar,
+}: Props) {
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const fimDaListaRef = useRef<HTMLDivElement>(null);
+  const ultimaMensagemId = mensagens.at(-1)?.id;
 
   // Rola para a última mensagem quando chega algo novo. `behavior: auto` e não
   // `smooth`: com várias mensagens chegando juntas, a animação suave enfileira
   // e a lista fica visivelmente atrasada em relação ao conteúdo.
   useEffect(() => {
     fimDaListaRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
-  }, [mensagens.length]);
+  }, [ultimaMensagemId]);
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -66,6 +77,18 @@ export function Conversa({ mensagens, carregando, aoEnviar }: Props) {
         aria-live="polite"
         aria-label="Mensagens da conversa"
       >
+        {temMais && (
+          <div className="mb-4 flex justify-center">
+            <Button
+              type="button"
+              variant="secundario"
+              disabled={carregandoAnteriores}
+              onClick={aoCarregarAnteriores}
+            >
+              {carregandoAnteriores ? 'Carregando…' : 'Carregar mensagens anteriores'}
+            </Button>
+          </div>
+        )}
         {carregando ? (
           <p className="text-sm" style={{ color: 'var(--text-muted)' }} role="status">
             Carregando mensagens…

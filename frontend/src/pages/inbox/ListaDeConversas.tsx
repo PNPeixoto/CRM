@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import type { ConversaResumo, StatusConversa } from '@/shared/conversas/tipos';
 
 /**
@@ -19,9 +20,20 @@ interface Props {
   readonly selecionada: string | null;
   readonly aoSelecionar: (id: string) => void;
   readonly carregando: boolean;
+  readonly temMais: boolean;
+  readonly carregandoMais: boolean;
+  readonly aoCarregarMais: () => void;
 }
 
-export function ListaDeConversas({ conversas, selecionada, aoSelecionar, carregando }: Props) {
+export function ListaDeConversas({
+  conversas,
+  selecionada,
+  aoSelecionar,
+  carregando,
+  temMais,
+  carregandoMais,
+  aoCarregarMais,
+}: Props) {
   if (carregando) {
     return (
       <p className="p-4 text-sm" style={{ color: 'var(--text-muted)' }} role="status">
@@ -45,12 +57,13 @@ export function ListaDeConversas({ conversas, selecionada, aoSelecionar, carrega
   return (
     // Lista semântica: leitor de tela anuncia a quantidade de itens, o que uma
     // pilha de <div> não faz.
-    <ul>
-      {conversas.map((conversa) => {
-        const estaSelecionada = conversa.id === selecionada;
-        const status = STATUS[conversa.status];
+    <>
+      <ul>
+        {conversas.map((conversa) => {
+          const estaSelecionada = conversa.id === selecionada;
+          const status = STATUS[conversa.status];
 
-        return (
+          return (
           <li key={conversa.id}>
             <button
               type="button"
@@ -84,9 +97,23 @@ export function ListaDeConversas({ conversas, selecionada, aoSelecionar, carrega
               </span>
             </button>
           </li>
-        );
-      })}
-    </ul>
+          );
+        })}
+      </ul>
+      {temMais && (
+        <div className="p-3">
+          <Button
+            type="button"
+            variant="secundario"
+            className="w-full"
+            disabled={carregandoMais}
+            onClick={aoCarregarMais}
+          >
+            {carregandoMais ? 'Carregando…' : 'Carregar conversas anteriores'}
+          </Button>
+        </div>
+      )}
+    </>
   );
 }
 

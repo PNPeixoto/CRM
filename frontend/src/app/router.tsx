@@ -6,6 +6,7 @@ import { AppLayout } from '@/shared/layouts/AppLayout';
 import { LoginPage } from '@/pages/login';
 import { OnboardingPage } from '@/pages/onboarding';
 import { AuthProvider, useAuth } from '@/shared/auth/AuthContext';
+import { EstadoServidorProvider } from '@/shared/server-state/EstadoServidorProvider';
 import { RotaProtegida } from '@/shared/auth/RotaProtegida';
 import { RotaComAcesso } from '@/shared/auth/RotaComAcesso';
 import { PaginaNaoEncontrada, PaginaSemPermissao } from '@/shared/components/PaginaDeStatus';
@@ -17,17 +18,19 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <TenantPresentationProvider>
-          <Suspense
-            fallback={
-              <div className="p-[var(--space-page)]">
-                <EstadoDeConteudo tipo="carregando" titulo="Carregando módulo…" />
-              </div>
-            }
-          >
-            <ApplicationRoutes />
-          </Suspense>
-        </TenantPresentationProvider>
+        <EstadoServidorProvider>
+          <TenantPresentationProvider>
+            <Suspense
+              fallback={
+                <div className="p-[var(--space-page)]">
+                  <EstadoDeConteudo tipo="carregando" titulo="Carregando módulo…" />
+                </div>
+              }
+            >
+              <ApplicationRoutes />
+            </Suspense>
+          </TenantPresentationProvider>
+        </EstadoServidorProvider>
       </AuthProvider>
     </BrowserRouter>
   );
@@ -35,7 +38,7 @@ export function AppRouter() {
 
 function ApplicationRoutes() {
   const { usuario } = useAuth();
-  const { apresentacao, permissoes } = useTenantPresentation();
+  const { apresentacao, permissoes, contextosNavegaveis } = useTenantPresentation();
   const navigation = useMemo(
     () => resolveNavigation(ROTAS, apresentacao, {
       permissoes: permissoes ? Object.keys(permissoes) : undefined,
@@ -43,9 +46,10 @@ function ApplicationRoutes() {
     [apresentacao, permissoes],
   );
   const safePath = caminhoInicialSeguro(navigation);
-  const contextosAutorizados = usuario
-    ? [{ id: usuario.tenantId, rotulo: 'Empresa atual' }]
-    : [];
+  const contextosAutorizados = contextosNavegaveis.map((contexto) => ({
+    id: contexto.id,
+    rotulo: contexto.nome,
+  }));
 
   return (
     <Routes>
@@ -58,7 +62,7 @@ function ApplicationRoutes() {
               <AppLayout
                 navigation={navigation}
                 contextosAutorizados={contextosAutorizados}
-                contextoAtivoId={usuario?.tenantId ?? ''}
+                contextoAtivoId={contextosAutorizados[0]?.id ?? usuario?.tenantId ?? ''}
               />
             }
           >

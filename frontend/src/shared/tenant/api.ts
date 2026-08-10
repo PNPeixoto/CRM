@@ -2,11 +2,13 @@ import type {
   ApresentacaoWire,
   PerfilInicialWire,
   PermissoesWire,
+  ResumoDeAcessoWire,
 } from '@/adapters/http/contracts';
 import { obrigatorio, umDe } from '@/adapters/http/mapping';
 import { api } from '@/lib/api';
 import type {
   ApresentacaoDoTenant,
+  ResumoDeAcessoDaOrganizacao,
   EscopoDePermissao,
   PermissoesDoUsuario,
   SegmentoDeNegocio,
@@ -44,18 +46,39 @@ function mapearApresentacao(dados: ApresentacaoWire): ApresentacaoDoTenant {
   };
 }
 
-export async function obterApresentacao(): Promise<ApresentacaoDoTenant> {
-  return mapearApresentacao(await api.get<ApresentacaoWire>('/empresa/apresentacao'));
+export async function obterApresentacao(signal?: AbortSignal): Promise<ApresentacaoDoTenant> {
+  return mapearApresentacao(await api.get<ApresentacaoWire>('/empresa/apresentacao', { signal }));
 }
 
-export async function obterPermissoes(): Promise<PermissoesDoUsuario> {
-  const dados = await api.get<PermissoesWire>('/organizacao/permissoes');
+export async function obterPermissoes(signal?: AbortSignal): Promise<PermissoesDoUsuario> {
+  const dados = await api.get<PermissoesWire>('/organizacao/permissoes', { signal });
   return Object.fromEntries(
     Object.entries(dados).map(([codigo, escopo]) => [
       codigo,
       umDe(escopo, ESCOPOS, `permissoes.${codigo}`),
     ]),
   ) as Readonly<Record<string, EscopoDePermissao>>;
+}
+
+export async function obterContextos(
+  signal?: AbortSignal,
+): Promise<ResumoDeAcessoDaOrganizacao> {
+  const dados = await api.get<ResumoDeAcessoWire>('/organizacao/contextos', { signal });
+  return {
+    tenantId: obrigatorio(dados.tenantId, 'contextos.tenantId'),
+    membershipId: obrigatorio(dados.membershipId, 'contextos.membershipId'),
+    contextos: obrigatorio(dados.contexts, 'contextos.contexts').map((contexto) => ({
+      id: obrigatorio(contexto.id, 'contexto.id'),
+      tipo: umDe(contexto.type, ESCOPOS, 'contexto.tipo'),
+      codigo: obrigatorio(contexto.code, 'contexto.codigo'),
+      nome: obrigatorio(contexto.name, 'contexto.nome'),
+      papeis: obrigatorio(contexto.roles, 'contexto.papeis'),
+      permissoes: obrigatorio(contexto.permissions, 'contexto.permissoes'),
+      escopos: obrigatorio(contexto.scopes, 'contexto.escopos').map((escopo) =>
+        umDe(escopo, ESCOPOS, 'contexto.escopo'),
+      ),
+    })),
+  };
 }
 
 export async function salvarPerfilInicial(

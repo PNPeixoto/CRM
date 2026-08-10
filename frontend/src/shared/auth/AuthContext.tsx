@@ -1,5 +1,6 @@
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { definirAccessToken, tentarRenovarSessao } from '@/lib/api';
+import { limparCachesDeServidor } from '@/shared/server-state/registro';
 import { criarCanalDeSessao } from './canalDeSessao';
 import { authApi, type CadastroMfa, type Sessao, type Usuario } from './api';
 
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // servidor; isto apenas impede que as outras abas sigam exibindo uma
     // interface autenticada até esbarrarem no próximo 401.
     const cancelar = atual.aoReceber(() => {
+      limparCachesDeServidor();
       definirAccessToken(null);
       setUsuario(null);
     });
@@ -60,7 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const renovou = await tentarRenovarSessao();
         if (!renovou) return;
         const encontrado = await authApi.usuarioAtual();
-        if (!cancelado) setUsuario(encontrado);
+        if (!cancelado) {
+          limparCachesDeServidor();
+          setUsuario(encontrado);
+        }
       } catch {
         // Sessão ausente ou expirada é o estado normal antes do login.
       } finally {
@@ -71,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const adotarSessao = useCallback((sessao: Sessao) => {
+    limparCachesDeServidor();
     definirAccessToken(sessao.accessToken);
     setUsuario(sessao.usuario);
   }, []);
@@ -104,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Limpa localmente mesmo se a chamada falhar: manter a interface
       // autenticada depois de o usuário pedir para sair é pior do que
       // divergir do servidor por um instante.
+      limparCachesDeServidor();
       definirAccessToken(null);
       setUsuario(null);
       canal.current?.anunciarSaida();

@@ -65,6 +65,7 @@ describe('smoke acessível da aplicação', () => {
         caminho: '/api/organizacao/permissoes',
         json: { 'contacts.read': 'OWN' },
       },
+      contextoOrganizacional(),
     ]);
     const { container } = render(<AppRouter />);
 
@@ -110,6 +111,7 @@ describe('smoke acessível da aplicação', () => {
           'conversations.read': 'TENANT',
         },
       },
+      contextoOrganizacional(),
     ]);
 
     render(<AppRouter />);
@@ -119,3 +121,22 @@ describe('smoke acessível da aplicação', () => {
     http.verificarTudoConsumido();
   });
 });
+
+function contextoOrganizacional() {
+  return {
+    caminho: '/api/organizacao/contextos',
+    json: {
+      tenantId: 'tenant-sintetico',
+      membershipId: 'membership-sintetico',
+      contexts: [{
+        id: 'tenant-sintetico',
+        type: 'TENANT',
+        code: 'empresa-sintetica',
+        name: 'Empresa Sintética',
+        roles: ['operador'],
+        permissions: ['contacts.read'],
+        scopes: ['OWN'],
+      }],
+    },
+  } as const;
+}

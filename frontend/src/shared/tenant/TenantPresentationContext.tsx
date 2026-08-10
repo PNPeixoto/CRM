@@ -1,16 +1,14 @@
-import {
-  createContext,
-  use,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, use, useCallback, useMemo, type ReactNode } from 'react';
 import { useAuth } from '@/shared/auth/AuthContext';
-import { obterApresentacao, obterPermissoes, salvarPerfilInicial } from './api';
+import {
+  useApresentacaoDoTenant,
+  useContextosOrganizacionais,
+  usePermissoesDoUsuario,
+  useSalvarPerfilInicial,
+} from '@/shared/server-state/recursos';
 import type {
   ApresentacaoDoTenant,
+  ContextoAutorizadoDaOrganizacao,
   PermissoesDoUsuario,
   SegmentoDeNegocio,
 } from './tipos';
@@ -18,6 +16,7 @@ import type {
 interface TenantPresentationContextValue {
   readonly apresentacao: ApresentacaoDoTenant | null;
   readonly permissoes: PermissoesDoUsuario | null;
+  readonly contextosNavegaveis: readonly ContextoAutorizadoDaOrganizacao[];
   readonly carregando: boolean;
   readonly erroAoCarregar: boolean;
   readonly recarregar: () => Promise<void>;
@@ -28,61 +27,65 @@ const TenantPresentationContext = createContext<TenantPresentationContextValue |
 
 export function TenantPresentationProvider({ children }: { readonly children: ReactNode }) {
   const { usuario } = useAuth();
-  const [apresentacao, setApresentacao] = useState<ApresentacaoDoTenant | null>(null);
-  const [permissoes, setPermissoes] = useState<PermissoesDoUsuario | null>(null);
-  const [carregando, setCarregando] = useState(false);
-  const [erroAoCarregar, setErroAoCarregar] = useState(false);
+  const apresentacaoQuery = useApresentacaoDoTenant();
+  const permissoesQuery = usePermissoesDoUsuario();
+  const contextosQuery = useContextosOrganizacionais();
+  const salvarPerfil = useSalvarPerfilInicial();
+
+  const apresentacao = apresentacaoQuery.data ?? null;
+  const permissoes = permissoesQuery.data ?? null;
+
+  // UNIT ainda não é um contexto de consulta dos agregados do CRM (ADR-0008).
+  // Exibi-la como selecionável rotularia dados do tenant inteiro como se fossem
+  // de uma unidade. Consumimos o contrato real e expomos somente o contexto que
+  // o backend consegue aplicar de ponta a ponta hoje.
+  const contextosNavegaveis = useMemo(
+    () => (contextosQuery.data?.contextos ?? []).filter(
+      (contexto) => contexto.tipo === 'TENANT' && contexto.id === usuario?.tenantId,
+    ),
+    [contextosQuery.data, usuario?.tenantId],
+  );
+
+  const carregando = Boolean(usuario) && (
+    apresentacaoQuery.isPending || permissoesQuery.isPending || contextosQuery.isPending
+  );
+  const erroAoCarregar = Boolean(usuario) && (
+    apresentacaoQuery.isError || permissoesQuery.isError || contextosQuery.isError
+  );
 
   const recarregar = useCallback(async () => {
-    if (!usuario) {
-      setApresentacao(null);
-      setPermissoes(null);
-      setCarregando(false);
-      setErroAoCarregar(false);
-      return;
-    }
-    setCarregando(true);
-    setErroAoCarregar(false);
-    try {
-      const [novaApresentacao, novasPermissoes] = await Promise.all([
-        obterApresentacao(),
-        obterPermissoes(),
-      ]);
-      setApresentacao(novaApresentacao);
-      setPermissoes(novasPermissoes);
-    } catch {
-      // Sem os sinais de acesso, a interface falha fechada e não tenta
-      // descobrir autorização chamando cada endpoint protegido.
-      setApresentacao(null);
-      setPermissoes(null);
-      setErroAoCarregar(true);
-    } finally {
-      setCarregando(false);
-    }
-  }, [usuario]);
+    if (!usuario) return;
+    await Promise.all([
+      apresentacaoQuery.refetch(),
+      permissoesQuery.refetch(),
+      contextosQuery.refetch(),
+    ]);
+  }, [usuario, apresentacaoQuery, permissoesQuery, contextosQuery]);
 
-  useEffect(() => {
-    void recarregar();
-  }, [recarregar]);
-
-  const escolherSegmento = useCallback(async (segmento: SegmentoDeNegocio) => {
-    const atualizada = await salvarPerfilInicial(segmento);
-    // A resposta substitui o estado imediatamente; não há novo login e nem
-    // janela em que menu e roteador usem presets diferentes.
-    setApresentacao(atualizada);
-    return atualizada;
-  }, []);
+  const escolherSegmento = useCallback(
+    (segmento: SegmentoDeNegocio) => salvarPerfil.mutateAsync(segmento),
+    [salvarPerfil],
+  );
 
   const value = useMemo(
     () => ({
       apresentacao,
       permissoes,
+      contextosNavegaveis,
       carregando,
       erroAoCarregar,
       recarregar,
       escolherSegmento,
     }),
-    [apresentacao, permissoes, carregando, erroAoCarregar, recarregar, escolherSegmento],
+    [
+      apresentacao,
+      permissoes,
+      contextosNavegaveis,
+      carregando,
+      erroAoCarregar,
+      recarregar,
+      escolherSegmento,
+    ],
   );
 
   return <TenantPresentationContext value={value}>{children}</TenantPresentationContext>;

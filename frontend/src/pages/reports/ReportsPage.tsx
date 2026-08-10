@@ -1,23 +1,13 @@
-import { useEffect, useState } from 'react';
-import { relatoriosApi } from '@/shared/crm/api';
-import type { VisaoGeral } from '@/shared/crm/tipos';
 import { formatarMoeda, formatarNumero } from '@/shared/formato';
 import { EstadoDeConteudo } from '@/components/ui/content-state';
 import { Cartao, Carregando, Pagina } from '@/shared/components/Pagina';
+import { useVisaoGeral } from '@/shared/server-state/recursos';
 
 export function ReportsPage() {
-  const [dados, setDados] = useState<VisaoGeral | null>(null);
-  const [carregando, setCarregando] = useState(true);
+  const dadosQuery = useVisaoGeral();
+  const dados = dadosQuery.data;
 
-  useEffect(() => {
-    relatoriosApi
-      .visaoGeral()
-      .then(setDados)
-      .catch(() => setDados(null))
-      .finally(() => setCarregando(false));
-  }, []);
-
-  if (carregando) {
+  if (dadosQuery.isPending) {
     return (
       <Pagina titulo="Relatórios">
         <Carregando />
@@ -25,7 +15,7 @@ export function ReportsPage() {
     );
   }
 
-  if (!dados) {
+  if (dadosQuery.isError || !dados) {
     return (
       <Pagina titulo="Relatórios">
         <EstadoDeConteudo

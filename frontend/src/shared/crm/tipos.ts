@@ -64,7 +64,13 @@ export interface Tarefa {
   readonly criadaEm: string;
 }
 
-export type TipoCanal = 'LIVE_CHAT' | 'TELEGRAM' | 'WHATSAPP_CLOUD' | 'INSTAGRAM';
+export type TipoCanal =
+  | 'LIVE_CHAT'
+  | 'TELEGRAM'
+  | 'WHATSAPP_CLOUD'
+  | 'WHATSAPP_EVOLUTION'
+  | 'INSTAGRAM';
+export type EstadoRemotoCanal = 'CHECKING' | 'HEALTHY' | 'DEGRADED' | 'REPAIRED' | 'ERROR';
 
 export interface Canal {
   readonly id: string;
@@ -75,6 +81,28 @@ export interface Canal {
   /** O backend nunca devolve o segredo — apenas se existe. */
   readonly temToken: boolean;
   readonly temSegredoWebhook: boolean;
+  readonly estadoRemoto: EstadoRemotoCanal | null;
+  readonly pendenciasRemotas: number | null;
+  readonly ultimaReconciliacaoEm: string | null;
+  readonly ultimaFalhaRemotaEm: string | null;
+}
+
+/**
+ * Material de pareamento do WhatsApp Evolution.
+ *
+ * <p>Isto é credencial de sessão: quem tiver o QR ou o código passa a enviar
+ * como aquele número. Nunca é persistido, nem em memória além do necessário
+ * para exibir — a resposta vem `no-store` e a tela o descarta ao fechar.
+ *
+ * <p>`qrCode` e `codigo` vêm nulos quando a sessão já está aberta: não há o
+ * que parear, e o backend recusa emitir material novo para não derrubar uma
+ * conexão em uso.
+ */
+export interface PareamentoCanal {
+  readonly estado: string;
+  readonly qrCode: string | null;
+  readonly codigo: string | null;
+  readonly tentativa: number;
 }
 
 export interface VisaoGeral {

@@ -32,6 +32,8 @@ export interface ConversaResumo {
   readonly status: StatusConversa;
   readonly atendenteId: string | null;
   readonly ultimaMensagemEm: string | null;
+  readonly venceEm: string | null;
+  readonly versao: number;
 }
 
 export interface Mensagem {
@@ -42,6 +44,43 @@ export interface Mensagem {
   readonly status: StatusMensagem;
   readonly autorId: string | null;
   readonly criadaEm: string;
+  readonly versao: number;
+}
+
+export interface CursorTemporal {
+  readonly antesDe: string;
+  readonly antesDoId: string;
+}
+
+export interface PaginaConversas {
+  readonly itens: readonly ConversaResumo[];
+  readonly proximoCursor: CursorTemporal | null;
+  readonly temMais: boolean;
+  readonly sequenciaDoStream: number;
+}
+
+export interface PaginaMensagens {
+  readonly itens: readonly Mensagem[];
+  readonly proximoCursor: CursorTemporal | null;
+  readonly temMais: boolean;
+  readonly sequenciaDoStream: number;
+}
+
+export interface EventoTempoReal {
+  readonly id: string;
+  readonly sequence: number;
+  readonly tipo: string;
+  readonly conversationId: string;
+  readonly messageId: string | null;
+  readonly versao: number;
+  readonly ocorridoEm: string;
+}
+
+export interface PaginaEventos {
+  readonly eventos: readonly EventoTempoReal[];
+  readonly temMais: boolean;
+  readonly resetObrigatorio: boolean;
+  readonly ultimaSequencia: number;
 }
 
 /**
@@ -50,9 +89,11 @@ export interface Mensagem {
  * completa vem do REST.
  */
 export interface MensagemPush {
+  readonly eventId: string;
+  readonly sequence: number;
+  readonly tipo: string;
   readonly conversationId: string;
-  readonly messageId: string;
-  readonly direcao: DirecaoMensagem;
-  readonly texto: string | null;
+  readonly messageId: string | null;
+  readonly versao: number;
   readonly ocorridoEm: string;
 }

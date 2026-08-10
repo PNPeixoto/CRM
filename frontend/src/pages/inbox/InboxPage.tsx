@@ -1,93 +1,65 @@
-import { useCallback, useEffect, useState } from 'react';
-import { conversasApi } from '@/shared/conversas/api';
-import { useTempoReal, type EstadoConexao } from '@/shared/conversas/useTempoReal';
-import type { ConversaResumo, Mensagem } from '@/shared/conversas/tipos';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '@/shared/auth/AuthContext';
+import type { ConversaResumo, Mensagem, MensagemPush } from '@/shared/conversas/tipos';
+import { useTempoReal, type EstadoConexao } from '@/shared/conversas/useTempoReal';
+import {
+  useConversas,
+  useEnviarMensagem,
+  useMensagens,
+  useSincronizacaoDaInbox,
+} from '@/shared/server-state/recursos';
 import { Conversa } from './Conversa';
 import { ListaDeConversas } from './ListaDeConversas';
 
-/**
- * Caixa de entrada omnichannel.
- *
- * <p>Duas fontes alimentam a tela e a hierarquia entre elas é explícita: o
- * REST é a verdade, o WebSocket é aceleração. Toda (re)conexão dispara uma
- * recarga completa — enquanto o socket esteve caído chegaram mensagens que
- * ninguém entregou, e não há como saber quantas. Reconstruir o que faltou a
- * partir de informação incompleta produz uma tela sutilmente errada; recarregar
- * é barato e sempre certo.
- */
+/** Caixa de entrada omnichannel: REST é a verdade e o WebSocket a aceleração. */
 export function InboxPage() {
   const { usuario } = useAuth();
-
-  const [conversas, setConversas] = useState<readonly ConversaResumo[]>([]);
   const [selecionada, setSelecionada] = useState<string | null>(null);
-  const [mensagens, setMensagens] = useState<readonly Mensagem[]>([]);
-  const [carregandoLista, setCarregandoLista] = useState(true);
-  const [carregandoMensagens, setCarregandoMensagens] = useState(false);
+  const conversasQuery = useConversas();
+  const mensagensQuery = useMensagens(selecionada);
+  const enviarMensagem = useEnviarMensagem();
+  const sincronizarInbox = useSincronizacaoDaInbox();
 
-  const recarregarLista = useCallback(async () => {
-    try {
-      setConversas(await conversasApi.listar());
-    } finally {
-      setCarregandoLista(false);
-    }
-  }, []);
+  const conversas = useMemo(
+    () => deduplicarPorVersao(
+      conversasQuery.data?.pages.flatMap((pagina) => pagina.itens) ?? [],
+    ),
+    [conversasQuery.data],
+  );
+  const mensagens = useMemo(
+    () => deduplicarPorVersao(
+      [...(mensagensQuery.data?.pages ?? [])].reverse().flatMap((pagina) => pagina.itens),
+    ),
+    [mensagensQuery.data],
+  );
+  const sequenciaInicial = Math.max(
+    0,
+    ...(conversasQuery.data?.pages.map((pagina) => pagina.sequenciaDoStream) ?? []),
+    ...(mensagensQuery.data?.pages.map((pagina) => pagina.sequenciaDoStream) ?? []),
+  );
 
-  const recarregarMensagens = useCallback(async (conversaId: string) => {
-    setCarregandoMensagens(true);
-    try {
-      setMensagens(await conversasApi.mensagens(conversaId));
-    } finally {
-      setCarregandoMensagens(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void recarregarLista();
-  }, [recarregarLista]);
-
-  useEffect(() => {
-    if (selecionada) void recarregarMensagens(selecionada);
-    else setMensagens([]);
-  }, [selecionada, recarregarMensagens]);
-
-  /**
-   * O push traz o mínimo para atualizar a tela. Em vez de montar uma Mensagem
-   * a partir dele — o que exigiria adivinhar campos que o push não carrega —
-   * recarregamos do REST. Custa uma requisição e elimina uma classe inteira de
-   * bug em que a mensagem exibida difere da gravada.
-   */
-  const aoReceberMensagem = useCallback(() => {
-    void recarregarLista();
-    if (selecionada) void recarregarMensagens(selecionada);
-  }, [recarregarLista, recarregarMensagens, selecionada]);
+  const aoReceberMensagem = useCallback((push: MensagemPush) => {
+    sincronizarInbox(push.conversationId === selecionada ? selecionada : null);
+  }, [sincronizarInbox, selecionada]);
 
   const aoSincronizar = useCallback(() => {
-    void recarregarLista();
-    if (selecionada) void recarregarMensagens(selecionada);
-  }, [recarregarLista, recarregarMensagens, selecionada]);
+    sincronizarInbox(selecionada);
+  }, [sincronizarInbox, selecionada]);
 
   const conexao = useTempoReal({
     tenantId: usuario?.tenantId ?? null,
     conversaAtiva: selecionada,
+    sequenciaInicial,
     aoReceberMensagem,
     aoSincronizar,
   });
 
-  const enviar = useCallback(
-    async (texto: string) => {
-      if (!selecionada) return;
-      await conversasApi.enviar(selecionada, texto);
-      // Recarrega em vez de acrescentar localmente: a mensagem nasce PENDING no
-      // backend e o status muda depois, quando o worker a entrega. Espelhar
-      // isso à mão duplicaria a máquina de estados no frontend.
-      await recarregarMensagens(selecionada);
-      await recarregarLista();
-    },
-    [selecionada, recarregarMensagens, recarregarLista],
-  );
+  const enviar = useCallback(async (texto: string) => {
+    if (!selecionada) return;
+    await enviarMensagem.mutateAsync({ conversaId: selecionada, texto });
+  }, [selecionada, enviarMensagem]);
 
-  const conversaAberta = conversas.find((c) => c.id === selecionada);
+  const conversaAberta = conversas.find((conversa) => conversa.id === selecionada);
 
   return (
     <div className="flex h-full flex-col">
@@ -109,7 +81,10 @@ export function InboxPage() {
             conversas={conversas}
             selecionada={selecionada}
             aoSelecionar={setSelecionada}
-            carregando={carregandoLista}
+            carregando={conversasQuery.isPending}
+            temMais={conversasQuery.hasNextPage}
+            carregandoMais={conversasQuery.isFetchingNextPage}
+            aoCarregarMais={() => void conversasQuery.fetchNextPage()}
           />
         </section>
 
@@ -130,7 +105,10 @@ export function InboxPage() {
               <div className="min-h-0 flex-1">
                 <Conversa
                   mensagens={mensagens}
-                  carregando={carregandoMensagens}
+                  carregando={mensagensQuery.isPending}
+                  temMais={mensagensQuery.hasNextPage}
+                  carregandoAnteriores={mensagensQuery.isFetchingNextPage}
+                  aoCarregarAnteriores={() => void mensagensQuery.fetchNextPage()}
                   aoEnviar={enviar}
                 />
               </div>
@@ -148,20 +126,12 @@ export function InboxPage() {
   );
 }
 
-/**
- * Estado da conexão visível o tempo todo.
- *
- * <p>Sem isto, uma queda do WebSocket deixa a tela parada e o atendente conclui
- * que ninguém está mandando mensagem — enquanto as mensagens chegam e ficam no
- * banco. O modo de falha silencioso é pior que a falha.
- */
 function IndicadorDeConexao({ estado }: { readonly estado: EstadoConexao }) {
   const textos: Record<EstadoConexao, string> = {
     conectando: 'Conectando…',
     conectado: 'Tempo real ativo',
-    desconectado: 'Sem tempo real — recarregue para ver novidades',
+    desconectado: 'Reconectando — sincronização automática ativa',
   };
-
   const cores: Record<EstadoConexao, string> = {
     conectando: 'var(--warning)',
     conectado: 'var(--success)',
@@ -175,8 +145,16 @@ function IndicadorDeConexao({ estado }: { readonly estado: EstadoConexao }) {
         className="inline-block size-2 rounded-full"
         style={{ backgroundColor: 'currentColor' }}
       />
-      {/* O texto acompanha a bolinha: cor sozinha não comunica estado. */}
-      <span role="status">{textos[estado]}</span>
+      <span role="status" aria-live="polite">{textos[estado]}</span>
     </span>
   );
+}
+
+function deduplicarPorVersao<T extends ConversaResumo | Mensagem>(itens: readonly T[]): readonly T[] {
+  const unicos = new Map<string, T>();
+  for (const item of itens) {
+    const anterior = unicos.get(item.id);
+    if (!anterior || item.versao >= anterior.versao) unicos.set(item.id, item);
+  }
+  return [...unicos.values()];
 }
