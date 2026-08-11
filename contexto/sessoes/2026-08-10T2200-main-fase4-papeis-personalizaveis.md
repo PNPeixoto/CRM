@@ -132,12 +132,73 @@ Três avisos que a tela dá porque ninguém descobriria sozinho:
 - papel de equipe sem composição enxerga só o próprio responsável;
 - papel que concede além do seu privilégio aparece, sem botão, com o motivo.
 
+## Revisão — dois defeitos, mesma família
+
+Ambos eram a tela prometendo o que o servidor recusa.
+
+**Contradição interna.** A listagem marcava `gerenciavel` por possuir a
+permissão, e `criar`/`definirPermissoes` exigiam alcance de tenant. Um
+administrador com `organization.manage` no tenant e `contacts.read` só no
+próprio via "Editar" habilitado e levava 422 ao salvar sem ter mudado nada.
+
+A fronteira foi para onde está de fato: **definir papel exige possuir; atribuir
+exige o alcance**. O papel não concede nada até ser atribuído, e é na atribuição
+que o privilégio é conferido. Não abre escalonamento — quem só tem a permissão
+sob alcance próprio segue só conseguindo atribuir sob alcance próprio.
+
+**Seletor de alcance oferecia o impossível.** Faltava `delegavelNaEquipe` no
+catálogo. A tela passou a calcular por papel quais alcances pode oferecer.
+
+## Aplicação da V25 — 2026-08-10
+
+| Verificação | Resultado |
+|---|---|
+| Comandos destrutivos | `REVOKE` de privilégio e 2 `DROP CONSTRAINT` **seguidos de recriação mais ampla**; nenhum `DELETE`/`DROP TABLE` |
+| Backup | 16 MB antes de tudo |
+| Prova em contêiner descartável | V25 subiu limpa sobre cópia restaurada; dados intactos |
+| RLS `team_member` | `true/true` |
+| Privilégios do runtime | `INSERT, SELECT`; `DELETE` **recusado de fato** |
+| `UPDATE` por coluna | `valid_until, updated_at, updated_by` |
+| Banco após deploy | flyway em 25, contadores **idênticos** à linha de base |
+| App | healthy, readiness UP, zero erro |
+| Rota nova sem token | 401 |
+
+## Verificação na interface
+
+Fluxo completo exercitado no navegador, contra o backend real:
+
+1. Papel `GESTOR` criado com três permissões — `OWNER` apareceu com "Editar" e
+   "Remover" desabilitados e o motivo no `title`.
+2. Atribuído à atendente com alcance **A equipe dele**; a dica apareceu sozinha:
+   *"Monte a equipe na aba Equipes"*.
+3. Equipe montada — o seletor de liderado **já excluía a própria gestora**.
+
+No banco: papel com 3 permissões, atribuição `TEAM`, composição vigente. Na
+trilha, os três eventos com o motivo certo — `ROLE_CREATED`,
+`ROLE_ASSIGNMENT_CHANGED`, `TEAM_MEMBERSHIP_CHANGED`. Todas as chamadas da tela
+em 200/204.
+
+**Um 422 no console não era defeito**: `MFA_NECESSARIO`, do login do operador,
+com MFA obrigatório para `OWNER`. Conferido no log em vez de presumido.
+
+O recorte em si — gestor enxergando o time e não enxergando quem está fora —
+continua provado pelos 16 casos de `AlcanceDeEquipeTest`, não pelo navegador:
+não há sessão da atendente, e eu não digito senha.
+
+## Erro cometido nesta sessão
+
+Um `git add -A` levou o dump de 16 MB para dentro de um commit. Dump contém
+conteúdo de mensagem, dado de contato e hash de senha — exatamente o que a
+seção de segurança documental do `CLAUDE.md` proíbe versionar.
+
+Corrigido no mesmo minuto: removido do commit, `var/backups/` acrescentado ao
+`.gitignore`, reflog expirado e `gc` executado. Zero objetos com o dump
+restaram na história. O commit nunca saiu da máquina.
+
 ## Pendências da Fase 4
 
-- **V25 não foi aplicada ao banco vivo.** A imagem em execução é a v24 e as
-  rotas novas não existem nela, então a tela não foi verificada ponta a ponta —
-  só por teste de componente e contra Testcontainers. Aplicar é decisão
-  explícita, como foi com a V22, V23 e V24.
 - **Preset de papéis.** SDR, Closer, Atendente, Gestor e Gerente como papéis
-  comuns editáveis — não `system_role`.
+  comuns editáveis — não `system_role`. Hoje o cliente cria os dele do zero.
 - **Hierarquia de mais de um nível**, se a operação passar a exigir.
+- **Dados de demonstração no banco local**: o papel `GESTOR`, a atribuição e a
+  equipe criados na verificação continuam lá.
