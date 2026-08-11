@@ -95,17 +95,27 @@ class GuardaDeConcessao {
      * Regra de delegacao, dita por extenso em vez de comparar ordinais.
      *
      * <p>Comparar {@code ordinal()} pareceria mais curto e estaria errado:
-     * UNIT, TEAM e NETWORK ficam entre TENANT e OWN na ordem do enum, mas hoje
-     * <b>nao decidem sobre registro de dominio</b> (ADR-0008). Quem so os tem
-     * nao exerce autoridade nenhuma — e portanto nao pode delegar autoridade
-     * real a terceiros. Falha fechada, e volta a ser revisada quando o alcance
-     * de equipe ganhar persistencia.
+     * UNIT e NETWORK ficam entre TENANT e OWN na ordem do enum e <b>nao decidem
+     * sobre registro de dominio</b> (ADR-0008). Quem so os tem nao exerce
+     * autoridade nenhuma — e portanto nao pode delegar autoridade real a
+     * terceiros. Falha fechada.
+     *
+     * <p><b>O alcance e relativo, e e isso que torna a regra coerente.</b>
+     * Conceder OWN a alguem nao entrega os <i>meus</i> registros: entrega os
+     * dele. O mesmo vale para TEAM. A invariante e sobre o <b>tipo</b> de
+     * recorte — nunca conceder um recorte mais amplo do que o proprio —, e nao
+     * sobre um conjunto absoluto de ids, que mudaria a cada contratacao.
      */
     private static boolean podeDelegar(OrganizationAccess.ScopeType minha,
                                        OrganizationAccess.ScopeType concedida) {
         return switch (minha) {
             // O tenant inteiro contem qualquer recorte menor.
             case TENANT -> concedida == OrganizationAccess.ScopeType.TENANT
+                    || concedida == OrganizationAccess.ScopeType.TEAM
+                    || concedida == OrganizationAccess.ScopeType.OWN;
+            // Quem enxerga a propria equipe delega equipe ou proprio, nunca o
+            // tenant inteiro.
+            case TEAM -> concedida == OrganizationAccess.ScopeType.TEAM
                     || concedida == OrganizationAccess.ScopeType.OWN;
             // Quem so enxerga o proprio so delega o proprio.
             case OWN -> concedida == OrganizationAccess.ScopeType.OWN;

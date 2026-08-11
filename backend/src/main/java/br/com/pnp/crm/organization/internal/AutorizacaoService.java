@@ -42,6 +42,7 @@ class AutorizacaoService implements Autorizacao {
     private final Map<Permissao, Alcance> resolvidas = new HashMap<>();
 
     private Map<String, OrganizationAccess.ScopeType> escopoPorPermissao;
+    private Set<UUID> equipe;
 
     AutorizacaoService(OrganizationAccess acessos, ApplicationEventPublisher events) {
         this.acessos = acessos;
@@ -79,14 +80,38 @@ class AutorizacaoService implements Autorizacao {
 
     @Override
     public void exigirSobreRegistro(Permissao permissao, UUID responsavelId) {
-        if (alcanceDe(permissao) == Alcance.TENANT) {
+        Alcance alcance = alcanceDe(permissao);
+        if (alcance == Alcance.TENANT) {
             return;
         }
-        // Alcance próprio: só o responsável age. Registro sem responsável não
-        // é de ninguém — negar é a leitura segura.
-        if (responsavelId == null || !responsavelId.equals(usuarioCorrente())) {
+        // Fora do tenant, registro sem responsável não é de ninguém — negar é a
+        // leitura segura, e é o que impede dado órfão virar dado de todos.
+        if (responsavelId == null) {
             throw negar(permissao, AcessoOrganizacionalNegado.Motivo.SCOPE_DENIED);
         }
+        boolean permitido = alcance == Alcance.EQUIPE
+                ? equipe().contains(responsavelId)
+                : responsavelId.equals(usuarioCorrente());
+        if (!permitido) {
+            throw negar(permissao, AcessoOrganizacionalNegado.Motivo.SCOPE_DENIED);
+        }
+    }
+
+    @Override
+    public Recorte recorteDe(Permissao permissao) {
+        return switch (alcanceDe(permissao)) {
+            case TENANT -> Recorte.tenantInteiro();
+            case EQUIPE -> Recorte.apenas(equipe());
+            case PROPRIO -> Recorte.apenas(Set.of(usuarioCorrente()));
+        };
+    }
+
+    /** Equipe do usuário corrente, resolvida uma vez por requisição. */
+    private Set<UUID> equipe() {
+        if (equipe == null) {
+            equipe = acessos.equipeDe(TenantContext.obrigatorio(), usuarioCorrente());
+        }
+        return equipe;
     }
 
     @Override
@@ -105,9 +130,10 @@ class AutorizacaoService implements Autorizacao {
         }
         return switch (escopo) {
             case TENANT -> Alcance.TENANT;
+            case TEAM -> Alcance.EQUIPE;
             case OWN -> Alcance.PROPRIO;
-            // UNIT, TEAM e NETWORK não decidem sobre registro de domínio
-            // enquanto nenhuma tabela declarar unidade — ADR-0008. Falha
+            // UNIT e NETWORK continuam sem decidir sobre registro de domínio:
+            // nenhuma tabela declara unidade nem rede — ADR-0008. Falha
             // fechada: conceder o tenant inteiro aqui seria ampliar
             // silenciosamente quem foi restrito de propósito.
             default -> throw negar(permissao, AcessoOrganizacionalNegado.Motivo.SCOPE_DENIED);

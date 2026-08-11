@@ -108,9 +108,21 @@ class OrganizationAccessService implements OrganizationAccess {
         return Map.copyOf(efetivo);
     }
 
+    /**
+     * Escolhe o alcance que a aplicação consegue realmente decidir, preferindo
+     * o mais amplo entre os decidíveis.
+     *
+     * <p>A ordem é TENANT, depois TEAM, depois OWN — e é escrita por extenso em
+     * vez de comparar {@code ordinal()}, porque UNIT e NETWORK ficam no meio da
+     * ordem do enum sem decidir nada. Comparar ordinais faria UNIT vencer OWN e
+     * anularia uma concessão própria perfeitamente válida.
+     */
     private static ScopeType escopoEfetivo(ScopeType atual, ScopeType novo) {
         if (atual == ScopeType.TENANT || novo == ScopeType.TENANT) {
             return ScopeType.TENANT;
+        }
+        if (atual == ScopeType.TEAM || novo == ScopeType.TEAM) {
+            return ScopeType.TEAM;
         }
         if (atual == ScopeType.OWN || novo == ScopeType.OWN) {
             return ScopeType.OWN;
@@ -118,6 +130,23 @@ class OrganizationAccessService implements OrganizationAccess {
         // Nenhum dos dois é decidível sobre os registros atuais. Preservar o
         // primeiro mantém a resposta determinística sem ampliar acesso.
         return atual;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Set<UUID> equipeDe(UUID tenantId, UUID userId) {
+        List<UUID> liderados = jdbc.queryForList("""
+                SELECT member_user_id
+                  FROM team_member
+                 WHERE tenant_id = ? AND manager_user_id = ?
+                   AND valid_until IS NULL
+                """, UUID.class, tenantId, userId);
+
+        Set<UUID> equipe = new LinkedHashSet<>(liderados);
+        // O próprio usuário sempre entra: gestor que enxerga a equipe e não
+        // enxerga a própria carteira seria um recorte que ninguém pediu.
+        equipe.add(userId);
+        return Set.copyOf(equipe);
     }
 
     @Override

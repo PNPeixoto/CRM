@@ -76,7 +76,7 @@ class DealController {
     ResponseEntity<List<DealDtos.OportunidadeResponse>> listarOportunidades(
             @PathVariable UUID funilId) {
 
-        UUID responsavelId = filtroDeResponsavel(Permissao.DEALS_READ);
+        Autorizacao.Recorte recorte = autorizacao.recorteDe(Permissao.DEALS_READ);
 
         // Confirma que o funil é do tenant antes de listar. O RLS já barraria,
         // mas devolver lista vazia para um id de outro cliente é pior que
@@ -85,7 +85,8 @@ class DealController {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Funil"));
 
         List<DealEntity> negocios = oportunidades.listarDoFunil(
-                TenantContext.obrigatorio(), funilId, responsavelId);
+                TenantContext.obrigatorio(), funilId,
+                recorte.todoOTenant(), recorte.responsaveis());
         Map<UUID, UsuarioLookup.UsuarioReference> responsaveis = users.findKnown(
                 TenantContext.obrigatorio(), negocios.stream()
                         .map(DealEntity::getOwnerUserId)
@@ -99,12 +100,7 @@ class DealController {
                 .toList());
     }
 
-    /** Ver a explicação equivalente em {@code ContactController}. */
-    private UUID filtroDeResponsavel(Permissao permissao) {
-        return autorizacao.alcanceDe(permissao) == Autorizacao.Alcance.PROPRIO
-                ? autorizacao.usuarioCorrente()
-                : null;
-    }
+
 
     @PostMapping("/oportunidades")
     @Transactional

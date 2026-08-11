@@ -57,9 +57,10 @@ class ContactController {
 
         validarConsulta(busca, pagina, tamanho, ordenarPor);
 
+        Autorizacao.Recorte recorte = autorizacao.recorteDe(Permissao.CONTACTS_READ);
         var page = repository.buscar(
                 TenantContext.obrigatorio(),
-                filtroDeResponsavel(Permissao.CONTACTS_READ),
+                recorte.todoOTenant(), recorte.responsaveis(),
                 busca == null || busca.isBlank() ? null : busca.trim(),
                 PageRequest.of(pagina, tamanho));
 
@@ -135,11 +136,7 @@ class ContactController {
      * um endpoint novo que esqueça de chamar não passa despercebido: ele
      * simplesmente não compila sem escolher um filtro.
      */
-    private UUID filtroDeResponsavel(Permissao permissao) {
-        return autorizacao.alcanceDe(permissao) == Autorizacao.Alcance.PROPRIO
-                ? autorizacao.usuarioCorrente()
-                : null;
-    }
+
 
     private static void validarConsulta(String busca, int pagina, int tamanho, String ordenarPor) {
         if (pagina < 0 || tamanho < 1 || tamanho > TAMANHO_MAXIMO_PAGINA) {

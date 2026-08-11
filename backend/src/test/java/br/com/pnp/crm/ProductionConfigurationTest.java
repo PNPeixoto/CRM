@@ -25,7 +25,7 @@ class ProductionConfigurationTest {
         assertThat(environment.getProperty(
                 "spring.jackson.deserialization.fail-on-unknown-properties", Boolean.class))
                 .isTrue();
-        assertThat(environment.getProperty("app.schema.expected-version")).isEqualTo("24");
+        assertThat(environment.getProperty("app.schema.expected-version")).isEqualTo("25");
         assertThat(environment.getProperty(
                 "app.http-connector.require-egress-proxy", Boolean.class)).isTrue();
         assertThat(environment.getPropertySources().get("prod")

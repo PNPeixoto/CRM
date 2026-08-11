@@ -103,6 +103,7 @@ public interface AuditTrail {
         CHANNEL_CONNECTION,
         HTTP_CONNECTOR,
         ROLE,
+        TEAM,
         TENANT_PROFILE
     }
 
@@ -128,6 +129,7 @@ public interface AuditTrail {
         ROLE_CREATED,
         ROLE_UPDATED,
         ROLE_REMOVED,
-        ROLE_ASSIGNMENT_CHANGED
+        ROLE_ASSIGNMENT_CHANGED,
+        TEAM_MEMBERSHIP_CHANGED
     }
 }

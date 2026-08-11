@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.util.Collection;
 import java.util.UUID;
 
 interface ContactRepository extends JpaRepository<ContactEntity, UUID> {
@@ -29,17 +30,18 @@ interface ContactRepository extends JpaRepository<ContactEntity, UUID> {
      * injeção em CRM, porque o campo de busca aceita qualquer coisa.
      */
     /**
-     * @param responsavelId quando não nulo, restringe ao alcance próprio. O
-     *                      filtro é aplicado <b>na consulta</b>, e não sobre a
-     *                      página já carregada: filtrar depois devolveria
-     *                      páginas de tamanho imprevisível e ainda faria o
-     *                      banco ler o que o usuário não pode ver.
+     * @param irrestrito   verdadeiro quando o alcance é todo o tenant
+     * @param responsaveis ids permitidos quando o alcance é equipe ou próprio.
+     *                     O filtro é aplicado <b>na consulta</b>, e não sobre a
+     *                     página já carregada: filtrar depois devolveria
+     *                     páginas de tamanho imprevisível e ainda faria o
+     *                     banco ler o que o usuário não pode ver.
      */
     @Query("""
             SELECT c FROM ContactEntity c
              WHERE c.tenantId = :tenantId
                AND c.deletedAt IS NULL
-               AND (:responsavelId IS NULL OR c.ownerUserId = :responsavelId)
+               AND (:irrestrito = TRUE OR c.ownerUserId IN :responsaveis)
                AND (CAST(:termo AS string) IS NULL
                     OR LOWER(c.name) LIKE LOWER(CONCAT('%', CAST(:termo AS string), '%'))
                     OR LOWER(c.email) LIKE LOWER(CONCAT('%', CAST(:termo AS string), '%'))
@@ -47,7 +49,8 @@ interface ContactRepository extends JpaRepository<ContactEntity, UUID> {
              ORDER BY c.name
             """)
     Page<ContactEntity> buscar(@Param("tenantId") UUID tenantId,
-                               @Param("responsavelId") UUID responsavelId,
+                               @Param("irrestrito") boolean irrestrito,
+                               @Param("responsaveis") Collection<UUID> responsaveis,
                                @Param("termo") String termo,
                                Pageable pageable);
 

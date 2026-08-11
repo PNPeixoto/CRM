@@ -31,6 +31,20 @@ public interface OrganizationAccess {
     /** Consulta de política sem exceção para identidades ainda sem membership. */
     boolean hasAnyRole(UUID tenantId, UUID userId, Set<String> roleCodes);
 
+    /**
+     * Quem responde ao usuário, mais ele próprio.
+     *
+     * <p>O próprio usuário entra sempre: um gestor que enxerga a equipe e não
+     * enxerga a própria carteira seria um recorte que ninguém pediu, e a
+     * primeira listagem já denunciaria.
+     *
+     * <p><b>Um nível, sem recursão.</b> Gerente de gestores exigiria
+     * {@code WITH RECURSIVE} e uma guarda de ciclo, e o desenho atual cobre
+     * Gerente sobre SDR e Closer, que é o caso real. A tabela suporta a
+     * extensão sem migration; a mudança seria só aqui. Ver ADR-0015.
+     */
+    Set<UUID> equipeDe(UUID tenantId, UUID userId);
+
     record AccessSummary(UUID tenantId, UUID membershipId,
                          List<AuthorizedContext> contexts) {
         public AccessSummary {

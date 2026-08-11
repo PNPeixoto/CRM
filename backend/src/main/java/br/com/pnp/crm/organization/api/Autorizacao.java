@@ -1,5 +1,6 @@
 package br.com.pnp.crm.organization.api;
 
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -59,14 +60,48 @@ public interface Autorizacao {
      * Confirma que o usuário pode agir sobre um registro específico.
      *
      * <p>Sob {@link Alcance#TENANT} sempre passa — o RLS já garante o tenant.
-     * Sob {@link Alcance#PROPRIO}, exige que o responsável seja o próprio
-     * usuário. Registro sem responsável é tratado como <b>negado</b> no alcance
-     * próprio: dono ausente não é dono presente, e liberar por omissão é como
-     * dado órfão vira dado de todos.
+     * Sob {@link Alcance#EQUIPE}, exige que o responsável seja o próprio usuário
+     * ou alguém da sua equipe. Sob {@link Alcance#PROPRIO}, exige que seja o
+     * próprio usuário. Registro sem responsável é tratado como <b>negado</b>
+     * fora do alcance de tenant: dono ausente não é dono presente, e liberar por
+     * omissão é como dado órfão vira dado de todos.
      *
      * @param responsavelId responsável do registro, possivelmente {@code null}
      */
     void exigirSobreRegistro(Permissao permissao, UUID responsavelId);
+
+    /**
+     * Recorte a aplicar na consulta de uma listagem.
+     *
+     * <p>Existe porque {@link #alcanceDe} responde "qual alcance", e quem monta
+     * uma listagem precisa de "quais responsáveis" — e sob
+     * {@link Alcance#EQUIPE} isso é um conjunto, não um id. Devolver o alcance e
+     * deixar cada controller traduzir faria a mesma regra ser reescrita em três
+     * módulos, que é como duas delas passam a divergir.
+     */
+    Recorte recorteDe(Permissao permissao);
+
+    /**
+     * Quem a listagem pode enxergar.
+     *
+     * <p>{@code todoOTenant} verdadeiro dispensa o conjunto: o RLS já limita ao
+     * tenant, e não há recorte adicional. Caso contrário, {@code responsaveis}
+     * traz exatamente os ids permitidos — nunca vazio, porque o próprio usuário
+     * sempre está incluído.
+     */
+    record Recorte(boolean todoOTenant, Set<UUID> responsaveis) {
+        public Recorte {
+            responsaveis = Set.copyOf(responsaveis);
+        }
+
+        public static Recorte tenantInteiro() {
+            return new Recorte(true, Set.of());
+        }
+
+        public static Recorte apenas(Set<UUID> responsaveis) {
+            return new Recorte(false, responsaveis);
+        }
+    }
 
     /** Id do usuário autenticado na requisição corrente. */
     UUID usuarioCorrente();
@@ -96,10 +131,19 @@ public interface Autorizacao {
      * <p>{@code UNIT} não aparece aqui: as tabelas de domínio não carregam
      * unidade, então não há como aplicá-lo sem inventar um filtro que o banco
      * não sustenta. Ver ADR-0008.
+     *
+     * <p>{@code EQUIPE} aparece porque o filtro <b>existe</b>: o responsável já
+     * é coluna indexada em contato, oportunidade e tarefa desde a V5, e a
+     * composição da equipe é uma tabela própria. Ver ADR-0015.
+     *
+     * <p>A ordem das constantes é do mais amplo para o mais restrito, e há
+     * teste que depende disso ao escolher o alcance efetivo.
      */
     enum Alcance {
         /** Enxerga e altera todo o tenant. */
         TENANT,
+        /** Enxerga e altera o que é seu e o de quem responde a você. */
+        EQUIPE,
         /** Enxerga e altera apenas os registros sob sua responsabilidade. */
         PROPRIO
     }

@@ -71,8 +71,8 @@ export const ROTAS: readonly RotaApp[] = [
     componente: lazy(() => import('@/pages/units').then((m) => ({ default: m.UnitsPage }))),
   },
   {
-    id: 'teams', caminho: '/equipes', rotulo: 'Equipes',
-    icone: 'users-round', status: 'em_producao', grupo: 'gestao',
+    id: 'teams', caminho: '/acessos', rotulo: 'Acessos',
+    icone: 'users-round', status: 'pronto', grupo: 'gestao',
     componente: lazy(() => import('@/pages/teams').then((m) => ({ default: m.TeamsPage }))),
   },
   {

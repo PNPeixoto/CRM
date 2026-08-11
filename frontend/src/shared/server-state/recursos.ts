@@ -19,6 +19,8 @@ import {
 } from '@/shared/tenant/api';
 import type { SegmentoDeNegocio } from '@/shared/tenant/tipos';
 import { auditoriaApi, type FiltrosAuditoria } from '@/shared/audit/api';
+import { organizacaoApi } from '@/shared/organizacao/api';
+import type { Alcance } from '@/shared/organizacao/tipos';
 import {
   chaveDoRecurso,
   contextoSeguro,
@@ -374,4 +376,107 @@ export function useSincronizacaoDaInbox() {
       });
     }
   };
+}
+
+// ---------------------------------------------------------------------------
+// Administração de acessos
+// ---------------------------------------------------------------------------
+//
+// Toda mutação invalida 'papeis' e 'membros' juntos: mudar as permissões de um
+// papel altera o que cada pessoa atribuída a ele pode fazer, e mostrar a lista
+// de membros desatualizada faria a tela contradizer a si mesma.
+//
+// 'permissoes' também entra, porque é o que o menu usa: quem acabou de perder
+// um acesso não deve continuar vendo o item até recarregar a página.
+
+export function useCatalogoDePapeis() {
+  const contexto = useContextoEstadoServidor();
+  const seguro = contextoSeguro(contexto);
+  return useQuery({
+    queryKey: chaveDoRecurso(seguro, 'papeis'),
+    queryFn: ({ signal }) => organizacaoApi.catalogo(signal),
+    enabled: Boolean(contexto),
+  });
+}
+
+export function useMembrosDaOrganizacao() {
+  const contexto = useContextoEstadoServidor();
+  const seguro = contextoSeguro(contexto);
+  return useQuery({
+    queryKey: chaveDoRecurso(seguro, 'membros'),
+    queryFn: ({ signal }) => organizacaoApi.membros(signal),
+    enabled: Boolean(contexto),
+  });
+}
+
+export function useEquipes() {
+  const contexto = useContextoEstadoServidor();
+  const seguro = contextoSeguro(contexto);
+  return useQuery({
+    queryKey: chaveDoRecurso(seguro, 'equipes'),
+    queryFn: ({ signal }) => organizacaoApi.equipes(signal),
+    enabled: Boolean(contexto),
+  });
+}
+
+function useMutacaoDeAcesso<Entrada, Saida>(
+  executar: (entrada: Entrada) => Promise<Saida>,
+) {
+  const contexto = useContextoEstadoServidor();
+  const cliente = useQueryClient();
+  return useMutation({
+    mutationFn: executar,
+    onSuccess: () => invalidar(cliente, contextoObrigatorio(contexto),
+      ['papeis', 'membros', 'equipes', 'permissoes']),
+  });
+}
+
+export function useCriarPapel() {
+  return useMutacaoDeAcesso(organizacaoApi.criarPapel);
+}
+
+export function useAtualizarPapel() {
+  return useMutacaoDeAcesso(
+    (entrada: { id: string; nome: string; descricao?: string | null; ativo: boolean }) =>
+      organizacaoApi.atualizarPapel(entrada.id, entrada),
+  );
+}
+
+export function useDefinirPermissoes() {
+  return useMutacaoDeAcesso(
+    (entrada: { id: string; permissoes: readonly string[] }) =>
+      organizacaoApi.definirPermissoes(entrada.id, entrada.permissoes),
+  );
+}
+
+export function useRemoverPapel() {
+  return useMutacaoDeAcesso((id: string) => organizacaoApi.removerPapel(id));
+}
+
+export function useAtribuirPapel() {
+  return useMutacaoDeAcesso(
+    (entrada: { membershipId: string; papelId: string; alcance: Alcance }) =>
+      organizacaoApi.atribuirPapel(entrada.membershipId, entrada.papelId, entrada.alcance),
+  );
+}
+
+export function useRevogarPapel() {
+  return useMutacaoDeAcesso(
+    (entrada: { membershipId: string; atribuicaoId: string }) =>
+      organizacaoApi.revogarPapel(entrada.membershipId, entrada.atribuicaoId),
+  );
+}
+
+export function useIncluirNaEquipe() {
+  return useMutacaoDeAcesso(
+    (entrada: { gestorId: string; usuarioId: string }) =>
+      organizacaoApi.incluirNaEquipe(entrada.gestorId, entrada.usuarioId),
+  );
+}
+
+export function useRemoverDaEquipe() {
+  return useMutacaoDeAcesso(
+    (entrada: { gestorId: string; usuarioId: string }) =>
+      organizacaoApi.removerDaEquipe(entrada.gestorId, entrada.usuarioId),
+  );
 }

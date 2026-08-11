@@ -22,8 +22,11 @@ final class PapelDtos {
      * e aceita pelo banco e <b>nao concede nada</b> (ADR-0008). Ofere-cê-la na
      * tela produziria papel que parece funcionar e falha em silencio — pior que
      * a ausencia da opcao.
+     *
+     * <p>TEAM entrou na V25: o recorte por equipe filtra por
+     * {@code owner_user_id}, coluna que existe e e indexada. Ver ADR-0015.
      */
-    static final String ALCANCES = "TENANT|OWN";
+    static final String ALCANCES = "TENANT|TEAM|OWN";
 
     record PapelResponse(UUID id, String codigo, String nome, String descricao,
                          boolean sistema, boolean ativo, List<String> permissoes,

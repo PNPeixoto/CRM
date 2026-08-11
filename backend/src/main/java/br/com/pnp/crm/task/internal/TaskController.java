@@ -52,9 +52,10 @@ class TaskController {
     @Transactional(readOnly = true)
     ResponseEntity<List<TarefaResponse>> listar(
             @RequestParam(defaultValue = "false") boolean apenasAbertas) {
+        Autorizacao.Recorte recorte = autorizacao.recorteDe(Permissao.TASKS_READ);
         List<TaskEntity> tarefas = repository.listar(
                 TenantContext.obrigatorio(),
-                filtroDeResponsavel(Permissao.TASKS_READ), apenasAbertas);
+                recorte.todoOTenant(), recorte.responsaveis(), apenasAbertas);
         Map<UUID, UsuarioLookup.UsuarioReference> responsaveis = users.findKnown(
                 TenantContext.obrigatorio(), tarefas.stream()
                         .map(TaskEntity::getAssignedUserId)
@@ -67,12 +68,7 @@ class TaskController {
                 .toList());
     }
 
-    /** Ver a explicação equivalente em {@code ContactController}. */
-    private UUID filtroDeResponsavel(Permissao permissao) {
-        return autorizacao.alcanceDe(permissao) == Autorizacao.Alcance.PROPRIO
-                ? autorizacao.usuarioCorrente()
-                : null;
-    }
+
 
     @PostMapping
     @Transactional

@@ -91,14 +91,53 @@ Não corrigido aqui para não misturar módulos numa entrega já fechada. Precis
 transação própria para a trilha, ou de inversão por evento como a que foi feita
 em `organization`.
 
+## Parte B — alcance de equipe (V25)
+
+O alcance intermediário virou **equipe**, não unidade. `contact`, `deal` e
+`task` já carregam `owner_user_id` com índice desde a V5, então o recorte é
+filtro sobre coluna existente: nenhuma coluna nova em tabela de domínio, nenhum
+backfill inventado, e nenhum conflito com o ADR-0008 — que trata de unidade e
+continua valendo. Registrado em `ADR-0015`.
+
+`team_member` guarda a composição com vigência, e o runtime não tem `DELETE`
+nem `UPDATE` livre: encerrar é `valid_until`. O período em que alguém respondeu
+a um gestor explica acessos já gravados na trilha.
+
+`ScopeType.TEAM` existia no enum desde a V10; a V25 só ampliou o `CHECK` de
+`membership_scope`.
+
+**O recorte é resolvido num lugar só.** `Autorizacao.recorteDe` devolve
+`Recorte(todoOTenant, responsaveis)`, e as três listagens passaram de
+`UUID responsavelId` para `boolean irrestrito, Collection<UUID> responsaveis`,
+sempre aplicado **na consulta**. Devolver só o alcance e deixar cada controller
+traduzir faria a mesma regra existir em três módulos.
+
+Um nível, sem recursão — cobre Gerente sobre SDR e Closer. Ciclos não travam a
+consulta por isso, mas o ciclo de dois é recusado assim mesmo: produz duas
+pessoas se enxergando sem que nenhuma seja gestora de fato.
+
+## Tela
+
+`/acessos` (antes `/equipes`, `EmProducao`) com três abas: Papéis, Pessoas e
+Equipes. Nove testes de componente.
+
+A tela desabilita o que o backend recusaria — permissão não delegável, papel de
+sistema, papel acima do privilégio, papel em uso — e **nada disso é a
+proteção**: cada botão bate num endpoint que decide sozinho, e há teste no
+backend provando a recusa.
+
+Três avisos que a tela dá porque ninguém descobriria sozinho:
+
+- revogação vale na próxima ação, mas a sessão aberta leva até 15 minutos;
+- papel de equipe sem composição enxerga só o próprio responsável;
+- papel que concede além do seu privilégio aparece, sem botão, com o motivo.
+
 ## Pendências da Fase 4
 
-- **Parte B — alcance de equipe.** Migration `team_member`, `Alcance.EQUIPE` e
-  recorte nas listagens. É o "gerente vê o que a equipe dele faz", hoje
-  inexistente: só há `TENANT` e `PROPRIO`.
-- **Interface.** `/equipes` continua `EmProducao`. As rotas existem e estão no
-  contrato TypeScript gerado.
+- **V25 não foi aplicada ao banco vivo.** A imagem em execução é a v24 e as
+  rotas novas não existem nela, então a tela não foi verificada ponta a ponta —
+  só por teste de componente e contra Testcontainers. Aplicar é decisão
+  explícita, como foi com a V22, V23 e V24.
 - **Preset de papéis.** SDR, Closer, Atendente, Gestor e Gerente como papéis
   comuns editáveis — não `system_role`.
-- **Revogação não é instantânea.** Vale na chamada seguinte à API, mas a sessão
-  já emitida carrega o token por até 15 minutos. A tela precisa dizer isso.
+- **Hierarquia de mais de um nível**, se a operação passar a exigir.
