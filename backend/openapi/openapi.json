@@ -9838,6 +9838,9 @@
           "codigo" : {
             "type" : "string"
           },
+          "delegavelNaEquipe" : {
+            "type" : "boolean"
+          },
           "delegavelNoTenant" : {
             "type" : "boolean"
           },

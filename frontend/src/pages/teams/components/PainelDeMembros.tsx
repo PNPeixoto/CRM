@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Cartao, Carregando, Vazio } from '@/shared/components/Pagina';
 import {
-  ALCANCES,
+  alcancesPossiveis,
   DESCRICAO_ALCANCE,
   ROTULO_ALCANCE,
   type Alcance,
   type Membro,
   type Papel,
+  type PermissaoDoCatalogo,
 } from '@/shared/organizacao/tipos';
 
 /**
@@ -21,12 +22,14 @@ import {
 export function PainelDeMembros({
   membros,
   papeis,
+  permissoes,
   carregando,
   aoAtribuir,
   aoRevogar,
 }: {
   readonly membros: readonly Membro[];
   readonly papeis: readonly Papel[];
+  readonly permissoes: readonly PermissaoDoCatalogo[];
   readonly carregando: boolean;
   readonly aoAtribuir: (entrada: {
     membershipId: string; papelId: string; alcance: Alcance;
@@ -87,6 +90,7 @@ export function PainelDeMembros({
 
             <FormularioDeAtribuicao
               papeis={papeis}
+              permissoes={permissoes}
               aoAtribuir={(papelId, alcance) => aoAtribuir({
                 membershipId: membro.membershipId, papelId, alcance,
               })}
@@ -100,9 +104,11 @@ export function PainelDeMembros({
 
 function FormularioDeAtribuicao({
   papeis,
+  permissoes,
   aoAtribuir,
 }: {
   readonly papeis: readonly Papel[];
+  readonly permissoes: readonly PermissaoDoCatalogo[];
   readonly aoAtribuir: (papelId: string, alcance: Alcance) => void;
 }) {
   const disponiveis = papeis.filter((papel) => papel.ativo);
@@ -110,6 +116,13 @@ function FormularioDeAtribuicao({
   const [alcance, setAlcance] = useState<Alcance>('OWN');
 
   if (disponiveis.length === 0) return null;
+
+  const papel = disponiveis.find((item) => item.id === papelId);
+  // Só os alcances em que este papel pode ser concedido por quem está na tela.
+  // Um papel com uma permissão que o autor só tem para si não pode ser dado
+  // para toda a empresa, e o servidor recusaria — oferecer seria enganar.
+  const possiveis = papel ? alcancesPossiveis(papel, permissoes) : [];
+  const escolhido = possiveis.includes(alcance) ? alcance : possiveis[0];
 
   return (
     <div className="flex flex-wrap items-end gap-2">
@@ -131,11 +144,12 @@ function FormularioDeAtribuicao({
         <span className="block">Alcance</span>
         <Select
           tamanho="compacto"
-          value={alcance}
+          value={escolhido ?? ''}
+          disabled={possiveis.length === 0}
           aria-label="Alcance da atribuição"
           onChange={(evento) => setAlcance(evento.target.value as Alcance)}
         >
-          {ALCANCES.map((item) => (
+          {possiveis.map((item) => (
             <option key={item} value={item}>{ROTULO_ALCANCE[item]}</option>
           ))}
         </Select>
@@ -144,15 +158,17 @@ function FormularioDeAtribuicao({
       <Button
         variant="secundario"
         size="pequeno"
-        disabled={!papelId}
-        onClick={() => aoAtribuir(papelId, alcance)}
+        disabled={!papelId || !escolhido}
+        onClick={() => escolhido && aoAtribuir(papelId, escolhido)}
       >
         Atribuir
       </Button>
 
       <p className="w-full text-xs text-[var(--text-muted)]">
-        {DESCRICAO_ALCANCE[alcance]}
-        {alcance === 'TEAM' && ' Monte a equipe na aba Equipes.'}
+        {escolhido ? DESCRICAO_ALCANCE[escolhido] : (
+          'Este papel concede acessos que você não possui, então você não pode atribuí-lo.'
+        )}
+        {escolhido === 'TEAM' && ' Monte a equipe na aba Equipes.'}
       </p>
     </div>
   );

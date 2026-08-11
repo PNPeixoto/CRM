@@ -75,10 +75,12 @@ class PapelController {
         autorizacao.exigirNoTenant(Permissao.ORGANIZATION_MANAGE);
 
         Set<String> noTenant = guarda.delegaveis(OrganizationAccess.ScopeType.TENANT);
+        Set<String> naEquipe = guarda.delegaveis(OrganizationAccess.ScopeType.TEAM);
 
         List<PapelDtos.PermissaoResponse> catalogo = Arrays.stream(Permissao.values())
                 .map(permissao -> new PapelDtos.PermissaoResponse(permissao.codigo(),
                         noTenant.contains(permissao.codigo()),
+                        naEquipe.contains(permissao.codigo()),
                         possuidas().contains(permissao.codigo())))
                 .toList();
 
@@ -96,10 +98,7 @@ class PapelController {
     ResponseEntity<PapelDtos.PapelResponse> criar(
             @Valid @RequestBody PapelDtos.CriarPapelRequest requisicao) {
         autorizacao.exigirNoTenant(Permissao.ORGANIZATION_MANAGE);
-        // Um papel nasce podendo ser concedido em qualquer alcance, então o
-        // conjunto precisa caber no mais amplo que o autor pode delegar.
-        guarda.exigirPoderDelegar(requisicao.permissoes(), OrganizationAccess.ScopeType.TENANT);
-
+        exigirPoderDefinir(requisicao.permissoes());
         exigirCodigoLivre(requisicao.codigo());
 
         UUID autor = autorizacao.usuarioCorrente();
@@ -135,7 +134,7 @@ class PapelController {
         autorizacao.exigirNoTenant(Permissao.ORGANIZATION_MANAGE);
 
         exigirEditavel(papelId);
-        guarda.exigirPoderDelegar(requisicao.permissoes(), OrganizationAccess.ScopeType.TENANT);
+        exigirPoderDefinir(requisicao.permissoes());
 
         UUID autor = autorizacao.usuarioCorrente();
         papeis.definirPermissoes(papelId, requisicao.permissoes(), autor);
@@ -249,6 +248,27 @@ class PapelController {
         if (ocupado) {
             throw new CodigoDePapelEmUsoException(codigo);
         }
+    }
+
+    /**
+     * Definir o conteúdo de um papel exige possuir cada permissão — e só isso.
+     *
+     * <p>Papel é uma lista de permissões e <b>não concede nada até ser
+     * atribuído</b>. O alcance entra na atribuição, e é lá que
+     * {@link GuardaDeConcessao#exigirPoderDelegar} confere se o autor pode
+     * entregar aquele recorte. Exigir alcance de tenant já na definição
+     * impediria um administrador de alcance próprio de montar um papel que ele
+     * poderia legitimamente atribuir em alcance próprio.
+     *
+     * <p>E não abre escalonamento: quem só possui a permissão sob alcance
+     * próprio continua só conseguindo atribuir o papel sob alcance próprio.
+     *
+     * <p>Esta é a mesma pergunta que {@code gerenciavel} responde na listagem.
+     * Quando as duas divergiram, a tela oferecia um botão de editar que o
+     * salvamento recusava.
+     */
+    private void exigirPoderDefinir(java.util.Collection<String> permissoes) {
+        guarda.exigirPoderDelegar(permissoes, OrganizationAccess.ScopeType.OWN);
     }
 
     private PapelRepository.Papel exigirEditavel(UUID papelId) {

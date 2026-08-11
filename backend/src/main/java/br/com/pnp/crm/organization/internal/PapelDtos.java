@@ -50,7 +50,16 @@ final class PapelDtos {
         }
     }
 
-    record PermissaoResponse(String codigo, boolean delegavelNoTenant, boolean delegavelProprio) {
+    /**
+     * Uma marca por alcance, e não um booleano só.
+     *
+     * <p>A tela precisa saber <b>em qual recorte</b> cada permissão pode ser
+     * concedida, porque é isso que a atribuição verifica. Com um único
+     * booleano, o seletor de alcance ofereceria opções que o servidor recusa —
+     * o mesmo defeito que já apareceu na definição do papel.
+     */
+    record PermissaoResponse(String codigo, boolean delegavelNoTenant,
+                             boolean delegavelNaEquipe, boolean delegavelProprio) {
     }
 
     record CriarPapelRequest(

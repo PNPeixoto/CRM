@@ -100,6 +100,52 @@ class NaoEscalonamentoTest {
     }
 
     @Test
+    void definirPapelExigePossuirAPermissaoENaoOAlcanceDeTenant() throws Exception {
+        // Papel é uma lista de permissões e não concede nada até ser atribuído.
+        // Exigir alcance de tenant já na definição impediria um administrador
+        // de alcance próprio de montar um papel que ele pode legitimamente
+        // atribuir em alcance próprio — e a listagem já dizia que ele podia,
+        // porque `gerenciavel` sempre respondeu "eu possuo isto".
+        UUID restrito = cenario.criarUsuario(tenant, "restrito", "12345");
+        cenario.concederTudoNoTenant(tenant, restrito, "organization.manage");
+        cenario.conceder(tenant, restrito, "OWN", "contacts.read");
+
+        UUID papel = criarPapel(restrito, "CARTEIRA", "contacts.read");
+
+        // O limite continua na atribuição: só o recorte que ele próprio tem.
+        mockMvc.perform(post("/api/organizacao/membros/" + membership(vendedor) + "/papeis")
+                        .with(como(restrito))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"papelId":"%s","alcance":"TENANT"}
+                                """.formatted(papel)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.codigo").value(ACIMA_DO_PRIVILEGIO));
+    }
+
+    @Test
+    void editarPapelQueSeGerenciaNaoEhRecusadoPorAlcance() throws Exception {
+        // Regressão: `gerenciavel` dizia editável e o salvamento devolvia 422,
+        // porque as duas decisões usavam critérios diferentes.
+        UUID restrito = cenario.criarUsuario(tenant, "restrito", "12345");
+        cenario.concederTudoNoTenant(tenant, restrito, "organization.manage");
+        cenario.conceder(tenant, restrito, "OWN", "contacts.read");
+
+        UUID papel = criarPapel(restrito, "CARTEIRA", "contacts.read");
+
+        mockMvc.perform(get("/api/organizacao/papeis").with(como(restrito)))
+                .andExpect(jsonPath("$.papeis[?(@.codigo=='CARTEIRA')].gerenciavel").value(true));
+
+        mockMvc.perform(put("/api/organizacao/papeis/" + papel + "/permissoes")
+                        .with(como(restrito))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"permissoes":["contacts.read"]}
+                                """))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void oQueOAutorPossuiEhAceito() throws Exception {
         mockMvc.perform(post("/api/organizacao/papeis").with(como(gestor))
                         .contentType(MediaType.APPLICATION_JSON)

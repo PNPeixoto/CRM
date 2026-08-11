@@ -1524,6 +1524,7 @@ export interface components {
         };
         readonly PermissaoResponse: {
             readonly codigo?: string;
+            readonly delegavelNaEquipe?: boolean;
             readonly delegavelNoTenant?: boolean;
             readonly delegavelProprio?: boolean;
         };

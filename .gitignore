@@ -18,3 +18,7 @@ node_modules/
 
 # SO
 .DS_Store
+
+# Dumps de banco: contem dado pessoal, conteudo de mensagem e hash de senha.
+# Backup nunca entra no repositorio.
+var/backups/

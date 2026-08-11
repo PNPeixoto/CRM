@@ -67,6 +67,7 @@ export const organizacaoApi = {
       permissoes: obrigatorio(dados.permissoes, 'catalogo.permissoes').map((item) => ({
         codigo: obrigatorio(item.codigo, 'permissao.codigo'),
         delegavelNoTenant: obrigatorio(item.delegavelNoTenant, 'permissao.delegavelNoTenant'),
+        delegavelNaEquipe: obrigatorio(item.delegavelNaEquipe, 'permissao.delegavelNaEquipe'),
         delegavelProprio: obrigatorio(item.delegavelProprio, 'permissao.delegavelProprio'),
       })),
     };

@@ -39,8 +39,14 @@ const CATALOGO = {
     },
   ],
   permissoes: [
-    { codigo: 'contacts.read', delegavelNoTenant: true, delegavelProprio: true },
-    { codigo: 'audit.read', delegavelNoTenant: false, delegavelProprio: false },
+    {
+      codigo: 'contacts.read',
+      delegavelNoTenant: true, delegavelNaEquipe: true, delegavelProprio: true,
+    },
+    {
+      codigo: 'audit.read',
+      delegavelNoTenant: false, delegavelNaEquipe: false, delegavelProprio: false,
+    },
   ],
 } as const;
 
@@ -135,6 +141,24 @@ describe('TeamsPage', () => {
     await waitFor(() => expect(organizacaoApi.atribuirPapel).toHaveBeenCalledOnce());
     expect(vi.mocked(organizacaoApi.atribuirPapel).mock.calls[0])
       .toEqual(['vinculo-2', 'papel-sdr', 'TENANT']);
+  });
+
+  it('não oferece alcance para papel que o usuário não pode atribuir', async () => {
+    // AUDITOR concede audit.read, que este usuário não possui em alcance
+    // nenhum. Oferecer o seletor e deixar o servidor devolver 422 é o mesmo
+    // defeito de "oferece e nega" que a tela existe para evitar.
+    renderComEstadoServidor(<TeamsPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /pessoas/i }));
+    await screen.findByText('Bruno Vendedor');
+
+    fireEvent.change(screen.getAllByLabelText('Papel a atribuir')[1], {
+      target: { value: 'papel-auditor' },
+    });
+
+    expect(screen.getAllByLabelText('Alcance da atribuição')[1]).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: /^atribuir$/i })[1]).toBeDisabled();
+    expect(screen.getAllByText(/não possui/i).length).toBeGreaterThan(0);
   });
 
   it('avisa quando há papel de equipe sem composição montada', async () => {

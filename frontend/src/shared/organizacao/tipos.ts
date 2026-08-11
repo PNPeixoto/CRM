@@ -38,7 +38,34 @@ export interface Papel {
 export interface PermissaoDoCatalogo {
   readonly codigo: string;
   readonly delegavelNoTenant: boolean;
+  readonly delegavelNaEquipe: boolean;
   readonly delegavelProprio: boolean;
+}
+
+/**
+ * Alcances em que um papel pode ser atribuído por quem está na tela.
+ *
+ * <p>Um papel só pode ser concedido sob um alcance se **todas** as permissões
+ * dele forem delegáveis naquele recorte. Oferecer um alcance que o servidor
+ * recusa transforma administração de rotina em tentativa e erro — e a decisão
+ * continua sendo do backend, que verifica de novo.
+ */
+export function alcancesPossiveis(
+  papel: Papel,
+  catalogo: readonly PermissaoDoCatalogo[],
+): readonly Alcance[] {
+  const porCodigo = new Map(catalogo.map((item) => [item.codigo, item]));
+  const delegavel = (codigo: string, alcance: Alcance): boolean => {
+    const permissao = porCodigo.get(codigo);
+    // Código fora do catálogo compilado nunca é delegável: o servidor recusa,
+    // e assumir o contrário aqui reintroduziria o "oferece e nega".
+    if (!permissao) return false;
+    if (alcance === 'TENANT') return permissao.delegavelNoTenant;
+    if (alcance === 'TEAM') return permissao.delegavelNaEquipe;
+    return permissao.delegavelProprio;
+  };
+  return ALCANCES.filter((alcance) =>
+    papel.permissoes.every((codigo) => delegavel(codigo, alcance)));
 }
 
 export interface CatalogoDePapeis {

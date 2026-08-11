@@ -142,6 +142,7 @@ export function TeamsPage() {
           <PainelDeMembros
             membros={membros.data ?? []}
             papeis={catalogo.data.papeis}
+            permissoes={catalogo.data.permissoes}
             carregando={membros.isPending}
             aoAtribuir={(entrada) => executar(() => atribuir.mutateAsync(entrada))}
             aoRevogar={(entrada) => executar(() => revogar.mutateAsync(entrada))}
