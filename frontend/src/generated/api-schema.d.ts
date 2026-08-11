@@ -11,7 +11,7 @@ export interface paths {
             readonly path?: never;
             readonly cookie?: never;
         };
-        readonly get: operations["listar_6"];
+        readonly get: operations["listar_7"];
         readonly put?: never;
         readonly post?: never;
         readonly delete?: never;
@@ -171,9 +171,9 @@ export interface paths {
             readonly path?: never;
             readonly cookie?: never;
         };
-        readonly get: operations["listar_4"];
+        readonly get: operations["listar_5"];
         readonly put?: never;
-        readonly post: operations["criar_5"];
+        readonly post: operations["criar_6"];
         readonly delete?: never;
         readonly options?: never;
         readonly head?: never;
@@ -379,9 +379,9 @@ export interface paths {
             readonly path?: never;
             readonly cookie?: never;
         };
-        readonly get: operations["listar_3"];
+        readonly get: operations["listar_4"];
         readonly put?: never;
-        readonly post: operations["criar_4"];
+        readonly post: operations["criar_5"];
         readonly delete?: never;
         readonly options?: never;
         readonly head?: never;
@@ -396,7 +396,7 @@ export interface paths {
             readonly cookie?: never;
         };
         readonly get?: never;
-        readonly put: operations["atualizar_4"];
+        readonly put: operations["atualizar_5"];
         readonly post?: never;
         readonly delete?: never;
         readonly options?: never;
@@ -443,9 +443,9 @@ export interface paths {
             readonly path?: never;
             readonly cookie?: never;
         };
-        readonly get: operations["listar_2"];
+        readonly get: operations["listar_3"];
         readonly put?: never;
-        readonly post: operations["criar_3"];
+        readonly post: operations["criar_4"];
         readonly delete?: never;
         readonly options?: never;
         readonly head?: never;
@@ -460,7 +460,7 @@ export interface paths {
             readonly cookie?: never;
         };
         readonly get: operations["obter"];
-        readonly put: operations["atualizar_3"];
+        readonly put: operations["atualizar_4"];
         readonly post?: never;
         readonly delete: operations["excluir_2"];
         readonly options?: never;
@@ -475,7 +475,7 @@ export interface paths {
             readonly path?: never;
             readonly cookie?: never;
         };
-        readonly get: operations["listar_5"];
+        readonly get: operations["listar_6"];
         readonly put?: never;
         readonly post?: never;
         readonly delete?: never;
@@ -587,9 +587,9 @@ export interface paths {
             readonly path?: never;
             readonly cookie?: never;
         };
-        readonly get: operations["listar_1"];
+        readonly get: operations["listar_2"];
         readonly put?: never;
-        readonly post: operations["criar_2"];
+        readonly post: operations["criar_3"];
         readonly delete?: never;
         readonly options?: never;
         readonly head?: never;
@@ -604,7 +604,7 @@ export interface paths {
             readonly cookie?: never;
         };
         readonly get?: never;
-        readonly put: operations["atualizar_2"];
+        readonly put: operations["atualizar_3"];
         readonly post?: never;
         readonly delete?: never;
         readonly options?: never;
@@ -717,7 +717,7 @@ export interface paths {
         };
         readonly get?: never;
         readonly put?: never;
-        readonly post: operations["criar_1"];
+        readonly post: operations["criar_2"];
         readonly delete?: never;
         readonly options?: never;
         readonly head?: never;
@@ -732,7 +732,7 @@ export interface paths {
             readonly cookie?: never;
         };
         readonly get?: never;
-        readonly put: operations["atualizar_1"];
+        readonly put: operations["atualizar_2"];
         readonly post?: never;
         readonly delete: operations["excluir_1"];
         readonly options?: never;
@@ -772,6 +772,102 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/organizacao/membros": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get: operations["membros"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/organizacao/membros/{membershipId}/papeis": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        readonly post: operations["atribuir"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/organizacao/membros/{membershipId}/papeis/{atribuicaoId}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete: operations["revogar"];
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/organizacao/papeis": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get: operations["listar_1"];
+        readonly put?: never;
+        readonly post: operations["criar_1"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/organizacao/papeis/{papelId}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put: operations["atualizar_1"];
+        readonly post?: never;
+        readonly delete: operations["remover"];
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/organizacao/papeis/{papelId}/permissoes": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put: operations["definirPermissoes"];
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/organizacao/permissoes": {
         readonly parameters: {
             readonly query?: never;
@@ -782,6 +878,38 @@ export interface paths {
         readonly get: operations["permissoes"];
         readonly put?: never;
         readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/privacidade/titulares/{contatoId}/anonimizacao": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        readonly post: operations["anonimizar"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/privacidade/titulares/{contatoId}/exportacao": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        readonly post: operations["exportar"];
         readonly delete?: never;
         readonly options?: never;
         readonly head?: never;
@@ -888,6 +1016,25 @@ export interface components {
             /** Format: int32 */
             readonly versaoPreset?: number;
         };
+        readonly AtribuicaoResponse: {
+            readonly alcance?: string;
+            /** Format: uuid */
+            readonly id?: string;
+            readonly papelCodigo?: string;
+            /** Format: uuid */
+            readonly papelId?: string;
+            readonly papelNome?: string;
+        };
+        readonly AtribuirPapelRequest: {
+            readonly alcance: string;
+            /** Format: uuid */
+            readonly papelId: string;
+        };
+        readonly AtualizarPapelRequest: {
+            readonly ativo: boolean;
+            readonly descricao?: string;
+            readonly nome: string;
+        };
         readonly AuthorizedContext: {
             readonly code?: string;
             /** Format: uuid */
@@ -923,6 +1070,10 @@ export interface components {
             readonly ultimaFalhaRemotaEm?: string;
             /** Format: date-time */
             readonly ultimaReconciliacaoEm?: string;
+        };
+        readonly CatalogoResponse: {
+            readonly papeis?: readonly components["schemas"]["PapelResponse"][];
+            readonly permissoes?: readonly components["schemas"]["PermissaoResponse"][];
         };
         readonly ConnectorRequest: {
             readonly cabecalhoIdempotencia?: string;
@@ -984,6 +1135,12 @@ export interface components {
             readonly venceEm?: string;
             /** Format: int64 */
             readonly versao?: number;
+        };
+        readonly CriarPapelRequest: {
+            readonly codigo: string;
+            readonly descricao?: string;
+            readonly nome: string;
+            readonly permissoes: readonly string[];
         };
         readonly DealEtapaResponse: {
             readonly ganho?: boolean;
@@ -1115,11 +1272,30 @@ export interface components {
             /** Format: int32 */
             readonly versaoDefinicao?: number;
         };
+        readonly ExportacaoDeTitular: {
+            /** Format: uuid */
+            readonly contatoId?: string;
+            /** Format: date-time */
+            readonly geradaEm?: string;
+            readonly observacoes?: readonly string[];
+            readonly secoes?: readonly components["schemas"]["Secao"][];
+            /** Format: uuid */
+            readonly solicitadaPor?: string;
+        };
         readonly LoginRequest: {
             readonly codigoMfa?: string;
             readonly empresa: string;
             readonly login: string;
             readonly senha: string;
+        };
+        readonly MembroResponse: {
+            readonly atribuicoes?: readonly components["schemas"]["AtribuicaoResponse"][];
+            readonly login?: string;
+            /** Format: uuid */
+            readonly membershipId?: string;
+            readonly nome?: string;
+            /** Format: uuid */
+            readonly usuarioId?: string;
         };
         readonly MensagemResposta: {
             /** Format: uuid */
@@ -1240,6 +1416,19 @@ export interface components {
             readonly sequenciaDoStream?: number;
             readonly temMais?: boolean;
         };
+        readonly PapelResponse: {
+            readonly ativo?: boolean;
+            /** Format: int64 */
+            readonly atribuicoes?: number;
+            readonly codigo?: string;
+            readonly descricao?: string;
+            readonly gerenciavel?: boolean;
+            /** Format: uuid */
+            readonly id?: string;
+            readonly nome?: string;
+            readonly permissoes?: readonly string[];
+            readonly sistema?: boolean;
+        };
         readonly PareamentoResponse: {
             readonly codigoDeParear?: string;
             readonly estado?: string;
@@ -1268,6 +1457,14 @@ export interface components {
         readonly PerfilInicialRequest: {
             /** @enum {string} */
             readonly segmento: "GENERAL_SERVICES" | "RESTAURANT" | "CONFECTIONERY" | "RENTAL";
+        };
+        readonly PermissaoResponse: {
+            readonly codigo?: string;
+            readonly delegavelNoTenant?: boolean;
+            readonly delegavelProprio?: boolean;
+        };
+        readonly PermissoesRequest: {
+            readonly permissoes: readonly string[];
         };
         readonly Preview: {
             readonly cabecalhoAutenticacao?: string;
@@ -1300,6 +1497,17 @@ export interface components {
             readonly status?: string;
             /** Format: int32 */
             readonly timeoutMs?: number;
+        };
+        readonly Secao: {
+            readonly categoria?: string;
+            readonly finalidade?: string;
+            readonly origem?: string;
+            /** Format: int32 */
+            readonly quantidade?: number;
+            readonly registros?: readonly {
+                readonly [key: string]: string;
+            }[];
+            readonly retencao?: string;
         };
         readonly SecretRequest: {
             readonly cabecalho?: string;
@@ -1435,7 +1643,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    readonly listar_6: {
+    readonly listar_7: {
         readonly parameters: {
             readonly query?: {
                 readonly acao?: string;
@@ -2374,7 +2582,7 @@ export interface operations {
             };
         };
     };
-    readonly listar_4: {
+    readonly listar_5: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -2466,7 +2674,7 @@ export interface operations {
             };
         };
     };
-    readonly criar_5: {
+    readonly criar_6: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -3704,7 +3912,7 @@ export interface operations {
             };
         };
     };
-    readonly listar_3: {
+    readonly listar_4: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -3796,7 +4004,7 @@ export interface operations {
             };
         };
     };
-    readonly criar_4: {
+    readonly criar_5: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -3892,7 +4100,7 @@ export interface operations {
             };
         };
     };
-    readonly atualizar_4: {
+    readonly atualizar_5: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -4178,7 +4386,7 @@ export interface operations {
             };
         };
     };
-    readonly listar_2: {
+    readonly listar_3: {
         readonly parameters: {
             readonly query?: {
                 readonly busca?: string;
@@ -4275,7 +4483,7 @@ export interface operations {
             };
         };
     };
-    readonly criar_3: {
+    readonly criar_4: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: {
@@ -4467,7 +4675,7 @@ export interface operations {
             };
         };
     };
-    readonly atualizar_3: {
+    readonly atualizar_4: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -4657,7 +4865,7 @@ export interface operations {
             };
         };
     };
-    readonly listar_5: {
+    readonly listar_6: {
         readonly parameters: {
             readonly query?: {
                 readonly antesDe?: string;
@@ -5517,7 +5725,7 @@ export interface operations {
             };
         };
     };
-    readonly listar_1: {
+    readonly listar_2: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -5609,7 +5817,7 @@ export interface operations {
             };
         };
     };
-    readonly criar_2: {
+    readonly criar_3: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -5705,7 +5913,7 @@ export interface operations {
             };
         };
     };
-    readonly atualizar_2: {
+    readonly atualizar_3: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -6372,7 +6580,7 @@ export interface operations {
             };
         };
     };
-    readonly criar_1: {
+    readonly criar_2: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -6468,7 +6676,7 @@ export interface operations {
             };
         };
     };
-    readonly atualizar_1: {
+    readonly atualizar_2: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -6848,6 +7056,763 @@ export interface operations {
             };
         };
     };
+    readonly membros: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "*/*": readonly components["schemas"]["MembroResponse"][];
+                };
+            };
+            /** @description Requisição ou JSON inválido */
+            readonly 400: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Autenticação ausente ou expirada */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Acesso negado */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Conflito de estado ou idempotência */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Regra de negócio ou validação semântica */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Limite de requisições excedido */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Falha interna com detalhe seguro */
+            readonly 500: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+        };
+    };
+    readonly atribuir: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly membershipId: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["AtribuirPapelRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Requisição ou JSON inválido */
+            readonly 400: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Autenticação ausente ou expirada */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Acesso negado */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Conflito de estado ou idempotência */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Regra de negócio ou validação semântica */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Limite de requisições excedido */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Falha interna com detalhe seguro */
+            readonly 500: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+        };
+    };
+    readonly revogar: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly atribuicaoId: string;
+                readonly membershipId: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Requisição ou JSON inválido */
+            readonly 400: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Autenticação ausente ou expirada */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Acesso negado */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Conflito de estado ou idempotência */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Regra de negócio ou validação semântica */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Limite de requisições excedido */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Falha interna com detalhe seguro */
+            readonly 500: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+        };
+    };
+    readonly listar_1: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "*/*": components["schemas"]["CatalogoResponse"];
+                };
+            };
+            /** @description Requisição ou JSON inválido */
+            readonly 400: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Autenticação ausente ou expirada */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Acesso negado */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Conflito de estado ou idempotência */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Regra de negócio ou validação semântica */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Limite de requisições excedido */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Falha interna com detalhe seguro */
+            readonly 500: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+        };
+    };
+    readonly criar_1: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["CriarPapelRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "*/*": components["schemas"]["PapelResponse"];
+                };
+            };
+            /** @description Requisição ou JSON inválido */
+            readonly 400: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Autenticação ausente ou expirada */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Acesso negado */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Conflito de estado ou idempotência */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Regra de negócio ou validação semântica */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Limite de requisições excedido */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Falha interna com detalhe seguro */
+            readonly 500: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+        };
+    };
+    readonly atualizar_1: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly papelId: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["AtualizarPapelRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "*/*": components["schemas"]["PapelResponse"];
+                };
+            };
+            /** @description Requisição ou JSON inválido */
+            readonly 400: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Autenticação ausente ou expirada */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Acesso negado */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Conflito de estado ou idempotência */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Regra de negócio ou validação semântica */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Limite de requisições excedido */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Falha interna com detalhe seguro */
+            readonly 500: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+        };
+    };
+    readonly remover: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly papelId: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Requisição ou JSON inválido */
+            readonly 400: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Autenticação ausente ou expirada */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Acesso negado */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Conflito de estado ou idempotência */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Regra de negócio ou validação semântica */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Limite de requisições excedido */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Falha interna com detalhe seguro */
+            readonly 500: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+        };
+    };
+    readonly definirPermissoes: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly papelId: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["PermissoesRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "*/*": components["schemas"]["PapelResponse"];
+                };
+            };
+            /** @description Requisição ou JSON inválido */
+            readonly 400: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Autenticação ausente ou expirada */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Acesso negado */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Conflito de estado ou idempotência */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Regra de negócio ou validação semântica */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Limite de requisições excedido */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Falha interna com detalhe seguro */
+            readonly 500: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+        };
+    };
     readonly permissoes: {
         readonly parameters: {
             readonly query?: never;
@@ -6866,6 +7831,192 @@ export interface operations {
                     readonly "*/*": {
                         readonly [key: string]: string;
                     };
+                };
+            };
+            /** @description Requisição ou JSON inválido */
+            readonly 400: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Autenticação ausente ou expirada */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Acesso negado */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Conflito de estado ou idempotência */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Regra de negócio ou validação semântica */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Limite de requisições excedido */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Falha interna com detalhe seguro */
+            readonly 500: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+        };
+    };
+    readonly anonimizar: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly contatoId: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Requisição ou JSON inválido */
+            readonly 400: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Autenticação ausente ou expirada */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Acesso negado */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Conflito de estado ou idempotência */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Regra de negócio ou validação semântica */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Limite de requisições excedido */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Falha interna com detalhe seguro */
+            readonly 500: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+        };
+    };
+    readonly exportar: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly contatoId: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "*/*": components["schemas"]["ExportacaoDeTitular"];
                 };
             };
             /** @description Requisição ou JSON inválido */

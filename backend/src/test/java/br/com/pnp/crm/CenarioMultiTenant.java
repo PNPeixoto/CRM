@@ -94,7 +94,7 @@ public class CenarioMultiTenant {
         conceder(tenantId, userId, "TENANT", permissoes);
     }
 
-    private UUID membershipVigente(UUID tenantId, UUID userId) {
+    public UUID membershipVigente(UUID tenantId, UUID userId) {
         return TenantContext.executarComo(tenantId, () -> {
             java.util.List<UUID> existente = jdbc.queryForList("""
                     SELECT id FROM organization_membership

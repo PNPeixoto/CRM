@@ -125,6 +125,9 @@ public interface AuditTrail {
         TENANT_PRESENTATION_CHANGED,
         EXPORT_REQUESTED,
         EXPORT_COMPLETED,
+        ROLE_CREATED,
+        ROLE_UPDATED,
+        ROLE_REMOVED,
         ROLE_ASSIGNMENT_CHANGED
     }
 }
