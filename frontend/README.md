@@ -1,4 +1,4 @@
-# Frontend do CRM PNP
+# Frontend do FinUp CRM
 
 Cliente React/TypeScript construído com Vite e Tailwind. Em desenvolvimento,
 `/api` é encaminhado para o backend local pela configuração do Vite.
@@ -13,6 +13,21 @@ npm run dev
 Use os mesmos comandos no Windows, Linux e na futura CI. A instalação
 reprodutível da CI deve usar `npm ci`; os runbooks gerais ainda serão alinhados
 no prompt de CI/CD.
+
+### Demonstração local
+
+Quando o backend completo não estiver disponível, execute a API sintética em
+um terminal:
+
+```bash
+npm run demo:api
+```
+
+Em outro terminal, inicie o Vite normalmente. O proxy local conecta o frontend
+à API de demonstração na porta 8080. O cenário inclui Visão geral, Contatos,
+Oportunidades, Conversas, Agenda, Tarefas e Acessos; criações e movimentações
+ficam em memória e são reiniciadas junto com o processo. Essa API existe apenas
+para apresentação e desenvolvimento visual, nunca para produção.
 
 ## Testes
 

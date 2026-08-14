@@ -10,6 +10,7 @@
   "scripts": {
     "api:generate": "openapi-typescript ../backend/openapi/openapi.json --output src/generated/api-schema.d.ts --alphabetize --immutable",
     "api:check": "openapi-typescript ../backend/openapi/openapi.json --output src/generated/api-schema.d.ts --alphabetize --immutable --check",
+    "demo:api": "node demo/server.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
