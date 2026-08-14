@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { SendHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertaErro } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import type { Mensagem, StatusMensagem } from '@/shared/conversas/tipos';
+import type { TipoCanal } from '@/shared/crm/tipos';
+import { rotuloDoCanal } from './identificacao';
 
 /**
  * Rótulo por status de entrega. Texto, nunca só um ícone colorido — o
@@ -27,6 +29,9 @@ interface Props {
   readonly carregandoAnteriores: boolean;
   readonly aoCarregarAnteriores: () => void;
   readonly aoEnviar: (texto: string) => Promise<void>;
+  readonly contatoNome: string;
+  readonly canalTipo: TipoCanal | null;
+  readonly respondendoComo: string;
 }
 
 export function Conversa({
@@ -36,6 +41,9 @@ export function Conversa({
   carregandoAnteriores,
   aoCarregarAnteriores,
   aoEnviar,
+  contatoNome,
+  canalTipo,
+  respondendoComo,
 }: Props) {
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -47,7 +55,7 @@ export function Conversa({
   // `smooth`: com várias mensagens chegando juntas, a animação suave enfileira
   // e a lista fica visivelmente atrasada em relação ao conteúdo.
   useEffect(() => {
-    fimDaListaRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+    fimDaListaRef.current?.scrollIntoView?.({ behavior: 'auto', block: 'end' });
   }, [ultimaMensagemId]);
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
@@ -72,7 +80,7 @@ export function Conversa({
   return (
     <div className="flex h-full flex-col">
       <div
-        className="min-h-0 flex-1 overflow-y-auto px-6 py-4"
+        className="min-h-0 flex-1 overflow-y-auto bg-[var(--surface-base)] px-4 py-5 sm:px-6"
         role="log"
         aria-live="polite"
         aria-label="Mensagens da conversa"
@@ -101,7 +109,7 @@ export function Conversa({
           <ol className="space-y-3">
             {mensagens.map((mensagem) => (
               <li key={mensagem.id}>
-                <Balao mensagem={mensagem} />
+                <Balao mensagem={mensagem} contatoNome={contatoNome} />
               </li>
             ))}
           </ol>
@@ -111,10 +119,14 @@ export function Conversa({
 
       <form
         onSubmit={enviar}
-        className="border-t px-6 py-4"
-        style={{ borderColor: 'var(--border-subtle)' }}
+        className="border-t border-[var(--border-subtle)] bg-[var(--surface-raised)] px-4 py-3 sm:px-6"
       >
         {erro && <AlertaErro className="mb-3">{erro}</AlertaErro>}
+
+        <p className="mb-2 text-xs text-[var(--text-muted)]">
+          Respondendo como <strong className="font-medium text-[var(--text-strong)]">{respondendoComo}</strong>
+          {' '}via {rotuloDoCanal(canalTipo)}
+        </p>
 
         <div className="flex items-end gap-2">
           <div className="flex-1">
@@ -124,16 +136,25 @@ export function Conversa({
             <Label htmlFor="composer" className="sr-only">
               Escreva uma mensagem
             </Label>
-            <Input
+            <textarea
               id="composer"
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
+              onKeyDown={(evento) => {
+                if (evento.key === 'Enter' && !evento.shiftKey) {
+                  evento.preventDefault();
+                  evento.currentTarget.form?.requestSubmit();
+                }
+              }}
               placeholder="Escreva uma mensagem…"
               autoComplete="off"
               disabled={enviando}
+              rows={2}
+              className="min-h-12 max-h-32 w-full resize-y rounded-[var(--radius-control)] border border-[var(--border-control)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-muted)] disabled:opacity-50"
             />
           </div>
           <Button type="submit" disabled={enviando || texto.trim().length === 0}>
+            <SendHorizontal aria-hidden="true" />
             {enviando ? 'Enviando…' : 'Enviar'}
           </Button>
         </div>
@@ -142,13 +163,22 @@ export function Conversa({
   );
 }
 
-function Balao({ mensagem }: { readonly mensagem: Mensagem }) {
+function Balao({ mensagem, contatoNome }: { readonly mensagem: Mensagem; readonly contatoNome: string }) {
   const daEquipe = mensagem.direcao === 'OUTBOUND';
   const falhou = mensagem.status === 'FAILED';
 
   return (
     <div className={cn('flex', daEquipe ? 'justify-end' : 'justify-start')}>
-      <div className="max-w-[min(38rem,75%)]">
+      <div className="max-w-[min(38rem,88%)] sm:max-w-[min(38rem,75%)]">
+        <p
+          className={cn(
+            'mb-1 text-[11px] font-medium',
+            daEquipe ? 'text-right' : 'text-left',
+          )}
+          style={{ color: 'var(--text-muted)' }}
+        >
+          {daEquipe ? (mensagem.autorNome ?? 'Equipe') : contatoNome}
+        </p>
         <div
           className={cn(
             'rounded-[var(--radius-surface)] px-3.5 py-2 text-sm whitespace-pre-wrap break-words',

@@ -52,7 +52,8 @@ export const ROTAS: readonly RotaApp[] = [
   },
   {
     id: 'calendar', caminho: '/agenda', rotulo: 'Agenda',
-    icone: 'calendar', status: 'em_producao', grupo: 'operacao',
+    icone: 'calendar', status: 'pronto', grupo: 'operacao',
+    permissaoNecessaria: 'tasks.read',
     componente: lazy(() => import('@/pages/calendar').then((m) => ({ default: m.CalendarPage }))),
   },
   {

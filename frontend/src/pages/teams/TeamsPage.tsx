@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { Sparkles } from 'lucide-react';
 import { AlertaErro } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Cartao, Carregando, Pagina, Vazio } from '@/shared/components/Pagina';
 import {
   useAtribuirPapel,
+  useAplicarPresetComercial,
   useCatalogoDePapeis,
   useEquipes,
   useIncluirNaEquipe,
@@ -19,6 +21,10 @@ import { PainelDePapeis } from './components/PainelDePapeis';
 import type { Papel } from '@/shared/organizacao/tipos';
 
 type Aba = 'papeis' | 'pessoas' | 'equipes';
+
+const CODIGOS_DO_PRESET = [
+  'SDR', 'CLOSER', 'ATENDENTE', 'GESTOR_ATENDIMENTO', 'GERENTE_COMERCIAL',
+] as const;
 
 const ABAS: readonly { readonly id: Aba; readonly rotulo: string }[] = [
   { id: 'papeis', rotulo: 'Papéis' },
@@ -41,18 +47,22 @@ export function TeamsPage() {
   const [emEdicao, setEmEdicao] = useState<Papel | null>(null);
   const [criando, setCriando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [confirmacao, setConfirmacao] = useState<string | null>(null);
 
   const catalogo = useCatalogoDePapeis();
   const membros = useMembrosDaOrganizacao();
   const equipes = useEquipes();
 
   const removerPapel = useRemoverPapel();
+  const aplicarPreset = useAplicarPresetComercial();
   const atribuir = useAtribuirPapel();
   const revogar = useRevogarPapel();
   const incluirNaEquipe = useIncluirNaEquipe();
   const removerDaEquipe = useRemoverDaEquipe();
 
   const semAcesso = catalogo.isError && (catalogo.error as { status?: number })?.status === 403;
+  const presetCompleto = CODIGOS_DO_PRESET.every((codigo) =>
+    catalogo.data?.papeis.some((papel) => papel.codigo === codigo));
 
   if (semAcesso) {
     return (
@@ -67,6 +77,7 @@ export function TeamsPage() {
 
   async function executar(acao: () => Promise<unknown>) {
     setErro(null);
+    setConfirmacao(null);
     try {
       await acao();
     } catch (falha) {
@@ -81,13 +92,36 @@ export function TeamsPage() {
       titulo="Acessos"
       descricao="Papéis, pessoas e equipes"
       acoes={aba === 'papeis' && (
-        <Button onClick={() => { setEmEdicao(null); setCriando((v) => !v); }}>
-          {criando ? 'Cancelar' : 'Novo papel'}
-        </Button>
+        <>
+          {!presetCompleto && (
+            <Button
+              variant="secundario"
+              disabled={aplicarPreset.isPending}
+              onClick={() => executar(async () => {
+                await aplicarPreset.mutateAsync(undefined);
+                setConfirmacao('Papéis comerciais prontos para uso.');
+              })}
+            >
+              <Sparkles aria-hidden="true" />
+              {aplicarPreset.isPending ? 'Preparando…' : 'Aplicar preset comercial'}
+            </Button>
+          )}
+          <Button onClick={() => { setEmEdicao(null); setCriando((v) => !v); }}>
+            {criando ? 'Cancelar' : 'Novo papel'}
+          </Button>
+        </>
       )}
     >
       <div className="space-y-4">
         {erro && <AlertaErro>{erro}</AlertaErro>}
+        {confirmacao && (
+          <p
+            role="status"
+            className="rounded-[var(--radius-control)] border border-[var(--success)] bg-[var(--success-soft)] px-3 py-2 text-sm text-[var(--success)]"
+          >
+            {confirmacao}
+          </p>
+        )}
 
         {/* Revogar não derruba a sessão em curso: o token vive 15 minutos e
             carrega o contexto. Prometer efeito imediato e entregar 15 minutos

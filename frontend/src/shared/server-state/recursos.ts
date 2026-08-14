@@ -435,6 +435,10 @@ export function useCriarPapel() {
   return useMutacaoDeAcesso(organizacaoApi.criarPapel);
 }
 
+export function useAplicarPresetComercial() {
+  return useMutacaoDeAcesso(organizacaoApi.aplicarPresetComercial);
+}
+
 export function useAtualizarPapel() {
   return useMutacaoDeAcesso(
     (entrada: { id: string; nome: string; descricao?: string | null; ativo: boolean }) =>

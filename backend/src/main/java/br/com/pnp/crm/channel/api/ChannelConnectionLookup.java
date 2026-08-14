@@ -1,5 +1,7 @@
 package br.com.pnp.crm.channel.api;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,4 +27,7 @@ public interface ChannelConnectionLookup {
      * pelo RLS normalmente.
      */
     Optional<ConexaoDeCanal> buscarAtiva(UUID channelConnectionId);
+
+    /** Resolve em lote inclusive canais hoje inativos, pois o histórico permanece identificável. */
+    Map<UUID, ConexaoDeCanal> buscarConhecidas(Collection<UUID> channelConnectionIds);
 }

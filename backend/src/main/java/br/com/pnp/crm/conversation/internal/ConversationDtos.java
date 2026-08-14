@@ -1,6 +1,7 @@
 package br.com.pnp.crm.conversation.internal;
 
 import br.com.pnp.crm.channel.api.TipoConteudo;
+import br.com.pnp.crm.channel.api.TipoCanal;
 import br.com.pnp.crm.conversation.api.DirecaoMensagem;
 import br.com.pnp.crm.conversation.api.StatusConversa;
 import br.com.pnp.crm.conversation.api.StatusMensagem;
@@ -26,9 +27,14 @@ final class ConversationDtos {
     record ConversaResumo(
             UUID id,
             UUID channelConnectionId,
+            TipoCanal canalTipo,
+            String canalNome,
+            String canalIdentificador,
             String contatoNome,
+            String contatoIdentificador,
             StatusConversa status,
             UUID atendenteId,
+            String atendenteNome,
             Instant ultimaMensagemEm,
             Instant venceEm,
             long versao) {
@@ -49,6 +55,7 @@ final class ConversationDtos {
             String texto,
             StatusMensagem status,
             UUID autorId,
+            String autorNome,
             Instant criadaEm,
             long versao) {
     }

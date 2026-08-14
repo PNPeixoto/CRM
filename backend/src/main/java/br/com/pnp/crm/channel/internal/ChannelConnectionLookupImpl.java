@@ -7,8 +7,12 @@ import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 class ChannelConnectionLookupImpl implements ChannelConnectionLookup {
@@ -53,6 +57,19 @@ class ChannelConnectionLookupImpl implements ChannelConnectionLookup {
         return repository.findByIdAndTenantIdAndActiveTrueAndDeletedAtIsNull(
                         channelConnectionId, TenantContext.obrigatorio())
                 .map(entity -> new ConexaoDeCanal(
-                        entity.getId(), entity.getTenantId(), entity.getKind(), entity.getName()));
+                        entity.getId(), entity.getTenantId(), entity.getKind(), entity.getName(),
+                        entity.getExternalAccountId()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, ConexaoDeCanal> buscarConhecidas(Collection<UUID> channelConnectionIds) {
+        if (channelConnectionIds == null || channelConnectionIds.isEmpty()) return Map.of();
+        return repository.findByTenantIdAndIdInAndDeletedAtIsNull(
+                        TenantContext.obrigatorio(), channelConnectionIds).stream()
+                .map(entity -> new ConexaoDeCanal(
+                        entity.getId(), entity.getTenantId(), entity.getKind(), entity.getName(),
+                        entity.getExternalAccountId()))
+                .collect(Collectors.toUnmodifiableMap(ConexaoDeCanal::id, Function.identity()));
     }
 }

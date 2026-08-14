@@ -1,6 +1,9 @@
 package br.com.pnp.crm.conversation.internal;
 
 import br.com.pnp.crm.channel.api.TipoConteudo;
+import br.com.pnp.crm.channel.api.ChannelConnectionLookup;
+import br.com.pnp.crm.channel.api.ConexaoDeCanal;
+import br.com.pnp.crm.identity.api.UsuarioLookup;
 import br.com.pnp.crm.shared.api.TenantContext;
 import br.com.pnp.crm.shared.api.RequisicaoInvalidaException;
 import org.springframework.stereotype.Service;
@@ -14,6 +17,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
@@ -32,12 +36,17 @@ class ConversaService {
     private final ConversationRepository conversas;
     private final MessageRepository mensagens;
     private final EventoTempoRealService eventos;
+    private final ChannelConnectionLookup canais;
+    private final UsuarioLookup usuarios;
 
     ConversaService(ConversationRepository conversas, MessageRepository mensagens,
-                    EventoTempoRealService eventos) {
+                    EventoTempoRealService eventos, ChannelConnectionLookup canais,
+                    UsuarioLookup usuarios) {
         this.conversas = conversas;
         this.mensagens = mensagens;
         this.eventos = eventos;
+        this.canais = canais;
+        this.usuarios = usuarios;
     }
 
     @Transactional(readOnly = true)
@@ -60,8 +69,15 @@ class ConversaService {
         boolean temMais = encontradas.size() > limite;
         if (temMais) encontradas = new ArrayList<>(encontradas.subList(0, limite));
         ConversationEntity ultima = encontradas.isEmpty() ? null : encontradas.getLast();
+        Map<UUID, ConexaoDeCanal> canaisConhecidos = canais.buscarConhecidas(encontradas.stream()
+                .map(ConversationEntity::getChannelConnectionId).distinct().toList());
+        Map<UUID, UsuarioLookup.UsuarioReference> atendentes = usuarios.findKnown(
+                tenantId, encontradas.stream().map(ConversationEntity::getAssignedUserId)
+                        .filter(Objects::nonNull).distinct().toList());
         List<ConversationDtos.ConversaResumo> itens = encontradas.stream()
-                .map(ConversaService::paraResumo)
+                .map(entity -> paraResumo(entity,
+                        canaisConhecidos.get(entity.getChannelConnectionId()),
+                        atendentes.get(entity.getAssignedUserId())))
                 .toList();
         return new ConversationDtos.PaginaConversas(
                 itens,
@@ -101,8 +117,11 @@ class ConversaService {
         if (temMais) pagina = new ArrayList<>(pagina.subList(0, limite));
         MessageEntity maisAntiga = pagina.isEmpty() ? null : pagina.getLast();
         Collections.reverse(pagina);
+        Map<UUID, UsuarioLookup.UsuarioReference> autores = usuarios.findKnown(
+                TenantContext.obrigatorio(), pagina.stream().map(MessageEntity::getAuthorUserId)
+                        .filter(Objects::nonNull).distinct().toList());
         List<ConversationDtos.MensagemResposta> itens = pagina.stream()
-                .map(ConversaService::paraResposta)
+                .map(entity -> paraResposta(entity, autores.get(entity.getAuthorUserId())))
                 .toList();
         return new ConversationDtos.PaginaMensagens(
                 itens,
@@ -143,7 +162,7 @@ class ConversaService {
                         || !Objects.equals(mensagem.getAuthorUserId(), autorId)) {
                     throw new ChaveIdempotenciaEmConflitoException();
                 }
-                return paraResposta(mensagem);
+                return paraResposta(mensagem, usuario(tenantId, mensagem.getAuthorUserId()));
             }
         }
 
@@ -161,7 +180,7 @@ class ConversaService {
         eventos.registrar("MESSAGE_CREATED", conversa.getId(), mensagem.getId(),
                 mensagem.getVersion(), mensagem.getCreatedAt());
 
-        return paraResposta(mensagem);
+        return paraResposta(mensagem, usuario(tenantId, autorId));
     }
 
     private static void validarIdempotencyKey(String key) {
@@ -191,19 +210,27 @@ class ConversaService {
                 .orElseThrow(ConversaNaoEncontradaException::new);
     }
 
-    private static ConversationDtos.ConversaResumo paraResumo(ConversationEntity entity) {
+    private static ConversationDtos.ConversaResumo paraResumo(
+            ConversationEntity entity, ConexaoDeCanal canal,
+            UsuarioLookup.UsuarioReference atendente) {
         return new ConversationDtos.ConversaResumo(
                 entity.getId(),
                 entity.getChannelConnectionId(),
+                canal == null ? null : canal.tipo(),
+                canal == null ? null : canal.nome(),
+                canal == null ? null : canal.identificadorExterno(),
                 entity.getContactDisplayName(),
+                entity.getExternalContactId(),
                 entity.getStatus(),
                 entity.getAssignedUserId(),
+                atendente == null ? null : atendente.nomeCompleto(),
                 entity.getLastMessageAt(),
                 entity.getDueAt(),
                 entity.getVersion());
     }
 
-    private static ConversationDtos.MensagemResposta paraResposta(MessageEntity entity) {
+    private static ConversationDtos.MensagemResposta paraResposta(
+            MessageEntity entity, UsuarioLookup.UsuarioReference autor) {
         return new ConversationDtos.MensagemResposta(
                 entity.getId(),
                 entity.getDirection(),
@@ -211,8 +238,14 @@ class ConversaService {
                 entity.getTextContent(),
                 entity.getStatus(),
                 entity.getAuthorUserId(),
+                autor == null ? null : autor.nomeCompleto(),
                 entity.getCreatedAt(),
                 entity.getVersion());
+    }
+
+    private UsuarioLookup.UsuarioReference usuario(UUID tenantId, UUID usuarioId) {
+        if (usuarioId == null) return null;
+        return usuarios.findKnown(tenantId, List.of(usuarioId)).get(usuarioId);
     }
 
     private static Instant momentoDaOrdem(ConversationEntity conversa) {

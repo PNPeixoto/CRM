@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -108,6 +110,41 @@ class PapelController {
 
         registrar(id, autor, PapelAlterado.Mudanca.CRIADO);
         return ResponseEntity.ok(resposta(papeis.obrigatorio(id)));
+    }
+
+    /**
+     * Instala a base comercial sem sobrescrever o que o cliente já editou.
+     * Repetir a chamada é seguro: códigos existentes são preservados e apenas
+     * papéis ausentes são criados.
+     */
+    @PostMapping("/papeis/presets/comercial")
+    @Transactional
+    ResponseEntity<PapelDtos.PresetComercialResponse> aplicarPresetComercial() {
+        autorizacao.exigirNoTenant(Permissao.ORGANIZATION_MANAGE);
+        PresetComercial.papeis().forEach(definicao ->
+                exigirPoderDefinir(definicao.permissoes()));
+
+        Map<String, PapelRepository.Papel> porCodigo = new LinkedHashMap<>();
+        papeis.listar().forEach(papel -> porCodigo.put(papel.codigo(), papel));
+
+        UUID autor = autorizacao.usuarioCorrente();
+        int criados = 0;
+        for (PresetComercial.Definicao definicao : PresetComercial.papeis()) {
+            if (porCodigo.containsKey(definicao.codigo())) continue;
+
+            UUID id = papeis.criar(definicao.codigo(), definicao.nome(),
+                    definicao.descricao(), autor);
+            papeis.definirPermissoes(id, definicao.permissoes(), autor);
+            registrar(id, autor, PapelAlterado.Mudanca.CRIADO);
+            porCodigo.put(definicao.codigo(), papeis.obrigatorio(id));
+            criados++;
+        }
+
+        List<PapelDtos.PapelResponse> papeisDoPreset = PresetComercial.papeis().stream()
+                .map(definicao -> resposta(porCodigo.get(definicao.codigo())))
+                .toList();
+        return ResponseEntity.ok(new PapelDtos.PresetComercialResponse(
+                criados, papeisDoPreset));
     }
 
     @PutMapping("/papeis/{papelId}")

@@ -10,5 +10,6 @@ import java.util.UUID;
  * conhecer o formato de armazenamento, nem receber um objeto gerenciado por
  * uma sessão do Hibernate que pertence a outro módulo.
  */
-public record ConexaoDeCanal(UUID id, UUID tenantId, TipoCanal tipo, String nome) {
+public record ConexaoDeCanal(UUID id, UUID tenantId, TipoCanal tipo, String nome,
+                             String identificadorExterno) {
 }

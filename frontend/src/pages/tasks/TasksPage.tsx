@@ -1,11 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { AlertaErro } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { formatarResponsavel } from '@/shared/crm/responsavel';
 import type { Tarefa } from '@/shared/crm/tipos';
-import { FUSO_DE_NEGOCIO, formatarDataHora, instanteDeHorarioLocal } from '@/shared/formato';
+import { formatarDataHora } from '@/shared/formato';
 import { Carregando, Pagina, Vazio } from '@/shared/components/Pagina';
 import {
   useAlternarConclusaoDeTarefa,
@@ -13,6 +11,7 @@ import {
   useExcluirTarefa,
   useTarefas,
 } from '@/shared/server-state/recursos';
+import { FormularioDeTarefa } from './FormularioDeTarefa';
 
 export function TasksPage() {
   const [apenasAbertas, setApenasAbertas] = useState(true);
@@ -164,75 +163,5 @@ function ItemDeTarefa({
         Excluir
       </Button>
     </li>
-  );
-}
-
-function FormularioDeTarefa({
-  aoSalvar,
-}: {
-  readonly aoSalvar: (dados: {
-    titulo: string;
-    descricao?: string;
-    vencimentoEm?: string | null;
-  }) => Promise<void>;
-}) {
-  const [titulo, setTitulo] = useState('');
-  const [descricao, setDescricao] = useState('');
-  const [vencimento, setVencimento] = useState('');
-  const [enviando, setEnviando] = useState(false);
-
-  async function enviar(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
-    setEnviando(true);
-    try {
-      await aoSalvar({
-        titulo: titulo.trim(),
-        descricao: descricao.trim() || undefined,
-        // datetime-local não carrega fuso. A fronteira usa explicitamente o
-        // fuso de negócio antes de transportar o instante em UTC.
-        vencimentoEm: vencimento
-          ? instanteDeHorarioLocal(vencimento, FUSO_DE_NEGOCIO)
-          : null,
-      });
-      setTitulo('');
-      setDescricao('');
-      setVencimento('');
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  return (
-    <form
-      onSubmit={enviar}
-      className="grid gap-3 rounded-[var(--radius-surface)] border p-4 sm:grid-cols-3"
-      style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--surface-raised)' }}
-    >
-      <div className="space-y-1.5">
-        <Label htmlFor="titulo">Título</Label>
-        <Input id="titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="descricao">Descrição</Label>
-        <Input id="descricao" value={descricao} onChange={(e) => setDescricao(e.target.value)} />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="vencimento">Vencimento</Label>
-        <Input
-          id="vencimento"
-          type="datetime-local"
-          value={vencimento}
-          onChange={(e) => setVencimento(e.target.value)}
-        />
-      </div>
-
-      <div className="sm:col-span-3">
-        <Button type="submit" disabled={enviando || titulo.trim().length === 0}>
-          {enviando ? 'Salvando…' : 'Criar tarefa'}
-        </Button>
-      </div>
-    </form>
   );
 }

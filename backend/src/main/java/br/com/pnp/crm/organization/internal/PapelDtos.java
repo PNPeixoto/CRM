@@ -50,6 +50,12 @@ final class PapelDtos {
         }
     }
 
+    record PresetComercialResponse(int criados, List<PapelResponse> papeis) {
+        PresetComercialResponse {
+            papeis = List.copyOf(papeis);
+        }
+    }
+
     /**
      * Uma marca por alcance, e não um booleano só.
      *

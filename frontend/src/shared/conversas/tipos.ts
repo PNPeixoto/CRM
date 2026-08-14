@@ -28,9 +28,14 @@ export type TipoConteudo =
 export interface ConversaResumo {
   readonly id: string;
   readonly channelConnectionId: string;
+  readonly canalTipo: TipoCanal | null;
+  readonly canalNome: string | null;
+  readonly canalIdentificador: string | null;
   readonly contatoNome: string | null;
+  readonly contatoIdentificador: string;
   readonly status: StatusConversa;
   readonly atendenteId: string | null;
+  readonly atendenteNome: string | null;
   readonly ultimaMensagemEm: string | null;
   readonly venceEm: string | null;
   readonly versao: number;
@@ -43,6 +48,7 @@ export interface Mensagem {
   readonly texto: string | null;
   readonly status: StatusMensagem;
   readonly autorId: string | null;
+  readonly autorNome: string | null;
   readonly criadaEm: string;
   readonly versao: number;
 }
@@ -97,3 +103,4 @@ export interface MensagemPush {
   readonly versao: number;
   readonly ocorridoEm: string;
 }
+import type { TipoCanal } from '@/shared/crm/tipos';

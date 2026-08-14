@@ -86,7 +86,7 @@ describe('resolveNavigation', () => {
 
     expect(routes.find((route) => route.id === 'contacts')?.acesso.permissao).toBe('permitido');
     expect(routes.find((route) => route.id === 'dashboard')?.acesso.permissao).toBe('negado');
-    expect(routes.find((route) => route.id === 'calendar')?.acesso.permissao).toBe('nao-publicado');
+    expect(routes.find((route) => route.id === 'calendar')?.acesso.permissao).toBe('negado');
   });
 
   it('não reexibe rota negada como fallback', () => {

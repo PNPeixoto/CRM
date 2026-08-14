@@ -22,14 +22,25 @@ const STATUS_CONVERSA = ['OPEN', 'PENDING', 'CLOSED'] as const;
 const DIRECOES = ['INBOUND', 'OUTBOUND'] as const;
 const STATUS_MENSAGEM = ['RECEIVED', 'PENDING', 'SENT', 'DELIVERED', 'READ', 'FAILED'] as const;
 const TIPOS_CONTEUDO = ['TEXT', 'IMAGE', 'AUDIO', 'VIDEO', 'DOCUMENT', 'LOCATION', 'OTHER'] as const;
+const TIPOS_CANAL = [
+  'LIVE_CHAT', 'TELEGRAM', 'WHATSAPP_CLOUD', 'WHATSAPP_EVOLUTION', 'INSTAGRAM',
+] as const;
 
 function mapearConversa(dados: ConversaWire): ConversaResumo {
   return {
     id: obrigatorio(dados.id, 'conversa.id'),
     channelConnectionId: obrigatorio(dados.channelConnectionId, 'conversa.channelConnectionId'),
+    canalTipo: dados.canalTipo ? umDe(dados.canalTipo, TIPOS_CANAL, 'conversa.canalTipo') : null,
+    canalNome: dados.canalNome ?? null,
+    canalIdentificador: dados.canalIdentificador ?? null,
     contatoNome: dados.contatoNome ?? null,
+    contatoIdentificador: obrigatorio(
+      dados.contatoIdentificador,
+      'conversa.contatoIdentificador',
+    ),
     status: umDe(dados.status, STATUS_CONVERSA, 'conversa.status'),
     atendenteId: dados.atendenteId ?? null,
+    atendenteNome: dados.atendenteNome ?? null,
     ultimaMensagemEm: dados.ultimaMensagemEm ?? null,
     venceEm: dados.venceEm ?? null,
     versao: obrigatorio(dados.versao, 'conversa.versao'),
@@ -44,6 +55,7 @@ function mapearMensagem(dados: MensagemWire): Mensagem {
     texto: dados.texto ?? null,
     status: umDe(dados.status, STATUS_MENSAGEM, 'mensagem.status'),
     autorId: dados.autorId ?? null,
+    autorNome: dados.autorNome ?? null,
     criadaEm: obrigatorio(dados.criadaEm, 'mensagem.criadaEm'),
     versao: obrigatorio(dados.versao, 'mensagem.versao'),
   };

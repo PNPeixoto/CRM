@@ -1,6 +1,8 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { ConversaResumo, StatusConversa } from '@/shared/conversas/tipos';
+import { IdentificacaoDoCanal } from './IdentificacaoDoCanal';
+import { formatarIdentificadorDoContato } from './identificacao';
 
 /**
  * Rótulo e cor por status.
@@ -76,9 +78,14 @@ export function ListaDeConversas({
               )}
               style={{ borderColor: 'var(--border-subtle)' }}
             >
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="truncate text-sm font-medium">
-                  {conversa.contatoNome ?? 'Contato sem nome'}
+              <div className="flex items-start justify-between gap-2">
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold">
+                    {conversa.contatoNome ?? 'Contato sem nome'}
+                  </span>
+                  <span className="mt-0.5 block truncate text-xs text-[var(--text-muted)]">
+                    {formatarIdentificadorDoContato(conversa.contatoIdentificador)}
+                  </span>
                 </span>
                 <time
                   className="shrink-0 text-xs tabular-nums"
@@ -89,11 +96,21 @@ export function ListaDeConversas({
                 </time>
               </div>
 
-              <span
-                className="mt-1.5 inline-block rounded px-1.5 py-px text-[11px] font-medium"
-                style={{ color: status.cor, backgroundColor: status.fundo }}
-              >
-                {status.rotulo}
+              <span className="mt-2 flex min-w-0 items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <IdentificacaoDoCanal tipo={conversa.canalTipo} />
+                  {conversa.canalNome && (
+                    <span className="truncate text-[11px] text-[var(--text-muted)]">
+                      {conversa.canalNome}
+                    </span>
+                  )}
+                </span>
+                <span
+                  className="shrink-0 rounded px-1.5 py-px text-[11px] font-medium"
+                  style={{ color: status.cor, backgroundColor: status.fundo }}
+                >
+                  {status.rotulo}
+                </span>
               </span>
             </button>
           </li>

@@ -52,7 +52,9 @@ class PapeisPersonalizaveisTest {
 
         cenario.concederTudoNoTenant(tenant, dono,
                 "organization.manage", "contacts.read", "contacts.write",
-                "deals.read", "deals.write", "conversations.read", "reports.read");
+                "deals.read", "deals.write", "tasks.read", "tasks.write",
+                "conversations.read", "conversations.write", "channels.read",
+                "dashboard.read", "reports.read");
     }
 
     @AfterEach
@@ -74,6 +76,33 @@ class PapeisPersonalizaveisTest {
                 .andExpect(jsonPath("$.papeis[?(@.codigo=='SDR')].nome").value("SDR"))
                 .andExpect(jsonPath("$.papeis[?(@.codigo=='CLOSER')].permissoes.length()")
                         .value(3));
+    }
+
+    @Test
+    void presetComercialCriaSomenteOsPapeisQueFaltamEPreservaEdicoes() throws Exception {
+        mockMvc.perform(post("/api/organizacao/papeis/presets/comercial").with(como(dono)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.criados").value(5))
+                .andExpect(jsonPath("$.papeis.length()").value(5))
+                .andExpect(jsonPath("$.papeis[?(@.codigo=='GESTOR_ATENDIMENTO')].nome")
+                        .value("Gestor de atendimento"));
+
+        UUID sdr = TenantContext.executarComo(tenant, () -> jdbc.queryForObject("""
+                SELECT id FROM app_role WHERE tenant_id = ? AND code = 'SDR'
+                """, UUID.class, tenant));
+        mockMvc.perform(put("/api/organizacao/papeis/" + sdr).with(como(dono))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"nome":"SDR personalizado","descricao":"Meu processo",
+                                 "ativo":true}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/organizacao/papeis/presets/comercial").with(como(dono)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.criados").value(0))
+                .andExpect(jsonPath("$.papeis[?(@.codigo=='SDR')].nome")
+                        .value("SDR personalizado"));
     }
 
     @Test

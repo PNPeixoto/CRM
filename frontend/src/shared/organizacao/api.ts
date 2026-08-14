@@ -85,6 +85,9 @@ export const organizacaoApi = {
     permissoes: [...dados.permissoes],
   })),
 
+  aplicarPresetComercial: (): Promise<void> =>
+    api.post<void>('/organizacao/papeis/presets/comercial'),
+
   atualizarPapel: async (id: string, dados: {
     nome: string;
     descricao?: string | null;
