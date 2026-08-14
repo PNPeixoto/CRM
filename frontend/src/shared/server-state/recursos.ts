@@ -10,7 +10,7 @@ import {
 import { conversasApi } from '@/shared/conversas/api';
 import type { CursorTemporal, Mensagem, PaginaMensagens } from '@/shared/conversas/tipos';
 import { canaisApi, contatosApi, funilApi, relatoriosApi, tarefasApi } from '@/shared/crm/api';
-import type { Tarefa } from '@/shared/crm/tipos';
+import type { Oportunidade, Tarefa } from '@/shared/crm/tipos';
 import {
   obterApresentacao,
   obterContextos,
@@ -184,13 +184,51 @@ export function useMoverOportunidade() {
   return useMutation({
     mutationFn: ({ id, etapaId }: { readonly id: string; readonly etapaId: string }) =>
       funilApi.mover(id, etapaId),
-    onSuccess: () => invalidar(
+    onMutate: async ({ id, etapaId }): Promise<SnapshotDeOportunidades> => {
+      const seguro = contextoObrigatorio(contexto);
+      const prefixo = prefixoDoRecurso(seguro, 'oportunidades');
+      await cliente.cancelQueries({ queryKey: prefixo });
+      const snapshot = cliente.getQueriesData<readonly Oportunidade[]>({ queryKey: prefixo });
+      for (const [chave, oportunidades] of snapshot) {
+        cliente.setQueryData(
+          chave,
+          oportunidades?.map((oportunidade) => oportunidade.id === id
+            ? { ...oportunidade, etapaId }
+            : oportunidade),
+        );
+      }
+      return snapshot;
+    },
+    onError: (_erro, _variaveis, snapshot) => {
+      for (const [chave, oportunidades] of snapshot ?? []) {
+        cliente.setQueryData(chave, oportunidades);
+      }
+    },
+    onSuccess: (atualizada) => {
+      const seguro = contextoObrigatorio(contexto);
+      const consultas = cliente.getQueriesData<readonly Oportunidade[]>({
+        queryKey: prefixoDoRecurso(seguro, 'oportunidades'),
+      });
+      for (const [chave, oportunidades] of consultas) {
+        cliente.setQueryData(
+          chave,
+          oportunidades?.map((oportunidade) => oportunidade.id === atualizada.id
+            ? atualizada
+            : oportunidade),
+        );
+      }
+    },
+    onSettled: () => invalidar(
       cliente,
       contextoObrigatorio(contexto),
       ['oportunidades', 'visao-geral'],
     ),
   });
 }
+
+type SnapshotDeOportunidades = readonly (
+  readonly [QueryKey, readonly Oportunidade[] | undefined]
+)[];
 
 export function useTarefas(apenasAbertas: boolean, contatoId?: string) {
   const contexto = useContextoEstadoServidor();

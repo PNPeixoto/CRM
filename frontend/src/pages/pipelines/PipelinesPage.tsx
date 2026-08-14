@@ -4,9 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { formatarResponsavel } from '@/shared/crm/responsavel';
-import type { Etapa, Oportunidade } from '@/shared/crm/tipos';
-import { formatarMoeda, paraCentavos } from '@/shared/formato';
+import type { Etapa } from '@/shared/crm/tipos';
+import { paraCentavos } from '@/shared/formato';
 import { Carregando, Pagina } from '@/shared/components/Pagina';
 import {
   useCriarOportunidade,
@@ -14,6 +13,7 @@ import {
   useMoverOportunidade,
   useOportunidades,
 } from '@/shared/server-state/recursos';
+import { KanbanBoard } from './KanbanBoard';
 
 /**
  * Kanban do funil.
@@ -38,7 +38,7 @@ export function PipelinesPage() {
   const moverOportunidade = useMoverOportunidade();
 
   async function mover(oportunidadeId: string, etapaId: string) {
-    if (!funilAtivo) return;
+    if (!funilAtivo || moverOportunidade.isPending) return;
     try {
       setErro(null);
       await moverOportunidade.mutateAsync({ id: oportunidadeId, etapaId });
@@ -80,7 +80,7 @@ export function PipelinesPage() {
         </>
       }
     >
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4 overflow-x-hidden">
         {(erro || funisQuery.isError || oportunidadesQuery.isError) && (
           <AlertaErro>{erro ?? 'Não foi possível carregar o funil.'}</AlertaErro>
         )}
@@ -101,108 +101,17 @@ export function PipelinesPage() {
         )}
 
         {funilAtivo && (
-          // Rolagem horizontal no contêiner do kanban, não na página: com
-          // muitas etapas, o corpo inteiro deslizaria e o cabeçalho sairia
-          // da tela.
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {funilAtivo.etapas.map((etapa) => (
-              <Coluna
-                key={etapa.id}
-                etapa={etapa}
-                oportunidades={oportunidades.filter((o) => o.etapaId === etapa.id)}
-                etapas={funilAtivo.etapas}
-                aoMover={mover}
-              />
-            ))}
-          </div>
+          <KanbanBoard
+            etapas={funilAtivo.etapas}
+            oportunidades={oportunidades}
+            oportunidadeEmMovimento={moverOportunidade.isPending
+              ? moverOportunidade.variables.id
+              : null}
+            aoMover={(oportunidadeId, etapaId) => void mover(oportunidadeId, etapaId)}
+          />
         )}
       </div>
     </Pagina>
-  );
-}
-
-function Coluna({
-  etapa,
-  oportunidades,
-  etapas,
-  aoMover,
-}: {
-  readonly etapa: Etapa;
-  readonly oportunidades: readonly Oportunidade[];
-  readonly etapas: readonly Etapa[];
-  readonly aoMover: (oportunidadeId: string, etapaId: string) => void;
-}) {
-  const total = oportunidades.reduce((soma, o) => soma + o.valorCentavos, 0);
-
-  return (
-    <section
-      className="flex w-72 shrink-0 flex-col rounded-[var(--radius-surface)] border"
-      style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--surface-sunken)' }}
-      aria-label={`Etapa ${etapa.nome}`}
-    >
-      <header className="border-b px-3 py-2" style={{ borderColor: 'var(--border-subtle)' }}>
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="truncate text-sm font-semibold">{etapa.nome}</h2>
-          {/* Texto, não só cor: etapa terminal precisa ser legível por quem
-              não distingue as cores e por leitor de tela. */}
-          {(etapa.ganho || etapa.perda) && (
-            <span
-              className="shrink-0 rounded px-1.5 py-px text-[10px] font-medium uppercase"
-              style={{
-                color: etapa.ganho ? 'var(--success)' : 'var(--danger)',
-                backgroundColor: etapa.ganho ? 'var(--success-soft)' : 'var(--danger-soft)',
-              }}
-            >
-              {etapa.ganho ? 'ganho' : 'perda'}
-            </span>
-          )}
-        </div>
-        <p className="mt-0.5 text-xs tabular-nums" style={{ color: 'var(--text-muted)' }}>
-          {oportunidades.length} · {formatarMoeda(total)}
-        </p>
-      </header>
-
-      <div className="flex min-h-24 flex-col gap-2 p-2">
-        {oportunidades.map((oportunidade) => (
-          <article
-            key={oportunidade.id}
-            className="rounded-[var(--radius-control)] border p-2.5"
-            style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--surface-raised)' }}
-          >
-            <p className="text-sm font-medium">{oportunidade.titulo}</p>
-            <p className="mt-0.5 text-sm tabular-nums" style={{ color: 'var(--text-muted)' }}>
-              {formatarMoeda(oportunidade.valorCentavos)}
-            </p>
-            <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-              Responsável: {formatarResponsavel(oportunidade)}
-            </p>
-
-            {/*
-              Mover por <select> em vez de arrastar-e-soltar. Drag and drop sem
-              alternativa de teclado é inacessível, e a versão acessível é
-              trabalho próprio — este controle funciona para todos hoje e não
-              impede o arraste depois.
-            */}
-            <label className="sr-only" htmlFor={`mover-${oportunidade.id}`}>
-              Mover {oportunidade.titulo} para outra etapa
-            </label>
-            <Select
-              id={`mover-${oportunidade.id}`}
-              tamanho="compacto"
-              className="mt-2 w-full"
-              value={oportunidade.etapaId}
-              onChange={(e) => aoMover(oportunidade.id, e.target.value)}
-            >
-              {etapas.map((destino) => (
-                <option key={destino.id} value={destino.id}>
-                  {destino.nome}
-                </option>
-              ))}
-            </Select>
-          </article>
-        ))}
-      </div>
-    </section>
   );
 }
 
