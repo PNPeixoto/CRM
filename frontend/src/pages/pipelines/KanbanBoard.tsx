@@ -13,12 +13,11 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { GripVertical } from 'lucide-react';
-import { Select } from '@/components/ui/select';
+import { CalendarClock, GripVertical, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatarResponsavel } from '@/shared/crm/responsavel';
 import type { Etapa, Oportunidade } from '@/shared/crm/tipos';
-import { formatarMoeda } from '@/shared/formato';
+import { formatarDataCivil, formatarMoeda } from '@/shared/formato';
 import { resolverMovimentoDoKanban } from './kanban';
 
 const anuncios: Announcements = {
@@ -54,11 +53,13 @@ export function KanbanBoard({
   oportunidades,
   oportunidadeEmMovimento,
   aoMover,
+  aoAdicionar,
 }: {
   readonly etapas: readonly Etapa[];
   readonly oportunidades: readonly Oportunidade[];
   readonly oportunidadeEmMovimento: string | null;
   readonly aoMover: (oportunidadeId: string, etapaId: string) => void;
+  readonly aoAdicionar: (etapaId: string) => void;
 }) {
   const [oportunidadeArrastadaId, setOportunidadeArrastadaId] = useState<string | null>(null);
   const sensores = useSensors(
@@ -107,9 +108,8 @@ export function KanbanBoard({
             key={etapa.id}
             etapa={etapa}
             oportunidades={oportunidades.filter((item) => item.etapaId === etapa.id)}
-            etapas={etapas}
             oportunidadeEmMovimento={oportunidadeEmMovimento}
-            aoMover={aoMover}
+            aoAdicionar={aoAdicionar}
           />
         ))}
       </div>
@@ -124,15 +124,13 @@ export function KanbanBoard({
 function Coluna({
   etapa,
   oportunidades,
-  etapas,
   oportunidadeEmMovimento,
-  aoMover,
+  aoAdicionar,
 }: {
   readonly etapa: Etapa;
   readonly oportunidades: readonly Oportunidade[];
-  readonly etapas: readonly Etapa[];
   readonly oportunidadeEmMovimento: string | null;
-  readonly aoMover: (oportunidadeId: string, etapaId: string) => void;
+  readonly aoAdicionar: (etapaId: string) => void;
 }) {
   const total = oportunidades.reduce((soma, oportunidade) => soma + oportunidade.valorCentavos, 0);
   const { isOver, setNodeRef } = useDroppable({
@@ -144,7 +142,7 @@ function Coluna({
     <section
       ref={setNodeRef}
       className={cn(
-        'flex w-72 shrink-0 flex-col rounded-[var(--radius-surface)] border transition-[border-color,box-shadow,background-color]',
+        'flex min-h-[30rem] w-72 shrink-0 flex-col rounded-[var(--radius-surface)] border transition-[border-color,box-shadow,background-color]',
         isOver && 'border-[var(--brand)] bg-[var(--brand-soft)] shadow-sm',
       )}
       style={isOver ? undefined : {
@@ -153,37 +151,51 @@ function Coluna({
       }}
       aria-label={`Etapa ${etapa.nome}`}
     >
-      <header className="border-b px-3 py-2" style={{ borderColor: 'var(--border-subtle)' }}>
+      <header className="border-b px-3 py-3" style={{ borderColor: 'var(--border-subtle)' }}>
         <div className="flex items-center justify-between gap-2">
-          <h2 className="truncate text-sm font-semibold">{etapa.nome}</h2>
-          {(etapa.ganho || etapa.perda) && (
+          <div className="flex min-w-0 items-center gap-2">
             <span
-              className="shrink-0 rounded px-1.5 py-px text-[10px] font-medium uppercase"
-              style={{
-                color: etapa.ganho ? 'var(--success)' : 'var(--danger)',
-                backgroundColor: etapa.ganho ? 'var(--success-soft)' : 'var(--danger-soft)',
-              }}
-            >
-              {etapa.ganho ? 'ganho' : 'perda'}
-            </span>
-          )}
+              className="size-2 shrink-0 rounded-full"
+              style={{ backgroundColor: corDaEtapa(etapa) }}
+              aria-hidden="true"
+            />
+            <h2 className="truncate text-sm font-semibold">{etapa.nome}</h2>
+          </div>
+          <span
+            className="min-w-6 shrink-0 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-raised)] px-1.5 py-0.5 text-center text-xs font-medium tabular-nums text-[var(--text-muted)]"
+            aria-label={oportunidades.length === 1
+              ? '1 oportunidade'
+              : `${oportunidades.length} oportunidades`}
+          >
+            {oportunidades.length}
+          </span>
         </div>
-        <p className="mt-0.5 text-xs tabular-nums" style={{ color: 'var(--text-muted)' }}>
-          {oportunidades.length} · {formatarMoeda(total)}
-        </p>
+        <div className="mt-2 flex items-center justify-between gap-2 text-xs tabular-nums text-[var(--text-muted)]">
+          <span>{formatarMoeda(total)}</span>
+          <span>média {formatarMoeda(oportunidades.length ? Math.round(total / oportunidades.length) : 0)}</span>
+        </div>
       </header>
 
-      <div className="flex min-h-28 flex-1 flex-col gap-2 p-2">
+      <div className="flex min-h-28 flex-1 flex-col gap-2 p-2.5">
         {oportunidades.map((oportunidade) => (
           <CartaoDeOportunidade
             key={oportunidade.id}
             oportunidade={oportunidade}
-            etapas={etapas}
             movendo={oportunidadeEmMovimento === oportunidade.id}
             desabilitado={oportunidadeEmMovimento !== null}
-            aoMover={aoMover}
           />
         ))}
+
+        <button
+          type="button"
+          onClick={() => aoAdicionar(etapa.id)}
+          disabled={oportunidadeEmMovimento !== null}
+          className="mt-auto flex min-h-11 w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-dashed border-[var(--border-strong)] text-xs font-medium text-[var(--text-muted)] hover:border-[var(--brand)] hover:bg-[var(--surface-raised)] hover:text-[var(--brand)] disabled:cursor-wait disabled:opacity-50"
+          aria-label={`Adicionar oportunidade em ${etapa.nome}`}
+        >
+          <Plus className="size-4" aria-hidden="true" />
+          Adicionar
+        </button>
       </div>
     </section>
   );
@@ -191,16 +203,12 @@ function Coluna({
 
 function CartaoDeOportunidade({
   oportunidade,
-  etapas,
   movendo,
   desabilitado,
-  aoMover,
 }: {
   readonly oportunidade: Oportunidade;
-  readonly etapas: readonly Etapa[];
   readonly movendo: boolean;
   readonly desabilitado: boolean;
-  readonly aoMover: (oportunidadeId: string, etapaId: string) => void;
 }) {
   const {
     attributes,
@@ -214,21 +222,23 @@ function CartaoDeOportunidade({
     disabled: desabilitado,
     attributes: { role: 'button', roleDescription: 'oportunidade arrastável' },
   });
+  const idade = idadeEmDias(oportunidade.criadaEm);
 
   return (
     <article
       ref={setNodeRef}
       aria-busy={movendo || undefined}
       className={cn(
-        'rounded-[var(--radius-control)] border p-2.5 shadow-sm transition-[border-color,box-shadow,opacity]',
+        'min-h-36 rounded-[var(--radius-control)] border p-3 shadow-sm transition-[border-color,box-shadow,opacity]',
+        'hover:border-[var(--border-strong)] hover:shadow-md',
         isDragging && 'opacity-35',
       )}
       style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--surface-raised)' }}
     >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <p className="break-words text-sm font-medium">{oportunidade.titulo}</p>
-          <p className="mt-0.5 text-sm tabular-nums" style={{ color: 'var(--text-muted)' }}>
+          <p className="break-words text-sm font-semibold leading-5">{oportunidade.titulo}</p>
+          <p className="mt-2 font-mono text-base font-semibold tabular-nums text-[var(--text-strong)]">
             {formatarMoeda(oportunidade.valorCentavos)}
           </p>
         </div>
@@ -245,29 +255,57 @@ function CartaoDeOportunidade({
           <GripVertical className="size-5" aria-hidden="true" />
         </button>
       </div>
-      <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-        Responsável: {formatarResponsavel(oportunidade)}
-      </p>
 
-      <label className="sr-only" htmlFor={`mover-${oportunidade.id}`}>
-        Mover {oportunidade.titulo} para outra etapa
-      </label>
-      <Select
-        id={`mover-${oportunidade.id}`}
-        tamanho="compacto"
-        className="mt-2 w-full"
-        value={oportunidade.etapaId}
-        disabled={desabilitado}
-        onChange={(evento) => aoMover(oportunidade.id, evento.target.value)}
-      >
-        {etapas.map((destino) => (
-          <option key={destino.id} value={destino.id}>
-            {destino.nome}
-          </option>
-        ))}
-      </Select>
+      {oportunidade.previsaoFechamento && (
+        <p className="mt-2 flex items-center gap-1.5 border-t border-[var(--border-subtle)] pt-2 text-xs text-[var(--text-muted)]">
+          <CalendarClock className="size-3.5" aria-hidden="true" />
+          Previsão {formatarDataCivil(oportunidade.previsaoFechamento)}
+        </p>
+      )}
+
+      <div className="mt-2 flex items-center gap-2 border-t border-[var(--border-subtle)] pt-2 text-xs text-[var(--text-muted)]">
+        <span
+          className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] text-[10px] font-semibold text-[var(--brand)]"
+          aria-hidden="true"
+        >
+          {iniciaisDe(nomeDoResponsavel(oportunidade))}
+        </span>
+        <span
+          className="min-w-0 flex-1 truncate"
+          title={formatarResponsavel(oportunidade)}
+          aria-label={`Responsável: ${formatarResponsavel(oportunidade)}`}
+        >
+          {nomeDoResponsavel(oportunidade)}
+        </span>
+        <span
+          className="shrink-0 rounded bg-[var(--surface-sunken)] px-1.5 py-0.5 tabular-nums"
+          aria-label={`Criada há ${idade} ${idade === 1 ? 'dia' : 'dias'}`}
+        >
+          {idade}d
+        </span>
+      </div>
     </article>
   );
+}
+
+function corDaEtapa(etapa: Etapa): string {
+  if (etapa.ganho) return 'var(--success)';
+  if (etapa.perda) return 'var(--danger)';
+  if (etapa.posicao === 1) return 'var(--info)';
+  return 'var(--brand)';
+}
+
+function nomeDoResponsavel(oportunidade: Oportunidade): string {
+  return oportunidade.responsavelNome ?? oportunidade.responsavelLogin ?? 'Sem responsável';
+}
+
+function iniciaisDe(nome: string): string {
+  return nome.split(/\s+/).filter(Boolean).slice(0, 2).map((parte) => parte[0]).join('').toUpperCase();
+}
+
+function idadeEmDias(criadaEm: string): number {
+  const diferenca = Date.now() - new Date(criadaEm).getTime();
+  return Math.max(0, Math.floor(diferenca / 86_400_000));
 }
 
 function CartaoDeArraste({ oportunidade }: { readonly oportunidade: Oportunidade }) {
@@ -277,7 +315,7 @@ function CartaoDeArraste({ oportunidade }: { readonly oportunidade: Oportunidade
       aria-hidden="true"
     >
       <p className="break-words text-sm font-semibold">{oportunidade.titulo}</p>
-      <p className="mt-1 text-sm tabular-nums text-[var(--text-muted)]">
+      <p className="mt-2 font-mono text-base font-semibold tabular-nums text-[var(--text-strong)]">
         {formatarMoeda(oportunidade.valorCentavos)}
       </p>
     </div>

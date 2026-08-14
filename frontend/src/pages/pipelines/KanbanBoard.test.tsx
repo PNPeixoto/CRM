@@ -27,26 +27,25 @@ const oportunidade: Oportunidade = {
 };
 
 describe('KanbanBoard', () => {
-  it('mantém seletor acessível e oferece alça para arrastar o card', async () => {
+  it('oferece alça acessível e ação de adicionar na etapa sem seletor no card', async () => {
     const aoMover = vi.fn();
+    const aoAdicionar = vi.fn();
     const { container } = render(
       <KanbanBoard
         etapas={etapas}
         oportunidades={[oportunidade]}
         oportunidadeEmMovimento={null}
         aoMover={aoMover}
+        aoAdicionar={aoAdicionar}
       />,
     );
 
     const alca = screen.getByRole('button', { name: 'Arrastar Expansão Grupo Horizonte' });
     expect(alca).toHaveAttribute('aria-roledescription', 'oportunidade arrastável');
     expect(alca).toHaveAttribute('aria-describedby');
-
-    fireEvent.change(
-      screen.getByLabelText('Mover Expansão Grupo Horizonte para outra etapa'),
-      { target: { value: 'proposta' } },
-    );
-    expect(aoMover).toHaveBeenCalledWith('oportunidade-1', 'proposta');
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar oportunidade em Novo' }));
+    expect(aoAdicionar).toHaveBeenCalledWith('novo');
     await esperarSemViolacoesAcessiveis(container);
   });
 
@@ -63,14 +62,15 @@ describe('KanbanBoard', () => {
         oportunidades={[oportunidade, outraOportunidade]}
         oportunidadeEmMovimento="oportunidade-1"
         aoMover={vi.fn()}
+        aoAdicionar={vi.fn()}
       />,
     );
 
     expect(screen.getByRole('button', { name: 'Arrastar Expansão Grupo Horizonte' }))
       .toBeDisabled();
-    expect(screen.getByLabelText('Mover Expansão Grupo Horizonte para outra etapa'))
-      .toBeDisabled();
     expect(screen.getByRole('button', { name: 'Arrastar Renovação Clínica Íris' }))
+      .toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Adicionar oportunidade em Proposta' }))
       .toBeDisabled();
   });
 

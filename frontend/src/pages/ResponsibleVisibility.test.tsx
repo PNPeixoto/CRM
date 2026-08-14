@@ -119,6 +119,6 @@ describe('visão consolidada por responsável', () => {
     renderComEstadoServidor(<PipelinesPage />);
 
     expect(await screen.findByText('Contrato Maria')).toBeInTheDocument();
-    expect(screen.getByText('Responsável: Peixoto (@peixoto)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Responsável: Peixoto (@peixoto)')).toHaveTextContent('Peixoto');
   });
 });

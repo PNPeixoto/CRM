@@ -77,7 +77,7 @@ Critério deste relatório: **pronta** conclui integralmente seu objetivo atual;
 | `/dashboard` | `pronto` | parcial | KPIs reais; sem teste da página e sem autorização por função/escopo. |
 | `/inbox` | `pronto` | parcial | REST + STOMP e envio real; sem cursor, sequence, polling, erro completo ou layout mobile. |
 | `/contatos` | `pronto` | parcial | Busca paginada, criação, exclusão e ficha com oportunidades/atividades; edição e paginação das relações ainda ausentes. |
-| `/funis` | `pronto` | parcial | Funis, criação e movimento otimista por mouse, toque, teclado ou `select`; edição/exclusão de etapas e paginação ainda ausentes. |
+| `/funis` | `pronto` | parcial | Resumo, totais, criação por etapa e movimento otimista por mouse, toque ou teclado; edição/exclusão de etapas e paginação ainda ausentes. |
 | `/tarefas` | `pronto` | parcial | Lista, filtro, criação, conclusão e exclusão; edição, paginação e erros de mutação ausentes. |
 | `/integracoes` | `pronto` | parcial | Lista/cria/ativa chat e Telegram sem reexibir segredos; edição/rotação/exclusão e erros por campo ausentes. |
 | `/relatorios` | `pronto` | parcial | Resumo pontual real; sem período, filtros, exportação ou testes da página. |

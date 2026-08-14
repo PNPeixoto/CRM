@@ -1,7 +1,7 @@
 # Estado atual
 
 > Reescrito ao fim de cada sessão. Máximo 150 linhas.
-> Última atualização: 2026-08-14 20:30 (America/Sao_Paulo), branch `agent/refino-apresentacao`, head anterior `fce5f93`
+> Última atualização: 2026-08-14 20:46 (America/Sao_Paulo), branch `agent/refino-apresentacao`, head anterior `f99e0d4`
 
 ## Onde parei
 
@@ -105,7 +105,7 @@ O expurgo continua desligado até a decisão dos prazos de retenção.
 ## Refino para apresentação
 - `/agenda` é mensal e real sobre tarefas; a Inbox identifica canal, conta, contato/número, atendente, autor e operador que responde.
 - A identidade FinUp e o cenário local de dashboard, contatos, funil, Agenda e Inbox são servidos por `npm run demo:api`.
-- O Kanban move oportunidades por mouse, toque ou teclado, mantém o `select` acessível e reverte otimisticamente se a API falhar.
+- O Kanban move oportunidades por mouse, toque ou teclado, sem seletor nos cards, e reverte otimisticamente se a API falhar.
 - A ficha reúne cadastro, carteira e atividades; oportunidades e tarefas são filtradas no backend pelo contato e alcance autorizado.
 - Conversas ainda não entram na ficha: o domínio não popula nem publica esse vínculo de forma confiável.
 - OpenAPI/tipos sincronizados; build, lint, `api:check`, 151 testes e revisão visual passaram com overflow isolado no quadro.

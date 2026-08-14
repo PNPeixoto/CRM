@@ -1,9 +1,21 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { funilApi } from '@/shared/crm/api';
 import type { Oportunidade } from '@/shared/crm/tipos';
 import { renderComEstadoServidor } from '@/test/estadoServidor';
 import { PipelinesPage } from './PipelinesPage';
+
+vi.mock('./KanbanBoard', () => ({
+  KanbanBoard: ({
+    aoMover,
+  }: {
+    readonly aoMover: (oportunidadeId: string, etapaId: string) => void;
+  }) => (
+    <button type="button" onClick={() => aoMover('oportunidade-1', 'proposta')}>
+      Mover oportunidade de teste
+    </button>
+  ),
+}));
 
 const oportunidade: Oportunidade = {
   id: 'oportunidade-1',
@@ -41,22 +53,23 @@ describe('movimentação do funil', () => {
     });
     const mover = vi.spyOn(funilApi, 'mover').mockReturnValue(requisicao);
 
-    renderComEstadoServidor(<PipelinesPage />);
+    const { cliente } = renderComEstadoServidor(<PipelinesPage />);
 
-    fireEvent.change(
-      await screen.findByLabelText('Mover Contrato Maria para outra etapa'),
-      { target: { value: 'proposta' } },
-    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Mover oportunidade de teste' }));
     await waitFor(() => expect(mover).toHaveBeenCalledWith('oportunidade-1', 'proposta'));
-
-    const proposta = screen.getByRole('region', { name: 'Etapa Proposta' });
-    expect(within(proposta).getByText('Contrato Maria')).toBeVisible();
+    await waitFor(() => expect(etapaNoCache(cliente)).toBe('proposta'));
 
     rejeitar(new Error('indisponível'));
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Não foi possível mover a oportunidade.',
     );
-    const novo = screen.getByRole('region', { name: 'Etapa Novo' });
-    await waitFor(() => expect(within(novo).getByText('Contrato Maria')).toBeVisible());
+    await waitFor(() => expect(etapaNoCache(cliente)).toBe('novo'));
   });
 });
+
+function etapaNoCache(cliente: ReturnType<typeof renderComEstadoServidor>['cliente']) {
+  return cliente.getQueriesData<readonly Oportunidade[]>({ queryKey: ['servidor'] })
+    .flatMap(([, oportunidades]) => oportunidades ?? [])
+    .find((item) => item.id === 'oportunidade-1')
+    ?.etapaId;
+}

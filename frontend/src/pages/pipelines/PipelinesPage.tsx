@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
+import { Plus } from 'lucide-react';
 import { AlertaErro } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import type { Etapa } from '@/shared/crm/tipos';
-import { paraCentavos } from '@/shared/formato';
+import { formatarMoeda, paraCentavos } from '@/shared/formato';
 import { Carregando, Pagina } from '@/shared/components/Pagina';
 import {
   useCriarOportunidade,
@@ -25,6 +26,7 @@ import { KanbanBoard } from './KanbanBoard';
 export function PipelinesPage() {
   const [funilAtivoId, setFunilAtivoId] = useState<string | null>(null);
   const [formAberto, setFormAberto] = useState(false);
+  const [etapaInicialId, setEtapaInicialId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const funisQuery = useFunis();
   const funis = funisQuery.data ?? [];
@@ -36,6 +38,17 @@ export function PipelinesPage() {
   const oportunidades = oportunidadesQuery.data ?? [];
   const criarOportunidade = useCriarOportunidade();
   const moverOportunidade = useMoverOportunidade();
+  const oportunidadesAbertas = oportunidades.filter((oportunidade) => oportunidade.status === 'OPEN');
+  const valorAberto = oportunidadesAbertas.reduce(
+    (total, oportunidade) => total + oportunidade.valorCentavos,
+    0,
+  );
+
+  function abrirFormulario(etapaId: string | undefined) {
+    if (!etapaId) return;
+    setEtapaInicialId(etapaId);
+    setFormAberto(true);
+  }
 
   async function mover(oportunidadeId: string, etapaId: string) {
     if (!funilAtivo || moverOportunidade.isPending) return;
@@ -57,8 +70,10 @@ export function PipelinesPage() {
 
   return (
     <Pagina
-      titulo="Funil"
-      descricao={funilAtivo?.nome}
+      titulo="Funil comercial"
+      descricao={funilAtivo
+        ? `${funilAtivo.nome} · ${oportunidadesAbertas.length} ${oportunidadesAbertas.length === 1 ? 'oportunidade aberta' : 'oportunidades abertas'} · ${formatarMoeda(valorAberto)} em pipeline`
+        : undefined}
       acoes={
         <>
           {funis.length > 1 && (
@@ -74,7 +89,13 @@ export function PipelinesPage() {
               ))}
             </Select>
           )}
-          <Button onClick={() => setFormAberto((aberto) => !aberto)} disabled={!funilAtivo}>
+          <Button
+            onClick={() => formAberto
+              ? setFormAberto(false)
+              : abrirFormulario(funilAtivo?.etapas[0]?.id)}
+            disabled={!funilAtivo}
+          >
+            {!formAberto && <Plus aria-hidden="true" />}
             {formAberto ? 'Cancelar' : 'Nova oportunidade'}
           </Button>
         </>
@@ -87,7 +108,9 @@ export function PipelinesPage() {
 
         {formAberto && funilAtivo && (
           <FormularioDeOportunidade
+            key={etapaInicialId}
             etapas={funilAtivo.etapas}
+            etapaInicialId={etapaInicialId ?? funilAtivo.etapas[0]?.id ?? ''}
             aoSalvar={async (dados) => {
               try {
                 setErro(null);
@@ -108,6 +131,7 @@ export function PipelinesPage() {
               ? moverOportunidade.variables.id
               : null}
             aoMover={(oportunidadeId, etapaId) => void mover(oportunidadeId, etapaId)}
+            aoAdicionar={abrirFormulario}
           />
         )}
       </div>
@@ -117,9 +141,11 @@ export function PipelinesPage() {
 
 function FormularioDeOportunidade({
   etapas,
+  etapaInicialId,
   aoSalvar,
 }: {
   readonly etapas: readonly Etapa[];
+  readonly etapaInicialId: string;
   readonly aoSalvar: (dados: {
     titulo: string;
     etapaId: string;
@@ -128,7 +154,7 @@ function FormularioDeOportunidade({
 }) {
   const [titulo, setTitulo] = useState('');
   const [valor, setValor] = useState('');
-  const [etapaId, setEtapaId] = useState(etapas[0]?.id ?? '');
+  const [etapaId, setEtapaId] = useState(etapaInicialId);
   const [enviando, setEnviando] = useState(false);
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
