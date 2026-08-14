@@ -18,24 +18,24 @@
   --palette-neutral-200: #e2e2ea;
   --palette-neutral-300: #c9c9d6;
   --palette-neutral-400: #a3a0b3;
-  --palette-neutral-450: #9a95ad;
+  --palette-neutral-450: #837d99;
   --palette-neutral-500: #8e8e9f;
   --palette-neutral-600: #5b5b6b;
   --palette-neutral-650: #706c84;
   --palette-neutral-700: #3d3a4e;
   --palette-neutral-800: #2b2938;
-  --palette-neutral-850: #221d31;
+  --palette-neutral-850: #241c3a;
   --palette-neutral-900: #1b1926;
   --palette-neutral-925: #17171f;
   --palette-neutral-950: #15121f;
   --palette-neutral-975: #12111a;
-  --palette-neutral-1000: #0d0c14;
+  --palette-neutral-1000: #0e0b18;
 
-  --palette-indigo-50: #ede9fb;
+  --palette-indigo-50: #f5f1fe;
   --palette-indigo-250: #b0a0f8;
   --palette-indigo-300: #9b85f5;
-  --palette-indigo-700: #4b2ed4;
-  --palette-indigo-800: #3f26b5;
+  --palette-indigo-700: #4708c8;
+  --palette-indigo-800: #7a2bf5;
   --palette-indigo-950: #241f3d;
 
   --palette-green-50: #dcfce7;
@@ -62,7 +62,7 @@
   --surface-base: var(--palette-neutral-25);
   --surface-raised: var(--palette-neutral-0);
   --surface-sunken: var(--palette-neutral-100);
-  --surface-shell: var(--palette-neutral-950);
+  --surface-shell: var(--palette-neutral-1000);
   --surface-shell-hover: var(--palette-neutral-850);
 
   --text-strong: var(--palette-neutral-925);

@@ -61,6 +61,7 @@ describe('entrada e segundo fator', () => {
     ]);
 
     await waitFor(() => expect(screen.getByLabelText('Empresa')).toBeEnabled());
+    expect(screen.getByRole('img', { name: 'FinUp, Plataforma CRM' })).toBeVisible();
     tentarEntrar();
 
     await waitFor(() =>

@@ -38,6 +38,7 @@ describe('AppLayout', () => {
       'href',
       '#conteudo-principal',
     );
+    expect(screen.getAllByRole('img', { name: 'FinUp, Plataforma CRM' })).not.toHaveLength(0);
     const abrir = screen.getByRole('button', { name: 'Abrir menu' });
     expect(abrir).toHaveAttribute('aria-expanded', 'false');
 

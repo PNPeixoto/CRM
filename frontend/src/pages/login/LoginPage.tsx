@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/shared/auth/AuthContext';
+import { MarcaFinUp } from '@/shared/components/MarcaFinUp';
 import type { CadastroMfa } from '@/shared/auth/api';
 import { destinoInternoSeguro } from '@/shared/auth/destinoSeguro';
 
@@ -134,7 +135,7 @@ export function LoginPage() {
         className="hidden w-2/5 flex-col justify-between p-10 lg:flex"
         style={{ backgroundColor: 'var(--surface-shell)', color: 'var(--text-on-shell)' }}
       >
-        <span className="text-lg font-semibold tracking-tight">CRM PNP</span>
+        <MarcaFinUp />
         <p className="max-w-sm text-sm" style={{ color: 'var(--text-on-shell-muted)' }}>
           Atendimento de WhatsApp, Instagram, Telegram e chat ao vivo em uma única
           caixa de entrada.

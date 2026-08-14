@@ -27,6 +27,7 @@ import type { RotaApp } from '@/app/routes';
 import { EstadoDeConteudo } from '@/components/ui/content-state';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { MarcaFinUp } from '@/shared/components/MarcaFinUp';
 import type { RotaResolvida } from '@/shared/tenant/resolveNavigation';
 import { useAuth } from '@/shared/auth/AuthContext';
 import {
@@ -143,7 +144,7 @@ export function AppLayout({
       </a>
 
       <header className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--surface-raised)] px-4 py-3 lg:hidden">
-        <span className="font-semibold tracking-tight">CRM PNP</span>
+        <MarcaFinUp tema="claro" />
         <button
           ref={botaoMenuRef}
           type="button"
@@ -167,10 +168,15 @@ export function AppLayout({
         )}
         aria-label="Navegação principal"
       >
-        <div className="hidden items-center justify-between px-3 py-4 lg:flex">
-          <span className={cn('px-2 font-semibold tracking-tight', menuRecolhido && 'sr-only')}>
-            CRM PNP
-          </span>
+        <div
+          className={cn(
+            'hidden py-3 lg:flex',
+            menuRecolhido
+              ? 'flex-col items-center gap-1 px-2'
+              : 'items-center justify-between px-3',
+          )}
+        >
+          <MarcaFinUp recolhida={menuRecolhido} className={menuRecolhido ? undefined : 'px-2'} />
           <button
             type="button"
             onClick={alternarMenuRecolhido}
@@ -316,11 +322,11 @@ function ItemDeNavegacao({
       title={recolhido ? rota.rotulo : undefined}
       className={({ isActive }) =>
         cn(
-          'flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-sm transition-colors',
+          'flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] border-l-2 px-2 py-1.5 text-sm transition-colors',
           recolhido ? 'lg:justify-center' : 'justify-between',
           isActive
-            ? 'bg-[var(--brand)] font-medium text-[var(--text-on-brand)]'
-            : 'hover:bg-[var(--surface-shell-hover)]',
+            ? 'border-[var(--brand-hover)] bg-[var(--surface-shell-hover)] font-semibold text-[var(--text-on-shell)]'
+            : 'border-transparent hover:bg-[var(--surface-shell-hover)]',
         )
       }
     >
