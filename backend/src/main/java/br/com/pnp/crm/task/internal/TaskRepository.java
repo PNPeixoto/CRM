@@ -30,6 +30,7 @@ interface TaskRepository extends JpaRepository<TaskEntity, UUID> {
                AND t.deletedAt IS NULL
                AND (:irrestrito = TRUE OR t.assignedUserId IN :responsaveis)
                AND (:apenasAbertas = false OR t.doneAt IS NULL)
+               AND (:contatoId IS NULL OR t.contactId = :contatoId)
              ORDER BY CASE WHEN t.doneAt IS NULL THEN 0 ELSE 1 END,
                       t.dueAt ASC NULLS LAST,
                       t.createdAt DESC
@@ -37,7 +38,8 @@ interface TaskRepository extends JpaRepository<TaskEntity, UUID> {
     List<TaskEntity> listar(@Param("tenantId") UUID tenantId,
                             @Param("irrestrito") boolean irrestrito,
                             @Param("responsaveis") Collection<UUID> responsaveis,
-                            @Param("apenasAbertas") boolean apenasAbertas);
+                            @Param("apenasAbertas") boolean apenasAbertas,
+                            @Param("contatoId") UUID contatoId);
 
     long countByTenantIdAndDoneAtIsNullAndDeletedAtIsNull(UUID tenantId);
 

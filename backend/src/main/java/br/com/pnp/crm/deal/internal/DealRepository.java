@@ -27,6 +27,20 @@ interface DealRepository extends JpaRepository<DealEntity, UUID> {
                                    @Param("irrestrito") boolean irrestrito,
                                    @Param("responsaveis") Collection<UUID> responsaveis);
 
+    /** Relações da ficha do contato, já recortadas no banco pelo alcance comercial. */
+    @Query("""
+            SELECT d FROM DealEntity d
+             WHERE d.tenantId = :tenantId
+               AND d.contactId = :contatoId
+               AND d.deletedAt IS NULL
+               AND (:irrestrito = TRUE OR d.ownerUserId IN :responsaveis)
+             ORDER BY d.createdAt DESC
+            """)
+    List<DealEntity> listarDoContato(@Param("tenantId") UUID tenantId,
+                                     @Param("contatoId") UUID contatoId,
+                                     @Param("irrestrito") boolean irrestrito,
+                                     @Param("responsaveis") Collection<UUID> responsaveis);
+
     List<DealEntity> findByTenantIdAndPipelineIdAndDeletedAtIsNullOrderByCreatedAtDesc(
             UUID tenantId, UUID pipelineId);
 

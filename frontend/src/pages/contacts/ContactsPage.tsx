@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { Eye, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertaErro } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import {
   useCriarContato,
   useExcluirContato,
 } from '@/shared/server-state/recursos';
+import { FichaDoContato } from './ContactDetails';
 
 export function ContactsPage() {
   const [parametros, setParametros] = useSearchParams();
@@ -26,7 +28,13 @@ export function ContactsPage() {
   const [buscaEstavel, setBuscaEstavel] = useState(buscaInicial.trim());
   const [formAberto, setFormAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const contatosQuery = useContatos(buscaEstavel, pagina, tamanhoDaPagina);
+  const contatoSelecionadoId = parametros.get('contato');
+  const contatosQuery = useContatos(
+    buscaEstavel,
+    pagina,
+    tamanhoDaPagina,
+    !contatoSelecionadoId,
+  );
   const criarContato = useCriarContato();
   const excluirContato = useExcluirContato();
   const contatos = contatosQuery.data ?? [];
@@ -78,6 +86,26 @@ export function ContactsPage() {
     }
   }
 
+  function abrirContato(contato: Contato) {
+    setParametros((atuais) => {
+      const proximos = new URLSearchParams(atuais);
+      proximos.set('contato', contato.id);
+      return proximos;
+    });
+  }
+
+  function fecharContato() {
+    setParametros((atuais) => {
+      const proximos = new URLSearchParams(atuais);
+      proximos.delete('contato');
+      return proximos;
+    });
+  }
+
+  if (contatoSelecionadoId) {
+    return <FichaDoContato contatoId={contatoSelecionadoId} aoVoltar={fecharContato} />;
+  }
+
   return (
     <Pagina
       titulo="Contatos"
@@ -121,7 +149,7 @@ export function ContactsPage() {
             }
           />
         ) : (
-          <TabelaDeContatos contatos={contatos} aoExcluir={excluir} />
+          <TabelaDeContatos contatos={contatos} aoAbrir={abrirContato} aoExcluir={excluir} />
         )}
 
         {(pagina > 0 || contatos.length === tamanhoDaPagina) && (
@@ -149,6 +177,7 @@ export function ContactsPage() {
     </Pagina>
   );
 }
+
 
 export interface NovoContato {
   nome: string;
@@ -304,9 +333,11 @@ function Campo({
 
 function TabelaDeContatos({
   contatos,
+  aoAbrir,
   aoExcluir,
 }: {
   readonly contatos: readonly Contato[];
+  readonly aoAbrir: (contato: Contato) => void;
   readonly aoExcluir: (contato: Contato) => void;
 }) {
   return (
@@ -344,9 +375,26 @@ function TabelaDeContatos({
               <Td>{formatarResponsavel(contato)}</Td>
               <Td>{formatarData(contato.criadoEm)}</Td>
               <Td>
-                <Button variant="fantasma" size="pequeno" onClick={() => aoExcluir(contato)}>
-                  Excluir
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="fantasma"
+                    size="icone"
+                    onClick={() => aoAbrir(contato)}
+                    aria-label={`Ver ficha de ${contato.nome}`}
+                    title="Ver ficha do contato"
+                  >
+                    <Eye aria-hidden="true" />
+                  </Button>
+                  <Button
+                    variant="fantasma"
+                    size="icone"
+                    onClick={() => aoExcluir(contato)}
+                    aria-label={`Excluir ${contato.nome}`}
+                    title="Excluir contato"
+                  >
+                    <Trash2 aria-hidden="true" />
+                  </Button>
+                </div>
               </Td>
             </tr>
           ))}

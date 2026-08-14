@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatarDataCivil,
   instanteDeHorarioLocal,
   lerValorMonetario,
   normalizarDataCivil,
@@ -21,6 +22,7 @@ describe('fronteiras temporais e monetárias', () => {
 
   it('mantém data civil sem conversão de fuso', () => {
     expect(normalizarDataCivil('2026-08-08')).toBe('2026-08-08');
+    expect(formatarDataCivil('2026-08-31')).toBe('31/08/2026');
     expect(() => normalizarDataCivil('2026-02-30')).toThrow(/data válida/i);
   });
 

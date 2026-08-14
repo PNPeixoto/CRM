@@ -76,7 +76,7 @@ Critério deste relatório: **pronta** conclui integralmente seu objetivo atual;
 | `/primeiro-acesso` | fora do registro | parcial | Persiste segmento e atualiza navegação; guard/provider têm testes, mas não é onboarding completo. |
 | `/dashboard` | `pronto` | parcial | KPIs reais; sem teste da página e sem autorização por função/escopo. |
 | `/inbox` | `pronto` | parcial | REST + STOMP e envio real; sem cursor, sequence, polling, erro completo ou layout mobile. |
-| `/contatos` | `pronto` | parcial | Busca, criação e exclusão; edição/detalhe ausentes, só primeira página e busca sujeita a resposta fora de ordem. |
+| `/contatos` | `pronto` | parcial | Busca paginada, criação, exclusão e ficha com oportunidades/atividades; edição e paginação das relações ainda ausentes. |
 | `/funis` | `pronto` | parcial | Funis, criação e movimento acessível por `select`; edição/exclusão, paginação e estados de erro são incompletos. |
 | `/tarefas` | `pronto` | parcial | Lista, filtro, criação, conclusão e exclusão; edição, paginação e erros de mutação ausentes. |
 | `/integracoes` | `pronto` | parcial | Lista/cria/ativa chat e Telegram sem reexibir segredos; edição/rotação/exclusão e erros por campo ausentes. |
@@ -133,7 +133,7 @@ confirmam claro + shell escuro, `#4B2ED4`, Manrope e JetBrains Mono.
 | Sessão | `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, `POST /auth/logout` | Interfaces locais em `AuthContext` | Implementado; access token JWT e refresh rotativo. |
 | Onboarding | `GET /empresa/apresentacao`, `PUT /empresa/perfil-inicial` | `shared/tenant/tipos.ts` | Implementado e testado no backend. |
 | Dashboard/relatórios | `GET /relatorios/visao-geral` | `VisaoGeral` manual | Implementado; regra de agregação fica no backend. |
-| Contatos | `GET/POST/PUT/DELETE /contatos`; UI não usa GET por ID nem PUT | `Contato` manual | Implementado; paginação aceita `pagina/tamanho`, mas devolve só o array. |
+| Contatos | `GET/POST/PUT/DELETE /contatos`, GET por ID e relações por contato; UI não usa PUT | `Contato`, `Oportunidade` e `Tarefa` mapeados do OpenAPI | Implementado; lista principal é paginada, relações ainda devolvem array. |
 | Funis/oportunidades | GET funis/lista, POST criar/mover; UI não usa PUT/DELETE | `Funil`/`Oportunidade` manuais | Implementado; lista de oportunidades não é paginada. |
 | Tarefas | GET/POST, POST concluir, DELETE; UI não usa PUT | `Tarefa` manual | Implementado; lista não é paginada. |
 | Inbox | GET conversas/mensagens, POST mensagem e STOMP `/ws` | Tipos REST/push manuais | Implementado sem cursor/sequence no contrato atual. |

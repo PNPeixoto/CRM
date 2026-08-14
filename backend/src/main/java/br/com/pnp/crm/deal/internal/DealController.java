@@ -100,6 +100,32 @@ class DealController {
                 .toList());
     }
 
+    @GetMapping("/contatos/{contatoId}/oportunidades")
+    @Transactional(readOnly = true)
+    ResponseEntity<List<DealDtos.OportunidadeResponse>> listarOportunidadesDoContato(
+            @PathVariable UUID contatoId) {
+
+        UUID tenantId = TenantContext.obrigatorio();
+        ContactLookup.ContactReference contato = contacts.findReference(tenantId, contatoId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Contato"));
+        autorizacao.exigirSobreRegistro(Permissao.CONTACTS_READ, contato.ownerUserId());
+
+        Autorizacao.Recorte recorte = autorizacao.recorteDe(Permissao.DEALS_READ);
+        List<DealEntity> negocios = oportunidades.listarDoContato(
+                tenantId, contatoId, recorte.todoOTenant(), recorte.responsaveis());
+        Map<UUID, UsuarioLookup.UsuarioReference> responsaveis = users.findKnown(
+                tenantId, negocios.stream()
+                        .map(DealEntity::getOwnerUserId)
+                        .filter(java.util.Objects::nonNull)
+                        .distinct()
+                        .toList());
+
+        return ResponseEntity.ok(negocios.stream()
+                .map(negocio -> paraResposta(
+                        negocio, responsaveis.get(negocio.getOwnerUserId())))
+                .toList());
+    }
+
 
 
     @PostMapping("/oportunidades")

@@ -90,14 +90,29 @@ export function useSalvarPerfilInicial() {
   });
 }
 
-export function useContatos(busca: string, pagina?: number, tamanho?: number) {
+export function useContatos(
+  busca: string,
+  pagina?: number,
+  tamanho?: number,
+  habilitado = true,
+) {
   const contexto = useContextoEstadoServidor();
   const seguro = contextoSeguro(contexto);
   const parametros = pagina === undefined ? { busca } : { busca, pagina, tamanho };
   return useQuery({
     queryKey: chaveDoRecurso(seguro, 'contatos', parametros),
     queryFn: ({ signal }) => contatosApi.listar(busca || undefined, signal, pagina, tamanho),
-    enabled: Boolean(contexto),
+    enabled: Boolean(contexto && habilitado),
+  });
+}
+
+export function useContato(contatoId: string | null) {
+  const contexto = useContextoEstadoServidor();
+  const seguro = contextoSeguro(contexto);
+  return useQuery({
+    queryKey: chaveDoRecurso(seguro, 'contatos', { contatoId }),
+    queryFn: ({ signal }) => contatosApi.obter(contatoId ?? '', signal),
+    enabled: Boolean(contexto && contatoId),
   });
 }
 
@@ -140,6 +155,16 @@ export function useOportunidades(funilId: string | null) {
   });
 }
 
+export function useOportunidadesDoContato(contatoId: string | null) {
+  const contexto = useContextoEstadoServidor();
+  const seguro = contextoSeguro(contexto);
+  return useQuery({
+    queryKey: chaveDoRecurso(seguro, 'oportunidades', { contatoId }),
+    queryFn: ({ signal }) => funilApi.listarOportunidadesDoContato(contatoId ?? '', signal),
+    enabled: Boolean(contexto && contatoId),
+  });
+}
+
 export function useCriarOportunidade() {
   const contexto = useContextoEstadoServidor();
   const cliente = useQueryClient();
@@ -167,12 +192,12 @@ export function useMoverOportunidade() {
   });
 }
 
-export function useTarefas(apenasAbertas: boolean) {
+export function useTarefas(apenasAbertas: boolean, contatoId?: string) {
   const contexto = useContextoEstadoServidor();
   const seguro = contextoSeguro(contexto);
   return useQuery({
-    queryKey: chaveDoRecurso(seguro, 'tarefas', { apenasAbertas }),
-    queryFn: ({ signal }) => tarefasApi.listar(apenasAbertas, signal),
+    queryKey: chaveDoRecurso(seguro, 'tarefas', { apenasAbertas, contatoId }),
+    queryFn: ({ signal }) => tarefasApi.listar(apenasAbertas, signal, contatoId),
     enabled: Boolean(contexto),
   });
 }

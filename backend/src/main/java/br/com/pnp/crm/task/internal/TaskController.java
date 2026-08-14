@@ -51,13 +51,19 @@ class TaskController {
     @GetMapping
     @Transactional(readOnly = true)
     ResponseEntity<List<TarefaResponse>> listar(
-            @RequestParam(defaultValue = "false") boolean apenasAbertas) {
+            @RequestParam(defaultValue = "false") boolean apenasAbertas,
+            @RequestParam(required = false) UUID contatoId) {
+        UUID tenantId = TenantContext.obrigatorio();
+        if (contatoId != null) {
+            ContactLookup.ContactReference contato = contacts.findReference(tenantId, contatoId)
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Contato"));
+            autorizacao.exigirSobreRegistro(Permissao.CONTACTS_READ, contato.ownerUserId());
+        }
         Autorizacao.Recorte recorte = autorizacao.recorteDe(Permissao.TASKS_READ);
         List<TaskEntity> tarefas = repository.listar(
-                TenantContext.obrigatorio(),
-                recorte.todoOTenant(), recorte.responsaveis(), apenasAbertas);
+                tenantId, recorte.todoOTenant(), recorte.responsaveis(), apenasAbertas, contatoId);
         Map<UUID, UsuarioLookup.UsuarioReference> responsaveis = users.findKnown(
-                TenantContext.obrigatorio(), tarefas.stream()
+                tenantId, tarefas.stream()
                         .map(TaskEntity::getAssignedUserId)
                         .filter(java.util.Objects::nonNull)
                         .distinct()

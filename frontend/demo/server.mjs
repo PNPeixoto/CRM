@@ -7,12 +7,12 @@ const membershipId = '018f0000-0000-7000-8000-000000000003';
 
 let tarefas = [
   tarefa('task-1', 'Apresentação comercial', '2026-08-17T13:30:00Z', null, 'Alex Peixoto'),
-  tarefa('task-2', 'Follow-up com Maria Silva', '2026-08-17T16:00:00Z', null, 'Carla Mendes'),
-  tarefa('task-3', 'Enviar proposta Grupo Horizonte', '2026-08-18T14:00:00Z', null, 'Alex Peixoto'),
+  tarefa('task-2', 'Follow-up com Maria Silva', '2026-08-17T16:00:00Z', null, 'Carla Mendes', 'contact-1', 'deal-1'),
+  tarefa('task-3', 'Enviar proposta Grupo Horizonte', '2026-08-18T14:00:00Z', null, 'Alex Peixoto', 'contact-1', 'deal-1'),
   tarefa('task-4', 'Reunião de pipeline', '2026-08-20T12:00:00Z', null, 'Equipe Comercial'),
-  tarefa('task-5', 'Revisar contrato Loja Aurora', '2026-08-13T18:00:00Z', null, 'Bruno Costa'),
-  tarefa('task-6', 'Atualizar cadastro do lead', null, null, 'Carla Mendes'),
-  tarefa('task-7', 'Diagnóstico inicial concluído', '2026-08-12T15:00:00Z', '2026-08-12T16:00:00Z', 'Alex Peixoto'),
+  tarefa('task-5', 'Revisar contrato Loja Aurora', '2026-08-13T18:00:00Z', null, 'Bruno Costa', 'contact-3', 'deal-2'),
+  tarefa('task-6', 'Atualizar cadastro do lead', null, null, 'Alex Peixoto', 'contact-2', 'deal-3'),
+  tarefa('task-7', 'Diagnóstico inicial concluído', '2026-08-12T15:00:00Z', '2026-08-12T16:00:00Z', 'Carla Mendes', 'contact-1', 'deal-1'),
 ];
 
 let contatos = [
@@ -159,9 +159,19 @@ const server = http.createServer(async (request, response) => {
     contatos = [...contatos, novo];
     return json(response, novo);
   }
-  const exclusaoContato = path.match(/^\/api\/contatos\/([^/]+)$/);
-  if (request.method === 'DELETE' && exclusaoContato) {
-    contatos = contatos.filter((item) => item.id !== exclusaoContato[1]);
+  const detalheContato = path.match(/^\/api\/contatos\/([^/]+)$/);
+  if (request.method === 'GET' && detalheContato) {
+    const encontrado = contatos.find((item) => item.id === detalheContato[1]);
+    return encontrado
+      ? json(response, encontrado)
+      : json(response, { codigo: 'NAO_ENCONTRADO' }, 404);
+  }
+  const oportunidadesDoContato = path.match(/^\/api\/contatos\/([^/]+)\/oportunidades$/);
+  if (request.method === 'GET' && oportunidadesDoContato) {
+    return json(response, oportunidades.filter((item) => item.contatoId === oportunidadesDoContato[1]));
+  }
+  if (request.method === 'DELETE' && detalheContato) {
+    contatos = contatos.filter((item) => item.id !== detalheContato[1]);
     return send(response, 204);
   }
 
@@ -187,10 +197,16 @@ const server = http.createServer(async (request, response) => {
     return json(response, atual);
   }
 
-  if (request.method === 'GET' && path === '/api/tarefas') return json(response, tarefas);
+  if (request.method === 'GET' && path === '/api/tarefas') {
+    const apenasAbertas = url.searchParams.get('apenasAbertas') === 'true';
+    const contatoId = url.searchParams.get('contatoId');
+    return json(response, tarefas.filter((item) =>
+      (!apenasAbertas || !item.concluidaEm) && (!contatoId || item.contatoId === contatoId)));
+  }
   if (request.method === 'POST' && path === '/api/tarefas') {
     const body = await readJson(request);
-    const nova = tarefa(randomUUID(), body.titulo, body.vencimentoEm ?? null, null, 'Alex Peixoto');
+    const nova = tarefa(randomUUID(), body.titulo, body.vencimentoEm ?? null, null, 'Alex Peixoto',
+      body.contatoId ?? null, body.oportunidadeId ?? null);
     nova.descricao = body.descricao ?? null;
     tarefas = [...tarefas, nova];
     return json(response, nova);
@@ -298,10 +314,11 @@ server.on('upgrade', (request, socket) => {
 
 server.listen(8080, () => console.log('CRM demo API em http://127.0.0.1:8080'));
 
-function tarefa(id, titulo, vencimentoEm, concluidaEm, responsavelNome) {
+function tarefa(id, titulo, vencimentoEm, concluidaEm, responsavelNome,
+  contatoId = null, oportunidadeId = null) {
   return { id, titulo, descricao: null, vencimentoEm, concluidaEm,
     responsavelId: null, responsavelLogin: null, responsavelNome,
-    contatoId: null, oportunidadeId: null, criadaEm: '2026-08-10T12:00:00Z' };
+    contatoId, oportunidadeId, criadaEm: '2026-08-10T12:00:00Z' };
 }
 function contato(id, nome, email, telefone, empresa, responsavelNome, criadoEm) {
   return { id, nome, email, telefone, empresa, observacoes: null,

@@ -452,6 +452,22 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/contatos/{contatoId}/oportunidades": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get: operations["listarOportunidadesDoContato"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/contatos/{id}": {
         readonly parameters: {
             readonly query?: never;
@@ -4674,6 +4690,100 @@ export interface operations {
             };
         };
     };
+    readonly listarOportunidadesDoContato: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly contatoId: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "*/*": readonly components["schemas"]["OportunidadeResponse"][];
+                };
+            };
+            /** @description Requisição ou JSON inválido */
+            readonly 400: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Autenticação ausente ou expirada */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Acesso negado */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Conflito de estado ou idempotência */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Regra de negócio ou validação semântica */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Limite de requisições excedido */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+            /** @description Falha interna com detalhe seguro */
+            readonly 500: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["ErroResponse"];
+                };
+            };
+        };
+    };
     readonly obter: {
         readonly parameters: {
             readonly query?: never;
@@ -8655,6 +8765,7 @@ export interface operations {
         readonly parameters: {
             readonly query?: {
                 readonly apenasAbertas?: boolean;
+                readonly contatoId?: string;
             };
             readonly header?: never;
             readonly path?: never;

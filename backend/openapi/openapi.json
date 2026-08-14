@@ -3384,6 +3384,116 @@
         "tags" : [ "contact-controller" ]
       }
     },
+    "/api/contatos/{contatoId}/oportunidades" : {
+      "get" : {
+        "operationId" : "listarOportunidadesDoContato",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "contatoId",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/OportunidadeResponse"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Requisição ou JSON inválido"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Autenticação ausente ou expirada"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Acesso negado"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Recurso não encontrado"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Conflito de estado ou idempotência"
+          },
+          "422" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Regra de negócio ou validação semântica"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Limite de requisições excedido"
+          },
+          "500" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErroResponse"
+                }
+              }
+            },
+            "description" : "Falha interna com detalhe seguro"
+          }
+        },
+        "tags" : [ "deal-controller" ]
+      }
+    },
     "/api/contatos/{id}" : {
       "delete" : {
         "operationId" : "excluir_2",
@@ -7940,6 +8050,14 @@
           "schema" : {
             "type" : "boolean",
             "default" : false
+          }
+        }, {
+          "in" : "query",
+          "name" : "contatoId",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
           }
         } ],
         "responses" : {

@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@/lib/api';
-import { contatosApi } from '@/shared/crm/api';
+import { contatosApi, funilApi, tarefasApi } from '@/shared/crm/api';
 import { esperarSemViolacoesAcessiveis } from '@/test/accessibility';
 import { renderComEstadoServidor } from '@/test/estadoServidor';
 import { ContactsPage, FormularioDeContato } from './ContactsPage';
@@ -79,5 +79,79 @@ describe('formulário de contato', () => {
     await waitFor(() => expect(listar).toHaveBeenCalledWith(
       'ana', expect.any(AbortSignal), 1, 20,
     ));
+  });
+
+  it('abre a ficha 360 pelo identificador e carrega somente as relações do contato', async () => {
+    const listar = vi.spyOn(contatosApi, 'listar').mockResolvedValue([]);
+    const obter = vi.spyOn(contatosApi, 'obter').mockResolvedValue({
+      id: 'contact-1',
+      nome: 'Maria Silva',
+      email: 'maria@horizonte.test',
+      telefone: '+55 11 99999-0000',
+      empresa: 'Grupo Horizonte',
+      observacoes: 'Prefere contato no período da tarde.',
+      responsavelId: 'user-carla',
+      responsavelLogin: 'carla',
+      responsavelNome: 'Carla Mendes',
+      criadoEm: '2026-07-18T13:00:00Z',
+    });
+    const listarOportunidades = vi.spyOn(funilApi, 'listarOportunidadesDoContato')
+      .mockResolvedValue([{
+        id: 'deal-1',
+        funilId: 'pipeline-1',
+        etapaId: 'stage-1',
+        contatoId: 'contact-1',
+        titulo: 'Expansão Grupo Horizonte',
+        valorCentavos: 12800000,
+        status: 'OPEN',
+        previsaoFechamento: '2026-08-31',
+        motivoPerda: null,
+        responsavelId: 'user-carla',
+        responsavelLogin: 'carla',
+        responsavelNome: 'Carla Mendes',
+        criadaEm: '2026-08-01T12:00:00Z',
+      }]);
+    const listarTarefas = vi.spyOn(tarefasApi, 'listar').mockResolvedValue([{
+      id: 'task-1',
+      titulo: 'Follow-up com Maria Silva',
+      descricao: null,
+      vencimentoEm: '2026-08-17T16:00:00Z',
+      concluidaEm: null,
+      responsavelId: 'user-carla',
+      responsavelLogin: 'carla',
+      responsavelNome: 'Carla Mendes',
+      contatoId: 'contact-1',
+      oportunidadeId: 'deal-1',
+      criadaEm: '2026-08-10T12:00:00Z',
+    }]);
+
+    const { container } = renderComEstadoServidor(
+      <MemoryRouter initialEntries={['/contatos?contato=contact-1']}>
+        <Routes>
+          <Route path="/contatos" element={<ContactsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Maria Silva' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'maria@horizonte.test' })).toHaveAttribute(
+      'href',
+      'mailto:maria@horizonte.test',
+    );
+    expect(screen.getByText('Expansão Grupo Horizonte')).toBeVisible();
+    expect(screen.getByText('Follow-up com Maria Silva')).toBeVisible();
+    expect(screen.getAllByText('R$ 128.000,00')).toHaveLength(2);
+    expect(listar).not.toHaveBeenCalled();
+    expect(obter).toHaveBeenCalledWith('contact-1', expect.any(AbortSignal));
+    expect(listarOportunidades).toHaveBeenCalledWith(
+      'contact-1',
+      expect.any(AbortSignal),
+    );
+    expect(listarTarefas).toHaveBeenCalledWith(
+      false,
+      expect.any(AbortSignal),
+      'contact-1',
+    );
+    await esperarSemViolacoesAcessiveis(container);
   });
 });

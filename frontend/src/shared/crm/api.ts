@@ -156,6 +156,8 @@ export const contatosApi = {
       { signal },
     )).map(mapearContato));
   },
+  obter: async (id: string, signal?: AbortSignal): Promise<Contato> =>
+    mapearContato(await api.get<ContatoWire>(`/contatos/${encodeURIComponent(id)}`, { signal })),
   criar: async (dados: Partial<Contato> & { nome: string }): Promise<Contato> =>
     mapearContato(await api.post<ContatoWire>('/contatos', corpoContato(dados), {
       idempotencyKey: globalThis.crypto.randomUUID(),
@@ -172,6 +174,14 @@ export const funilApi = {
   listarOportunidades: async (funilId: string, signal?: AbortSignal): Promise<Oportunidade[]> =>
     (await api.get<readonly OportunidadeWire[]>(`/funis/${funilId}/oportunidades`, { signal }))
       .map(mapearOportunidade),
+  listarOportunidadesDoContato: async (
+    contatoId: string,
+    signal?: AbortSignal,
+  ): Promise<Oportunidade[]> =>
+    (await api.get<readonly OportunidadeWire[]>(
+      `/contatos/${encodeURIComponent(contatoId)}/oportunidades`,
+      { signal },
+    )).map(mapearOportunidade),
   criar: async (dados: {
     titulo: string;
     etapaId: string;
@@ -197,9 +207,16 @@ export const funilApi = {
 };
 
 export const tarefasApi = {
-  listar: async (apenasAbertas = false, signal?: AbortSignal): Promise<Tarefa[]> =>
-    (await api.get<readonly TarefaWire[]>(`/tarefas?apenasAbertas=${apenasAbertas}`, { signal }))
-      .map(mapearTarefa),
+  listar: async (
+    apenasAbertas = false,
+    signal?: AbortSignal,
+    contatoId?: string,
+  ): Promise<Tarefa[]> => {
+    const parametros = new URLSearchParams({ apenasAbertas: String(apenasAbertas) });
+    if (contatoId) parametros.set('contatoId', contatoId);
+    return (await api.get<readonly TarefaWire[]>(`/tarefas?${parametros}`, { signal }))
+      .map(mapearTarefa);
+  },
   criar: async (dados: {
     titulo: string;
     descricao?: string;

@@ -48,6 +48,21 @@ describe('adaptadores do contrato gerado', () => {
     expect(http.chamadas[0].cabecalho('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/i);
   });
 
+  it('codifica o identificador da URL antes de montar o caminho do contato', async () => {
+    instalarHttpMock([{
+      caminho: '/api/contatos/contact%2F..%2Ftarefas%3Fcontato%3Dana',
+      json: {
+        id: 'contact-1',
+        nome: 'Ana',
+        tipo: 'PERSON',
+        criadoEm: '2026-08-01T12:00:00Z',
+      },
+    }]);
+
+    await expect(contatosApi.obter('contact/../tarefas?contato=ana'))
+      .resolves.toMatchObject({ nome: 'Ana' });
+  });
+
   it('mantém separados os schemas de funil comercial e funil de onboarding', async () => {
     instalarHttpMock([{
       caminho: '/api/empresa/apresentacao',

@@ -345,6 +345,37 @@ class AutorizacaoPorAlcanceTest {
     }
 
     @Test
+    void fichaDoContatoFiltraRelacoesSemExporOutraCarteira() throws Exception {
+        UUID contatoDoAtendente = criarContato(atendente, "Contato do atendente");
+        UUID contatoDoColega = criarContato(colega, "Contato do colega");
+        UUID etapa = criarEtapa();
+        UUID oportunidadeDoAtendente = criarOportunidade(
+                atendente, etapa, contatoDoAtendente);
+        criarOportunidade(colega, etapa, contatoDoColega);
+        UUID tarefaDoAtendente = criarTarefa(
+                atendente, "Retorno do atendente", contatoDoAtendente);
+        criarTarefa(colega, "Retorno do colega", contatoDoColega);
+
+        mockMvc.perform(get("/api/contatos/" + contatoDoAtendente + "/oportunidades")
+                        .with(como(atendente)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(oportunidadeDoAtendente.toString()));
+        mockMvc.perform(get("/api/tarefas?contatoId=" + contatoDoAtendente)
+                        .with(como(atendente)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(tarefaDoAtendente.toString()));
+
+        mockMvc.perform(get("/api/contatos/" + contatoDoColega + "/oportunidades")
+                        .with(como(atendente)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/tarefas?contatoId=" + contatoDoColega)
+                        .with(como(atendente)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void alcanceProprioNegaEscritaDiretaEmNegocioETarefaDeOutro() throws Exception {
         UUID etapa = criarEtapa();
         UUID oportunidadeDoColega = criarOportunidade(colega, etapa, null);
@@ -424,9 +455,17 @@ class AutorizacaoPorAlcanceTest {
     }
 
     private UUID criarTarefa(UUID usuario, String titulo) throws Exception {
+        return criarTarefa(usuario, titulo, null);
+    }
+
+    private UUID criarTarefa(UUID usuario, String titulo, UUID contato) throws Exception {
         String corpo = mockMvc.perform(post("/api/tarefas").with(como(usuario)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"titulo\":\"" + titulo + "\"}"))
+                        .content("{\"titulo\":\"" + titulo + "\""
+                                + (contato == null
+                                ? ""
+                                : ",\"contatoId\":\"" + contato + "\"")
+                                + "}"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return UUID.fromString(com.jayway.jsonpath.JsonPath.read(corpo, "$.id"));

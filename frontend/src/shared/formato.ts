@@ -68,6 +68,13 @@ export function normalizarDataCivil(valor: string): string {
   return valor;
 }
 
+/** Formata YYYY-MM-DD sem transformar a data civil em um instante. */
+export function formatarDataCivil(valor: string): string {
+  const normalizada = normalizarDataCivil(valor);
+  const [ano, mes, dia] = normalizada.split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
 function partesNoFuso(instante: Date, timeZone: string): Record<string, number> {
   const partes = new Intl.DateTimeFormat('en-CA', {
     timeZone,
