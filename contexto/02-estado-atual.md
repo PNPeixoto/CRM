@@ -1,23 +1,19 @@
 # Estado atual
 
 > Reescrito ao fim de cada sessão. Máximo 150 linhas.
-> Última atualização: 2026-08-10 22:57 (America/Montevideo), commit `838461d`
+> Última atualização: 2026-08-14 17:55 (America/Sao_Paulo), branch `agent/refino-apresentacao`, base `32bfc0b`
 
 ## Onde parei
 
-Os Prompts backend 00–18 e frontend F0–F6/F8 estão concluídos, com **267 testes
-no backend e 140 no frontend**, zero falhas. Gates A, B e D fechados; o Gate C
-ainda aguarda a jornada crítica E2E reproduzível.
+Os Prompts backend 00–18 e frontend F0–F6/F8 estão concluídos. A última suíte
+completa do backend tinha **267 testes**; esta branch acrescenta dois casos que
+ainda exigem JDK 25 para rodar. O frontend está com **144 testes**, zero falhas.
+Gates A, B e D fechados; o Gate C ainda aguarda a jornada E2E reproduzível.
 
-Fora da trilha numerada, a **Fase 4 do plano de MVP comercial** foi entregue:
-administração delegada de papéis, alcance de equipe e a tela `/acessos`. Ela não
-corresponde a nenhum prompt, e por isso os dois manifestos permanecem
-inalterados — o roteiro segue com `backend:19` como próximo item.
-
-O ambiente local está na **V25**, aplicada com backup prévio, prova em contêiner
-descartável e sem perda de dado. O expurgo permanece **desligado**: nenhum prazo
-foi decidido, e o worker não sobe sem eles. `frontend:F9` depende de evidência
-real de volume e não deve ser executado só por ordem numérica.
+Fora da trilha, a Fase 4 comercial inclui administração de papéis e equipes,
+um preset editável de cinco funções, Agenda funcional e Inbox identificada.
+Os manifestos permanecem inalterados; `backend:19` segue como próximo prompt.
+O expurgo continua desligado até a decisão dos prazos de retenção.
 
 ## Produto e segurança implementados
 
@@ -107,19 +103,22 @@ real de volume e não deve ser executado só por ordem numérica.
   aplicam **na consulta**.
 - Tela `/acessos` com Papéis, Pessoas e Equipes: desabilita o que o backend
   recusaria, sem que isso seja a proteção.
+- Preset comercial idempotente cria SDR, Closer, Atendente, Gestor de
+  atendimento e Gerente comercial sem sobrescrever edições do cliente.
+
+## Refino para apresentação
+- `/agenda` é mensal e real sobre tarefas: navegação, resumo, criação, conclusão, atrasos, itens sem data e vistas responsivas.
+- A Inbox identifica canal, integração, conta, contato/número, atendente, autor de cada mensagem e operador que responde.
+- OpenAPI/tipos sincronizados; build, lint, `api:check`, 144 testes e revisão visual desktop/móvel passaram sem overflow.
 
 ## Migrations e verificação nesta máquina
 
 - V1–V9 fundação; V10–V14 organização, sessão/MFA e idempotência; V15–V17
   omnichannel, Telegram e mídia em quarentena; V18–V21 Evolution, Inbox com SLA,
   automações e conector HTTP; V22 auditoria; V23 retenção e legal hold; V24
-  legal hold imutável; V25 equipe e alcance de equipe. **25 migrations, 65
+  legal hold imutável; V25 equipe e alcance de equipe. **25 migrations, 66
   rotas.** Seeds e dados demonstrativos só no profile `dev`.
-- Branch `main` sincronizada com `origin/main` em `838461d`; Windows, JDK
-  25.0.4, Node 24 e Docker. Backend **267 testes** e frontend **140**, ambos sem
-  falha, com PostgreSQL e Redis reais — Evolution, retenção, direitos do
-  titular, alcance de equipe, não escalonamento, OpenAPI, fronteira de módulos
-  e migração, todos verdes.
+- Base `main` em `32bfc0b`; backend histórico com **267 testes verdes**. Esta sessão teve Node 24, sem Docker/JDK 25 utilizável; frontend com **144 testes verdes**.
 - CRM local saudável na **V25**, com contadores idênticos à linha de base.
   `team_member` tem RLS forçado, e o `DELETE` foi recusado na verificação.
 - Fluxo de acessos exercitado no navegador contra o backend real: papel criado,
@@ -130,11 +129,9 @@ real de volume e não deve ser executado só por ordem numérica.
 ## Próximo passo
 
 1. Decidir os prazos de retenção por categoria para poder ligar o expurgo.
-2. Semear os papéis de partida (SDR, Closer, Atendente, Gestor, Gerente) como
-   papéis comuns editáveis, para o cliente não começar do zero.
+2. Rodar os dois novos testes de integração em JDK 25 e fazer o ensaio final.
 3. Fase 1 do plano de MVP: CRUD de etapas do funil — `/api/funis` é só leitura.
-4. Executar `backend:19` (entitlements e medição); F9 segue adiado até haver
-   medição representativa.
+4. Executar `backend:19` (entitlements e medição); F9 segue adiado até haver medição representativa.
 
 ## Riscos restantes
 
