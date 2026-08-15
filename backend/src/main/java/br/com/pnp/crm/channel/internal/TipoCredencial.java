@@ -23,6 +23,9 @@ enum TipoCredencial {
 
     META_APP_SECRET,
 
+    /** Token escolhido no App Dashboard para validar o desafio GET do callback. */
+    META_WEBHOOK_VERIFY_TOKEN,
+
     /** Segredo enviado pela Evolution no header do webhook desta conexao. */
     EVOLUTION_WEBHOOK_SECRET
 }

@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,9 @@ class EnvioDeMensagemService {
      * token enviado, e {@code failure_reason} é lido na tela.
      */
     private static final String MOTIVO_DESCONHECIDO = "Falha não detalhada pelo provedor.";
+    private static final String MOTIVO_JANELA_INSTAGRAM =
+            "A janela de 24 horas do Instagram foi encerrada. Aguarde uma nova mensagem do contato.";
+    private static final Duration JANELA_INSTAGRAM = Duration.ofHours(24);
 
     private final MessageRepository mensagens;
     private final ChannelConnectionLookup conexoes;
@@ -94,6 +98,15 @@ class EnvioDeMensagemService {
             return;
         }
 
+        if (foraDaJanelaDoInstagram(conexao, mensagem)) {
+            // É uma restrição de negócio permanente para esta tentativa. Não
+            // chama a Meta e não deixa o worker repetir uma mensagem que só
+            // poderá ser enviada depois de uma nova interação do contato.
+            mensagem.marcarFalhaPermanente(MOTIVO_JANELA_INSTAGRAM);
+            publicarMudanca(mensagem);
+            return;
+        }
+
         try {
             String externalId = adaptador.enviar(new OutboundMessage(
                     mensagem.getId(),
@@ -135,6 +148,16 @@ class EnvioDeMensagemService {
     private String motivoDe(EnvioDeMensagemException e) {
         String motivo = e.getMessage();
         return motivo == null || motivo.isBlank() ? MOTIVO_DESCONHECIDO : motivo;
+    }
+
+    private boolean foraDaJanelaDoInstagram(ConexaoDeCanal conexao,
+                                             MessageEntity mensagem) {
+        if (conexao.tipo() != TipoCanal.INSTAGRAM) return false;
+        Instant limite = Instant.now().minus(JANELA_INSTAGRAM);
+        return mensagens.buscarUltimoRecebimentoDaConversa(
+                        TenantContext.obrigatorio(), mensagem.getConversationId())
+                .filter(recebidaEm -> !recebidaEm.isBefore(limite))
+                .isEmpty();
     }
 
     private void publicarMudanca(MessageEntity mensagem) {

@@ -104,21 +104,23 @@ O expurgo continua desligado até a decisão dos prazos de retenção.
 
 ## Refino para apresentação
 - `/agenda` é mensal e real sobre tarefas; a Inbox busca e filtra conversas e identifica canal, conta, contato/número, atendente, autor e operador que responde.
-- A identidade FinUp e o cenário local de dashboard, contatos, funil, Agenda e Inbox, agora com Instagram demonstrativo, são servidos por `npm run demo:api`.
+- A identidade FinUp e o cenário local de dashboard, contatos, funil, Agenda e Inbox são servidos por `npm run demo:api`; o Instagram também possui conexão oficial no backend e na tela de canais.
 - O Kanban move por mouse, toque ou teclado; as colunas têm altura independente e rolagem interna ao atingir a tela.
 - A ficha reúne cadastro, carteira e atividades; oportunidades e tarefas são filtradas no backend pelo contato e alcance autorizado.
 - Conversas ainda não entram na ficha: o domínio não popula nem publica esse vínculo de forma confiável.
-- OpenAPI/tipos sincronizados; build, lint, `api:check`, 152 testes e revisão visual passaram sem overflow de página.
+- OpenAPI/tipos sincronizados; build, lint, `api:check`, 155 testes e revisão visual passaram sem overflow de página.
 
 ## Migrations e verificação nesta máquina
 
 - V1–V9 fundação; V10–V14 organização, sessão/MFA e idempotência; V15–V17
   omnichannel, Telegram e mídia em quarentena; V18–V21 Evolution, Inbox com SLA,
   automações e conector HTTP; V22 auditoria; V23 retenção e legal hold; V24
-  legal hold imutável; V25 equipe e alcance de equipe. **25 migrations, 67
+  legal hold imutável; V25 equipe e alcance de equipe; V26 Instagram Messaging
+  oficial. **26 migrations, 67
   rotas.** Seeds e dados demonstrativos só no profile `dev`.
-- Base `main` em `32bfc0b`; backend histórico com **267 testes verdes**. O host tem Java 21 e o projeto exige 25; frontend com **152 testes verdes**.
-- CRM local saudável na **V25**, com contadores idênticos à linha de base.
+- A integração foi consolidada na branch `codex/integrar-versao-outra-maquina`;
+  backend com **283 testes verdes** em Java 25 e frontend com **155 testes verdes**.
+- A atualização V8→V26 e a instalação limpa V1→V26 passaram em PostgreSQL 17.
   `team_member` tem RLS forçado, e o `DELETE` foi recusado na verificação.
 - Fluxo de acessos exercitado no navegador contra o backend real: papel criado,
   atribuído com alcance de equipe e equipe montada, com os três eventos na
@@ -128,15 +130,17 @@ O expurgo continua desligado até a decisão dos prazos de retenção.
 ## Próximo passo
 
 1. Decidir os prazos de retenção por categoria para poder ligar o expurgo.
-2. Rodar os três novos testes de integração em JDK 25 e fazer o ensaio final.
+2. Fazer o ensaio externo da Meta com app aprovado, callback HTTPS público e
+   uma conta profissional real.
 3. Fase 1 do plano de MVP: CRUD de etapas do funil — `/api/funis` é só leitura.
 4. Executar `backend:19` (entitlements e medição); F9 segue adiado até haver medição representativa.
 
 ## Riscos restantes
 
-- Evolution é ponte experimental de sessão WhatsApp Web; produção exige o
-  adaptador oficial. Instagram está só no contrato e no demo: ainda faltam
-  webhook Meta e adaptador de saída. Mídia sem promoção segue indisponível.
+- Evolution é ponte experimental de sessão WhatsApp Web; produção ainda exige
+  WhatsApp Cloud oficial. Instagram oficial recebe webhook com HMAC, envia
+  texto e reconcilia a assinatura, mas o aceite externo depende de app/negócio
+  aprovados pela Meta; mídia continua fora deste incremento.
 - Alcance por **unidade** continua sem decidir registro de domínio, e `UNIT`
   segue oculto na API (`ADR-0008`). O alcance intermediário que existe é o de
   **equipe**, de um nível só, e ele não substitui recorte por filial.

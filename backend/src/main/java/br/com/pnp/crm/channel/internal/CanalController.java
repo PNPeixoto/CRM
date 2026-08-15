@@ -5,6 +5,7 @@ import br.com.pnp.crm.audit.api.AuditTrail;
 import br.com.pnp.crm.organization.api.Autorizacao;
 import br.com.pnp.crm.organization.api.Permissao;
 import br.com.pnp.crm.shared.api.RecursoNaoEncontradoException;
+import br.com.pnp.crm.shared.api.RequisicaoInvalidaException;
 import br.com.pnp.crm.shared.api.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -29,6 +30,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Canais e números conectados.
@@ -41,6 +43,7 @@ import java.util.UUID;
 class CanalController {
 
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final Pattern ID_CONTA_INSTAGRAM = Pattern.compile("[0-9]{1,40}");
 
     private final ChannelConnectionRepository conexoes;
     private final CredenciaisDeCanal credenciais;
@@ -81,6 +84,7 @@ class CanalController {
     ResponseEntity<CanalResponse> criar(@Valid @RequestBody CanalRequest requisicao,
                                         @AuthenticationPrincipal Jwt jwt) {
         autorizacao.exigirNoTenant(Permissao.CHANNELS_WRITE);
+        validarInstagram(requisicao, true);
         UUID autorId = UUID.fromString(jwt.getSubject());
         ChannelConnectionEntity conexao = ChannelConnectionEntity.nova(
                 TenantContext.obrigatorio(), requisicao.tipo(), requisicao.nome(),
@@ -101,6 +105,11 @@ class CanalController {
                                             @AuthenticationPrincipal Jwt jwt) {
         autorizacao.exigirNoTenant(Permissao.CHANNELS_WRITE);
         ChannelConnectionEntity conexao = carregar(id);
+        if (conexao.getKind() != requisicao.tipo()) {
+            throw new RequisicaoInvalidaException(
+                    "O tipo de uma conexão existente não pode ser alterado.");
+        }
+        validarInstagram(requisicao, false);
         conexao.renomear(requisicao.nome(), requisicao.identificadorExterno(),
                 UUID.fromString(jwt.getSubject()));
         UUID autorId = UUID.fromString(jwt.getSubject());
@@ -222,6 +231,23 @@ class CanalController {
             credenciais.guardar(tenantId, conexaoId,
                     TipoCredencial.EVOLUTION_WEBHOOK_SECRET, gerarSegredoWebhook());
             alterada = true;
+        } else if (requisicao.tipo() == TipoCanal.INSTAGRAM) {
+            if (preenchido(requisicao.token())) {
+                credenciais.guardar(tenantId, conexaoId,
+                        TipoCredencial.META_ACCESS_TOKEN, requisicao.token());
+                alterada = true;
+            }
+            if (preenchido(requisicao.segredoWebhook())) {
+                credenciais.guardar(tenantId, conexaoId,
+                        TipoCredencial.META_APP_SECRET, requisicao.segredoWebhook());
+                alterada = true;
+            }
+            if (preenchido(requisicao.tokenVerificacaoWebhook())) {
+                credenciais.guardar(tenantId, conexaoId,
+                        TipoCredencial.META_WEBHOOK_VERIFY_TOKEN,
+                        requisicao.tokenVerificacaoWebhook());
+                alterada = true;
+            }
         }
         return alterada;
     }
@@ -259,22 +285,47 @@ class CanalController {
         return valor != null && !valor.isBlank();
     }
 
+    private void validarInstagram(CanalRequest requisicao, boolean novaConexao) {
+        if (requisicao.tipo() != TipoCanal.INSTAGRAM) return;
+        String conta = requisicao.identificadorExterno();
+        if (conta == null || !ID_CONTA_INSTAGRAM.matcher(conta.trim()).matches()) {
+            throw new RequisicaoInvalidaException(
+                    "Informe o ID numérico da conta profissional do Instagram.");
+        }
+        if (novaConexao && (!preenchido(requisicao.token())
+                || !preenchido(requisicao.segredoWebhook())
+                || !preenchido(requisicao.tokenVerificacaoWebhook()))) {
+            throw new RequisicaoInvalidaException(
+                    "Informe o token de acesso, o segredo do aplicativo e o token de verificação da Meta.");
+        }
+    }
+
     private ChannelConnectionEntity carregar(UUID id) {
         return conexoes.findByIdAndTenantIdAndDeletedAtIsNull(id, TenantContext.obrigatorio())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Canal"));
     }
 
     private CanalResponse paraResposta(ChannelConnectionEntity c) {
-        TipoCredencial token = c.getKind() == TipoCanal.TELEGRAM
-                ? TipoCredencial.TELEGRAM_BOT_TOKEN : null;
-        TipoCredencial segredo = c.getKind() == TipoCanal.WHATSAPP_EVOLUTION
-                ? TipoCredencial.EVOLUTION_WEBHOOK_SECRET
-                : c.getKind() == TipoCanal.TELEGRAM
-                    ? TipoCredencial.TELEGRAM_WEBHOOK_SECRET : null;
+        TipoCredencial token = switch (c.getKind()) {
+            case TELEGRAM -> TipoCredencial.TELEGRAM_BOT_TOKEN;
+            case INSTAGRAM -> TipoCredencial.META_ACCESS_TOKEN;
+            default -> null;
+        };
+        boolean temSegredo = switch (c.getKind()) {
+            case WHATSAPP_EVOLUTION -> credenciais.recuperar(
+                    c.getId(), TipoCredencial.EVOLUTION_WEBHOOK_SECRET).isPresent();
+            case TELEGRAM -> credenciais.recuperar(
+                    c.getId(), TipoCredencial.TELEGRAM_WEBHOOK_SECRET).isPresent();
+            case INSTAGRAM -> credenciais.recuperar(
+                    c.getId(), TipoCredencial.META_APP_SECRET).isPresent()
+                    && credenciais.recuperar(
+                    c.getId(), TipoCredencial.META_WEBHOOK_VERIFY_TOKEN).isPresent();
+            default -> true;
+        };
         return new CanalResponse(
                 c.getId(), c.getKind().name(), c.getName(), c.getExternalAccountId(), c.isActive(),
                 token == null || credenciais.recuperar(c.getId(), token).isPresent(),
-                segredo == null || credenciais.recuperar(c.getId(), segredo).isPresent(),
+                temSegredo,
                 c.getRemoteStatus(), c.getRemotePendingCount(),
                 c.getLastReconciledAt(), c.getLastRemoteErrorAt());
     }
@@ -284,7 +335,8 @@ class CanalController {
             @NotBlank(message = "Informe o nome.") @Size(max = 120) String nome,
             @Size(max = 120) String identificadorExterno,
             @Size(max = 300) String token,
-            @Size(max = 300) String segredoWebhook) {
+            @Size(max = 300) String segredoWebhook,
+            @Size(max = 300) String tokenVerificacaoWebhook) {
     }
 
     /**

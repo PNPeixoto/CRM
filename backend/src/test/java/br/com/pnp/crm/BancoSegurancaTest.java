@@ -46,6 +46,7 @@ class BancoSegurancaTest {
             "expurgar_payloads_eventos_recebidos",
             "reservar_canais_telegram_para_reconciliar",
             "reservar_canais_evolution_para_reconciliar",
+            "reservar_canais_instagram_para_reconciliar",
             "reservar_midias_expiradas",
             "next_realtime_sequence",
             "reservar_slas_vencidos",
@@ -137,6 +138,7 @@ class BancoSegurancaTest {
                 "expurgar_payloads_eventos_recebidos",
                 "reservar_canais_telegram_para_reconciliar",
                 "reservar_canais_evolution_para_reconciliar",
+                "reservar_canais_instagram_para_reconciliar",
                 "reservar_midias_expiradas",
                 "reservar_slas_vencidos",
                 "ha_legal_hold",
@@ -169,7 +171,7 @@ class BancoSegurancaTest {
     }
 
     @Test
-    void flywayValidaHistoricoLimpoAteV25() {
+    void flywayValidaHistoricoLimpoAteV26() {
         flyway.validate();
         List<String> versoes = jdbc.queryForList("""
                 SELECT version
@@ -178,6 +180,6 @@ class BancoSegurancaTest {
                  ORDER BY installed_rank
                 """, String.class);
         assertThat(versoes).containsExactly(
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25");
+                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26");
     }
 }

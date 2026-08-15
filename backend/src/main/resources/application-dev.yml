@@ -38,6 +38,11 @@ spring:
       url: ${REDIS_URL:redis://localhost:6380}
 
 app:
+  providers:
+    meta:
+      # A integração oficial fica disponível no ambiente local. Produção
+      # continua fechada por padrão em application.yml até META_ENABLED=true.
+      enabled: ${META_ENABLED:true}
   security:
     # TESTE — TROCAR ANTES DE PRODUÇÃO.
     # Este pepper é o que valida os hashes do seed em db/dev. Trocá-lo

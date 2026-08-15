@@ -243,6 +243,7 @@ export const canaisApi = {
     identificadorExterno?: string;
     token?: string;
     segredoWebhook?: string;
+    tokenVerificacaoWebhook?: string;
   }): Promise<Canal> => {
     const corpo: CanalRequestWire = {
       ...dados,

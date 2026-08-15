@@ -18,10 +18,10 @@ package br.com.pnp.crm.channel.api;
  *       secret_token} no Telegram), e traduz para {@link InboundMessage}. Um
  *       método {@code receber()} genérico teria que aceitar o formato de todos
  *       eles, o que é o oposto de normalizar.</li>
- *   <li>Consulta de janela de atendimento. Só o WhatsApp tem janela de 24h;
- *       Telegram e chat ao vivo não têm nada parecido. Colocar isso aqui
- *       agora obrigaria dois adaptadores a implementar um conceito que não
- *       existe no provedor deles.</li>
+ *   <li>Consulta de janela de atendimento. Alguns provedores impõem janelas,
+ *       enquanto Telegram e chat ao vivo não têm esse conceito. A regra é
+ *       aplicada pela orquestração de envio somente aos canais afetados, sem
+ *       obrigar todos os adaptadores a implementá-la.</li>
  * </ul>
  */
 public interface ChannelAdapter {

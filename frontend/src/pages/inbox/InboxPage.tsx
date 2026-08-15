@@ -176,6 +176,7 @@ export function InboxPage() {
                   aoEnviar={enviar}
                   contatoNome={conversaAberta.contatoNome ?? 'Contato'}
                   canalTipo={conversaAberta.canalTipo}
+                  ultimaMensagemRecebidaEm={conversaAberta.ultimaMensagemRecebidaEm}
                   respondendoComo={usuario?.nomeCompleto ?? usuario?.login ?? 'Equipe'}
                 />
               </div>

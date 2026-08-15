@@ -36,6 +36,7 @@ final class ConversationDtos {
             UUID atendenteId,
             String atendenteNome,
             Instant ultimaMensagemEm,
+            Instant ultimaMensagemRecebidaEm,
             Instant venceEm,
             long versao) {
     }

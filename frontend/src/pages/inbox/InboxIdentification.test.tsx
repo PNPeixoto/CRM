@@ -18,6 +18,7 @@ const CONVERSA: ConversaResumo = {
   atendenteId: 'user-1',
   atendenteNome: 'Alex Operador',
   ultimaMensagemEm: '2026-08-14T15:30:00Z',
+  ultimaMensagemRecebidaEm: '2026-08-14T15:29:00Z',
   venceEm: null,
   versao: 3,
 };
@@ -119,6 +120,7 @@ describe('identificação operacional da Inbox', () => {
         aoEnviar={vi.fn()}
         contatoNome="Maria Silva"
         canalTipo="WHATSAPP_EVOLUTION"
+        ultimaMensagemRecebidaEm={null}
         respondendoComo="Alex Operador"
       />,
     );
@@ -132,5 +134,46 @@ describe('identificação operacional da Inbox', () => {
 
   it('preserva identificadores não telefônicos', () => {
     expect(formatarIdentificadorDoContato('@cliente_telegram')).toBe('@cliente_telegram');
+  });
+
+  it('bloqueia o composer do Instagram quando a janela de 24 horas expirou', () => {
+    render(
+      <Conversa
+        mensagens={MENSAGENS}
+        carregando={false}
+        temMais={false}
+        carregandoAnteriores={false}
+        aoCarregarAnteriores={vi.fn()}
+        aoEnviar={vi.fn()}
+        contatoNome="Marina Costa"
+        canalTipo="INSTAGRAM"
+        ultimaMensagemRecebidaEm={new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString()}
+        respondendoComo="Alex Operador"
+      />,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent(/janela de 24 horas/i);
+    expect(screen.getByLabelText('Escreva uma mensagem')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Enviar' })).toBeDisabled();
+  });
+
+  it('mantém o composer do Instagram disponível dentro da janela', () => {
+    render(
+      <Conversa
+        mensagens={MENSAGENS}
+        carregando={false}
+        temMais={false}
+        carregandoAnteriores={false}
+        aoCarregarAnteriores={vi.fn()}
+        aoEnviar={vi.fn()}
+        contatoNome="Marina Costa"
+        canalTipo="INSTAGRAM"
+        ultimaMensagemRecebidaEm={new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString()}
+        respondendoComo="Alex Operador"
+      />,
+    );
+
+    expect(screen.getByLabelText('Escreva uma mensagem')).toBeEnabled();
+    expect(screen.queryByText(/janela de 24 horas/i)).not.toBeInTheDocument();
   });
 });

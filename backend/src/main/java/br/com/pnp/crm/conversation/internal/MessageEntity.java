@@ -212,6 +212,10 @@ class MessageEntity {
         return version;
     }
 
+    String getFailureReason() {
+        return failureReason;
+    }
+
     void marcarEnviada(String externalIdDoProvedor) {
         this.externalId = externalIdDoProvedor;
         this.status = StatusMensagem.SENT;

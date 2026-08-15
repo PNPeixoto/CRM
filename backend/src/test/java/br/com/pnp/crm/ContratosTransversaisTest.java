@@ -287,6 +287,65 @@ class ContratosTransversaisTest {
         });
     }
 
+    @Test
+    void credenciaisInstagramSaoWriteOnlyECifradas() throws Exception {
+        String accessToken = "IGAA-access-token-de-teste";
+        String appSecret = "app-secret-de-teste";
+        String verifyToken = "verify-token-de-teste";
+        var resultado = mockMvc.perform(post("/api/canais")
+                        .with(comoUsuario()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"tipo":"INSTAGRAM","nome":"Instagram Comercial",
+                                 "identificadorExterno":"178900000000001",
+                                 "token":"%s","segredoWebhook":"%s",
+                                 "tokenVerificacaoWebhook":"%s"}
+                                """.formatted(accessToken, appSecret, verifyToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.temToken").value(true))
+                .andExpect(jsonPath("$.temSegredoWebhook").value(true))
+                .andExpect(jsonPath("$.token").doesNotExist())
+                .andExpect(jsonPath("$.segredoWebhook").doesNotExist())
+                .andExpect(jsonPath("$.tokenVerificacaoWebhook").doesNotExist())
+                .andReturn();
+
+        UUID canalId = UUID.fromString(json.readTree(resultado.getResponse().getContentAsByteArray())
+                .get("id").asText());
+        TenantContext.executarComo(tenant, () -> {
+            var credenciais = jdbc.queryForList("""
+                    SELECT kind, ciphertext FROM channel_credential
+                     WHERE channel_connection_id = ? AND deleted_at IS NULL
+                     ORDER BY kind
+                    """, canalId);
+            assertThat(credenciais).extracting(linha -> linha.get("kind"))
+                    .containsExactly("META_ACCESS_TOKEN", "META_APP_SECRET",
+                            "META_WEBHOOK_VERIFY_TOKEN");
+            assertThat(credenciais.toString())
+                    .doesNotContain(accessToken)
+                    .doesNotContain(appSecret)
+                    .doesNotContain(verifyToken);
+            return null;
+        });
+    }
+
+    @Test
+    void instagramNaoNasceAtivoComConfiguracaoIncompleta() throws Exception {
+        mockMvc.perform(post("/api/canais")
+                        .with(comoUsuario()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"tipo":"INSTAGRAM","nome":"Instagram incompleto",
+                                 "identificadorExterno":"178900000000001"}
+                                """))
+                .andExpect(status().isBadRequest());
+
+        Long criados = TenantContext.executarComo(tenant, () -> jdbc.queryForObject("""
+                SELECT count(*) FROM channel_connection
+                 WHERE tenant_id = ? AND kind = 'INSTAGRAM'
+                """, Long.class, tenant));
+        assertThat(criados).isZero();
+    }
+
     private org.springframework.test.web.servlet.ResultActions send(String key, String text)
             throws Exception {
         return mockMvc.perform(post("/api/conversas/{id}/mensagens", conversa)

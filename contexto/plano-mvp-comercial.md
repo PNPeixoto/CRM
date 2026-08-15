@@ -450,11 +450,18 @@ dado pessoal, e nasce sem prazo se ninguém disser o contrário.
 
 ### Item 7 — WhatsApp Cloud API + Instagram
 
+**Estado em 2026-08-15.** A parte Instagram foi implementada com Instagram
+Login/Graph API v24.0: webhook HMAC sobre bytes crus, desafio GET, tradutor,
+saída de texto, reconciliação de `messages`, credenciais cifradas e janela de
+24 horas. WhatsApp Cloud continua pendente, assim como aprovação e ensaio real
+do aplicativo Meta.
+
 **A boa notícia.** A arquitetura já está pronta: existe a porta
 `ChannelAdapter`, o padrão de webhook que **persiste antes de confirmar**, a
 verificação de assinatura em tempo constante, o cofre de credenciais cifrado e
 a fila de saída com lease e backoff. `WHATSAPP_CLOUD` e `INSTAGRAM` já são
-valores do enum `TipoCanal` — falta o adaptador.
+valores do enum `TipoCanal`; o adaptador Instagram agora existe, e o de
+WhatsApp Cloud ainda falta.
 
 **Pré-requisitos fora do código**, e são o caminho crítico: app na Meta,
 verificação do negócio, número dedicado, token permanente de sistema, e os
@@ -497,8 +504,8 @@ if (foraDaJanelaDeAtendimento(conversa)) {
 tradutor, mudando só o mapeamento de identidade.
 
 **Migration.** Nenhuma tabela nova — `channel_connection` e `channel_credential`
-já servem. Acrescente o tipo de credencial `META_ACCESS_TOKEN` e
-`META_APP_SECRET` ao enum `TipoCredencial`.
+já servem. A V26 acrescenta `META_WEBHOOK_VERIFY_TOKEN` aos tipos Meta já
+previstos e a reserva multitenant da reconciliação.
 
 **Se a decisão for ficar na Evolution:** os itens 3, 10-Instagram e 12 saem do
 MVP. Não há meio-termo honesto.

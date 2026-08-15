@@ -20,7 +20,7 @@ const ROTULO_TIPO: Record<TipoCanal, string> = {
 
 /** Só os canais que o backend sabe atender hoje. */
 const TIPOS_DISPONIVEIS: readonly TipoCanal[] = [
-  'LIVE_CHAT', 'TELEGRAM', 'WHATSAPP_EVOLUTION',
+  'LIVE_CHAT', 'TELEGRAM', 'WHATSAPP_EVOLUTION', 'INSTAGRAM',
 ];
 
 /**
@@ -72,7 +72,7 @@ export function IntegrationsPage() {
         ) : erroExibido && canais.length === 0 ? null : canais.length === 0 ? (
           <Vazio
             titulo="Nenhum canal conectado"
-            descricao="Conecte chat ao vivo, Telegram ou WhatsApp Evolution para receber mensagens."
+            descricao="Conecte chat ao vivo, Telegram, Instagram ou WhatsApp Evolution para receber mensagens."
           />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -104,7 +104,12 @@ function CartaoDeCanal({
   readonly canal: Canal;
   readonly aoAlternar: () => void;
 }) {
-  const precisaCredencial = canal.tipo === 'TELEGRAM' || canal.tipo === 'WHATSAPP_EVOLUTION';
+  const callbackMeta = canal.tipo === 'INSTAGRAM'
+    ? new URL(`/api/webhooks/meta/${canal.id}`, window.location.origin).toString()
+    : null;
+  const precisaCredencial = canal.tipo === 'TELEGRAM'
+    || canal.tipo === 'WHATSAPP_EVOLUTION'
+    || canal.tipo === 'INSTAGRAM';
   const incompleto = precisaCredencial && (!canal.temToken || !canal.temSegredoWebhook);
 
   return (
@@ -136,8 +141,18 @@ function CartaoDeCanal({
         </p>
       )}
 
-      {!incompleto && (canal.tipo === 'TELEGRAM' || canal.tipo === 'WHATSAPP_EVOLUTION') && (
+      {!incompleto && (
+        canal.tipo === 'TELEGRAM'
+        || canal.tipo === 'WHATSAPP_EVOLUTION'
+        || canal.tipo === 'INSTAGRAM'
+      ) && (
         <EstadoDaSincronizacao canal={canal} />
+      )}
+
+      {canal.tipo === 'INSTAGRAM' && (
+        <p className="mt-2 break-all text-xs" style={{ color: 'var(--text-muted)' }}>
+          Callback na Meta: <code>{callbackMeta}</code>
+        </p>
       )}
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -236,7 +251,9 @@ function Pareamento({ canal }: { readonly canal: Canal }) {
 function EstadoDaSincronizacao({ canal }: { readonly canal: Canal }) {
   const saudavel = canal.estadoRemoto === 'HEALTHY' || canal.estadoRemoto === 'REPAIRED';
   const falha = canal.estadoRemoto === 'ERROR' || canal.estadoRemoto === 'DEGRADED';
-  const provedor = canal.tipo === 'WHATSAPP_EVOLUTION' ? 'Evolution' : 'Telegram';
+  const provedor = canal.tipo === 'WHATSAPP_EVOLUTION'
+    ? 'Evolution'
+    : canal.tipo === 'INSTAGRAM' ? 'Meta' : 'Telegram';
   const texto = saudavel
     ? `${provedor} sincronizado.`
     : falha
@@ -265,12 +282,16 @@ function FormularioDeCanal({
     nome: string;
     identificadorExterno?: string;
     token?: string;
+    segredoWebhook?: string;
+    tokenVerificacaoWebhook?: string;
   }) => Promise<void>;
 }) {
   const [tipo, setTipo] = useState<TipoCanal>('TELEGRAM');
   const [nome, setNome] = useState('');
   const [identificador, setIdentificador] = useState('');
   const [token, setToken] = useState('');
+  const [segredoWebhook, setSegredoWebhook] = useState('');
+  const [tokenVerificacaoWebhook, setTokenVerificacaoWebhook] = useState('');
   const [enviando, setEnviando] = useState(false);
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
@@ -282,12 +303,16 @@ function FormularioDeCanal({
         nome: nome.trim(),
         identificadorExterno: identificador.trim() || undefined,
         token: segredoOpcional(token),
+        segredoWebhook: segredoOpcional(segredoWebhook),
+        tokenVerificacaoWebhook: segredoOpcional(tokenVerificacaoWebhook),
       });
       // Limpa os segredos do estado assim que saem: manter em memória depois
       // do envio os deixa disponíveis a qualquer script que rode na página.
       setNome('');
       setIdentificador('');
       setToken('');
+      setSegredoWebhook('');
+      setTokenVerificacaoWebhook('');
     } finally {
       setEnviando(false);
     }
@@ -380,6 +405,65 @@ function FormularioDeCanal({
         </>
       )}
 
+      {tipo === 'INSTAGRAM' && (
+        <>
+          <div className="space-y-1.5">
+            <Label htmlFor="identificador-instagram">ID da conta profissional</Label>
+            <Input
+              id="identificador-instagram"
+              value={identificador}
+              onChange={(e) => setIdentificador(e.target.value)}
+              placeholder="17841400000000000"
+              inputMode="numeric"
+              pattern="[0-9]{1,40}"
+              autoComplete="off"
+              required
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="token-instagram">Token de acesso da Meta</Label>
+            <Input
+              id="token-instagram"
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              autoComplete="off"
+              required
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="segredo-instagram">Segredo do aplicativo Meta</Label>
+            <Input
+              id="segredo-instagram"
+              type="password"
+              value={segredoWebhook}
+              onChange={(e) => setSegredoWebhook(e.target.value)}
+              autoComplete="off"
+              required
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="verificacao-instagram">Token de verificação do webhook</Label>
+            <Input
+              id="verificacao-instagram"
+              type="password"
+              value={tokenVerificacaoWebhook}
+              onChange={(e) => setTokenVerificacaoWebhook(e.target.value)}
+              autoComplete="off"
+              required
+            />
+          </div>
+
+          <p className="text-xs sm:col-span-2" style={{ color: 'var(--text-muted)' }}>
+            Use uma conta profissional com a permissão instagram_business_manage_messages.
+            Depois de conectar, copie o callback exibido no cartão para o aplicativo Meta.
+          </p>
+        </>
+      )}
+
       <div className="sm:col-span-2">
         <Button
           type="submit"
@@ -388,6 +472,12 @@ function FormularioDeCanal({
             || nome.trim().length === 0
             || (tipo === 'TELEGRAM' && !token.trim())
             || (tipo === 'WHATSAPP_EVOLUTION' && !identificador.trim())
+            || (tipo === 'INSTAGRAM' && (
+              !identificador.trim()
+              || !token.trim()
+              || !segredoWebhook.trim()
+              || !tokenVerificacaoWebhook.trim()
+            ))
           }
         >
           {enviando ? 'Conectando…' : 'Conectar'}

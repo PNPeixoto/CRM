@@ -69,7 +69,7 @@ app:
   schema:
     # Atualizado junto com toda migration estrutural. Readiness compara este
     # valor ao histórico realmente aplicado e detecta inclusive imagem antiga.
-    expected-version: "25"
+    expected-version: "26"
   security:
     # Sem valor padrão, de propósito: a aplicação não sobe sem estes segredos.
     # Um default aqui seria herdado silenciosamente em produção, e um pepper
@@ -183,6 +183,14 @@ app:
     max-response-bytes: 1048576
 
   providers:
+    meta:
+      enabled: ${META_ENABLED:false}
+      # Contrato consultado na colecao oficial da Meta em 2026-08-14.
+      graph-api-version: "v24.0"
+      reconciliation-enabled: ${META_RECONCILIATION_ENABLED:true}
+      reconciliation-schedule-ms: 60000
+      reconciliation-interval-seconds: 300
+      reconciliation-batch-size: 25
     evolution:
       enabled: ${EVOLUTION_ENABLED:false}
       base-url: ${EVOLUTION_API_BASE_URL:http://evolution-api:8080}

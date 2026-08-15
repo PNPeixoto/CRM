@@ -33,6 +33,7 @@ interface Props {
   readonly aoEnviar: (texto: string) => Promise<void>;
   readonly contatoNome: string;
   readonly canalTipo: TipoCanal | null;
+  readonly ultimaMensagemRecebidaEm: string | null;
   readonly respondendoComo: string;
 }
 
@@ -45,6 +46,7 @@ export function Conversa({
   aoEnviar,
   contatoNome,
   canalTipo,
+  ultimaMensagemRecebidaEm,
   respondendoComo,
 }: Props) {
   const [texto, setTexto] = useState('');
@@ -52,6 +54,8 @@ export function Conversa({
   const [erro, setErro] = useState<string | null>(null);
   const fimDaListaRef = useRef<HTMLDivElement>(null);
   const ultimaMensagemId = mensagens.at(-1)?.id;
+  const janelaDoInstagramEncerrada = canalTipo === 'INSTAGRAM'
+    && !estaNasUltimas24Horas(ultimaMensagemRecebidaEm);
 
   // Rola para a última mensagem quando chega algo novo. `behavior: auto` e não
   // `smooth`: com várias mensagens chegando juntas, a animação suave enfileira
@@ -63,7 +67,7 @@ export function Conversa({
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const conteudo = texto.trim();
-    if (!conteudo) return;
+    if (!conteudo || janelaDoInstagramEncerrada) return;
 
     setErro(null);
     setEnviando(true);
@@ -136,6 +140,12 @@ export function Conversa({
       >
         {erro && <AlertaErro className="mb-3">{erro}</AlertaErro>}
 
+        {janelaDoInstagramEncerrada && (
+          <p className="mb-3 text-xs text-[var(--warning)]" role="status">
+            A janela de 24 horas do Instagram foi encerrada. Aguarde uma nova mensagem do contato.
+          </p>
+        )}
+
         <div
           className="mb-2 flex flex-wrap items-center gap-2 text-xs"
           aria-label={`Respondendo como ${respondendoComo} via ${rotuloDoCanal(canalTipo)}`}
@@ -171,14 +181,19 @@ export function Conversa({
                   evento.currentTarget.form?.requestSubmit();
                 }
               }}
-              placeholder="Escreva uma mensagem…"
+              placeholder={janelaDoInstagramEncerrada
+                ? 'Aguardando uma nova mensagem no Instagram…'
+                : 'Escreva uma mensagem…'}
               autoComplete="off"
-              disabled={enviando}
+              disabled={enviando || janelaDoInstagramEncerrada}
               rows={2}
               className="min-h-12 max-h-32 w-full resize-y rounded-[var(--radius-control)] border border-[var(--border-control)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-muted)] disabled:opacity-50"
             />
           </div>
-          <Button type="submit" disabled={enviando || texto.trim().length === 0}>
+          <Button
+            type="submit"
+            disabled={enviando || janelaDoInstagramEncerrada || texto.trim().length === 0}
+          >
             <SendHorizontal aria-hidden="true" />
             {enviando ? 'Enviando…' : 'Enviar'}
           </Button>
@@ -279,4 +294,10 @@ function chaveDaData(iso: string): string {
 function iniciaisDe(nome: string): string {
   return nome.split(/\s+/).filter(Boolean).slice(0, 2)
     .map((parte) => parte[0]).join('').toUpperCase();
+}
+
+function estaNasUltimas24Horas(instante: string | null): boolean {
+  if (!instante) return false;
+  const milissegundos = Date.parse(instante);
+  return Number.isFinite(milissegundos) && milissegundos >= Date.now() - 24 * 60 * 60 * 1000;
 }

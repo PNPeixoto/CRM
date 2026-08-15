@@ -74,10 +74,20 @@ class ConversaService {
         Map<UUID, UsuarioLookup.UsuarioReference> atendentes = usuarios.findKnown(
                 tenantId, encontradas.stream().map(ConversationEntity::getAssignedUserId)
                         .filter(Objects::nonNull).distinct().toList());
+        Map<UUID, Instant> ultimosRecebimentos = encontradas.isEmpty()
+                ? Map.of()
+                : mensagens.buscarUltimosRecebimentosDasConversas(
+                                tenantId,
+                                encontradas.stream().map(ConversationEntity::getId).toList())
+                        .stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                MessageRepository.UltimoRecebimentoDaConversa::getConversationId,
+                                MessageRepository.UltimoRecebimentoDaConversa::getRecebidaEm));
         List<ConversationDtos.ConversaResumo> itens = encontradas.stream()
                 .map(entity -> paraResumo(entity,
                         canaisConhecidos.get(entity.getChannelConnectionId()),
-                        atendentes.get(entity.getAssignedUserId())))
+                        atendentes.get(entity.getAssignedUserId()),
+                        ultimosRecebimentos.get(entity.getId())))
                 .toList();
         return new ConversationDtos.PaginaConversas(
                 itens,
@@ -212,7 +222,8 @@ class ConversaService {
 
     private static ConversationDtos.ConversaResumo paraResumo(
             ConversationEntity entity, ConexaoDeCanal canal,
-            UsuarioLookup.UsuarioReference atendente) {
+            UsuarioLookup.UsuarioReference atendente,
+            Instant ultimoRecebimento) {
         return new ConversationDtos.ConversaResumo(
                 entity.getId(),
                 entity.getChannelConnectionId(),
@@ -225,6 +236,7 @@ class ConversaService {
                 entity.getAssignedUserId(),
                 atendente == null ? null : atendente.nomeCompleto(),
                 entity.getLastMessageAt(),
+                ultimoRecebimento,
                 entity.getDueAt(),
                 entity.getVersion());
     }

@@ -78,6 +78,42 @@ interface MessageRepository extends JpaRepository<MessageEntity, UUID> {
             @Param("tenantId") UUID tenantId,
             @Param("conversationId") UUID conversationId);
 
+    /**
+     * Usa o instante em que o CRM persistiu a entrada, e não o relógio do
+     * provedor, para que desvio de horário no payload não prolongue uma janela
+     * de atendimento regulada pelo canal.
+     */
+    @Query("""
+            SELECT MAX(m.createdAt) FROM MessageEntity m
+             WHERE m.tenantId = :tenantId
+               AND m.conversationId = :conversationId
+               AND m.direction = br.com.pnp.crm.conversation.api.DirecaoMensagem.INBOUND
+               AND m.deletedAt IS NULL
+            """)
+    Optional<Instant> buscarUltimoRecebimentoDaConversa(
+            @Param("tenantId") UUID tenantId,
+            @Param("conversationId") UUID conversationId);
+
+    @Query("""
+            SELECT m.conversationId AS conversationId,
+                   MAX(m.createdAt) AS recebidaEm
+              FROM MessageEntity m
+             WHERE m.tenantId = :tenantId
+               AND m.conversationId IN :conversationIds
+               AND m.direction = br.com.pnp.crm.conversation.api.DirecaoMensagem.INBOUND
+               AND m.deletedAt IS NULL
+             GROUP BY m.conversationId
+            """)
+    List<UltimoRecebimentoDaConversa> buscarUltimosRecebimentosDasConversas(
+            @Param("tenantId") UUID tenantId,
+            @Param("conversationIds") List<UUID> conversationIds);
+
+    interface UltimoRecebimentoDaConversa {
+        UUID getConversationId();
+
+        Instant getRecebidaEm();
+    }
+
     @Query("""
             SELECT COUNT(m) FROM MessageEntity m
              WHERE m.tenantId = :tenantId

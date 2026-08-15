@@ -37,6 +37,7 @@ export interface ConversaResumo {
   readonly atendenteId: string | null;
   readonly atendenteNome: string | null;
   readonly ultimaMensagemEm: string | null;
+  readonly ultimaMensagemRecebidaEm: string | null;
   readonly venceEm: string | null;
   readonly versao: number;
 }

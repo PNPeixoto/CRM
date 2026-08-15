@@ -42,6 +42,7 @@ function mapearConversa(dados: ConversaWire): ConversaResumo {
     atendenteId: dados.atendenteId ?? null,
     atendenteNome: dados.atendenteNome ?? null,
     ultimaMensagemEm: dados.ultimaMensagemEm ?? null,
+    ultimaMensagemRecebidaEm: dados.ultimaMensagemRecebidaEm ?? null,
     venceEm: dados.venceEm ?? null,
     versao: obrigatorio(dados.versao, 'conversa.versao'),
   };

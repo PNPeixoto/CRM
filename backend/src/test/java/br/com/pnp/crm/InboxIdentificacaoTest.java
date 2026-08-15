@@ -63,6 +63,7 @@ class InboxIdentificacaoTest {
                          created_by, updated_by)
                     VALUES (?, ?, ?, ?, 'OUTBOUND', 'TEXT', 'Olá, Maria!', 'SENT', ?, ?, ?)
                     """, mensagem, tenant, conversa, canal, atendente, atendente, atendente);
+            return null;
         });
     }
 

@@ -320,7 +320,7 @@ server.on('upgrade', (request, socket) => {
   });
 });
 
-server.listen(8080, () => console.log('CRM demo API em http://127.0.0.1:8080'));
+server.listen(8080, '127.0.0.1', () => console.log('CRM demo API em http://127.0.0.1:8080'));
 
 function tarefa(id, titulo, vencimentoEm, concluidaEm, responsavelNome,
   contatoId = null, oportunidadeId = null) {

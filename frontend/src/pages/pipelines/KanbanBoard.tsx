@@ -250,7 +250,7 @@ function CartaoDeOportunidade({
           disabled={desabilitado}
           title={`Arrastar ${oportunidade.titulo}`}
           aria-label={`Arrastar ${oportunidade.titulo}`}
-          className="flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-[var(--radius-control)] text-[var(--text-muted)] hover:bg-[var(--surface-sunken)] hover:text-[var(--text-strong)] active:cursor-grabbing disabled:cursor-wait disabled:opacity-50"
+          className="flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-[var(--radius-control)] text-[var(--text-muted)] hover:bg-[var(--surface-sunken)] hover:text-[var(--text-strong)] active:cursor-grabbing disabled:cursor-wait disabled:opacity-50"
           {...attributes}
           {...listeners}
         >
