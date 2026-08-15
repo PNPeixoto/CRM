@@ -44,6 +44,9 @@ describe('KanbanBoard', () => {
     expect(alca).toHaveAttribute('aria-roledescription', 'oportunidade arrastável');
     expect(alca).toHaveAttribute('aria-describedby');
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    const coluna = screen.getByRole('region', { name: 'Etapa Novo' });
+    expect(coluna).toHaveClass('self-start', 'flex-col', 'max-h-[calc(100dvh-8rem)]');
+    expect(coluna.parentElement).toHaveClass('items-start');
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar oportunidade em Novo' }));
     expect(aoAdicionar).toHaveBeenCalledWith('novo');
     await esperarSemViolacoesAcessiveis(container);

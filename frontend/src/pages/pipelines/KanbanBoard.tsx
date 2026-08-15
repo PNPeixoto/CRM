@@ -102,7 +102,7 @@ export function KanbanBoard({
       onDragCancel={() => setOportunidadeArrastadaId(null)}
       onDragEnd={terminarArraste}
     >
-      <div className="flex w-full max-w-full gap-3 overflow-x-auto pb-2">
+      <div className="flex w-full max-w-full items-start gap-3 overflow-x-auto pb-2">
         {etapas.map((etapa) => (
           <Coluna
             key={etapa.id}
@@ -142,7 +142,7 @@ function Coluna({
     <section
       ref={setNodeRef}
       className={cn(
-        'flex min-h-[30rem] w-72 shrink-0 flex-col rounded-[var(--radius-surface)] border transition-[border-color,box-shadow,background-color]',
+        'flex max-h-[calc(100dvh-8rem)] w-72 shrink-0 self-start flex-col overflow-hidden rounded-[var(--radius-surface)] border transition-[border-color,box-shadow,background-color]',
         isOver && 'border-[var(--brand)] bg-[var(--brand-soft)] shadow-sm',
       )}
       style={isOver ? undefined : {
@@ -176,21 +176,23 @@ function Coluna({
         </div>
       </header>
 
-      <div className="flex min-h-28 flex-1 flex-col gap-2 p-2.5">
-        {oportunidades.map((oportunidade) => (
-          <CartaoDeOportunidade
-            key={oportunidade.id}
-            oportunidade={oportunidade}
-            movendo={oportunidadeEmMovimento === oportunidade.id}
-            desabilitado={oportunidadeEmMovimento !== null}
-          />
-        ))}
+      <div className="flex min-h-0 flex-col p-2.5">
+        <div className="min-h-0 space-y-2 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+          {oportunidades.map((oportunidade) => (
+            <CartaoDeOportunidade
+              key={oportunidade.id}
+              oportunidade={oportunidade}
+              movendo={oportunidadeEmMovimento === oportunidade.id}
+              desabilitado={oportunidadeEmMovimento !== null}
+            />
+          ))}
+        </div>
 
         <button
           type="button"
           onClick={() => aoAdicionar(etapa.id)}
           disabled={oportunidadeEmMovimento !== null}
-          className="mt-auto flex min-h-11 w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-dashed border-[var(--border-strong)] text-xs font-medium text-[var(--text-muted)] hover:border-[var(--brand)] hover:bg-[var(--surface-raised)] hover:text-[var(--brand)] disabled:cursor-wait disabled:opacity-50"
+          className="mt-2 flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-dashed border-[var(--border-strong)] text-xs font-medium text-[var(--text-muted)] hover:border-[var(--brand)] hover:bg-[var(--surface-raised)] hover:text-[var(--brand)] disabled:cursor-wait disabled:opacity-50"
           aria-label={`Adicionar oportunidade em ${etapa.nome}`}
         >
           <Plus className="size-4" aria-hidden="true" />
