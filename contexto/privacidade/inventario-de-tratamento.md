@@ -131,9 +131,9 @@ evento novo, e é o que o teste de contrato vigia.
 ### `LGPD-003` — Não há superfície de direitos do titular — **CORRIGIDO**
 
 - **Severidade:** média · **Corrigido em 2026-08-10**
-- Não existe endpoint de exportação, correção, anonimização ou exclusão. O
-  catálogo de auditoria já reserva `EXPORT_REQUESTED` e `EXPORT_COMPLETED`,
-  mas nada os emite: a intenção está registrada e a implementação não existe.
+- Na análise inicial não existia endpoint de exportação, correção,
+  anonimização ou exclusão. O Backend 18 corrigiu os direitos do titular e o
+  Backend 21 acrescentou exportação assíncrona de relatório agregado.
 
 ### `LGPD-004` — Backup sem tratamento documentado — **DOCUMENTADO**
 

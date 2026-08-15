@@ -8,7 +8,7 @@ Fluxo que o produto ainda não tem aparece **declarado como inexistente**, com a
 fronteira que precisará ser tratada. Modelar componente imaginário produz
 cobertura de mentira.
 
-Baseline: commit `a603534`.
+Baseline: branch `main` + working tree validada em 2026-08-15.
 
 ---
 
@@ -16,12 +16,12 @@ Baseline: commit `a603534`.
 
 | Elemento | Quantidade | Observação |
 |---|---|---|
-| Rotas HTTP | 30 | 9 de autenticação, 20 de domínio, 1 webhook |
-| Rotas sem autenticação | 9 | 6 de autenticação pré-sessão, `/v3/api-docs`, `/actuator/health`, `/error` |
+| Operações HTTP | 88 | 74 caminhos no OpenAPI 3.1 versionado |
+| Portas sem token | lista fechada | 6 de autenticação pré-sessão, documentação/health/error, handshake WS e webhooks assinados |
 | Endpoint WebSocket | 1 | `/ws`, autenticado no frame STOMP CONNECT |
-| Webhook de provedor | 1 | Telegram, autenticado por `secret_token` em tempo constante |
-| Workers assíncronos | 2 | fila de saída e entrada de webhook |
-| Fronteiras de confiança | 5 | navegador, provedor de canal, proxy reverso, PostgreSQL, Redis |
+| Webhooks de provedor | 3 | Telegram, Evolution experimental e Meta; segredo ou assinatura conferidos antes do processamento |
+| Rotinas agendadas | 12 | filas, reconciliação, retenção, SLA, sessão e exportação |
+| Fronteiras de confiança | 6 | navegador, provedor de canal, proxy reverso, PostgreSQL, Redis e storage privado |
 
 ---
 
@@ -130,6 +130,21 @@ externo. **Fronteira:** definição aprovada → DNS/egress → sistema externo.
 | Segredo aparece em preview ou trilha | Exposição de API key | AES-GCM, resposta write-only, resolução só no envio; diagnóstico sem request/response | — | `ConectorHttpSeguroIntegracaoTest` | Baixo |
 | Resposta lenta/grande esgota recursos | Indisponibilidade | Timeout, limite de bytes, concorrência e orçamento Redis por tenant/conector | Códigos e duração sanitizados | `ClienteHttpSeguroTest` | Baixo |
 
+## F8 — Relatórios e exportações
+
+**Ativo:** indicadores agregados e arquivo CSV temporário.
+**Fronteira:** usuário autenticado → fila → storage privado → download autenticado.
+
+| Abuso | Impacto | Preventivo | Detectivo | Teste | Residual |
+|---|---|---|---|---|---|
+| Permissão revogada após o pedido | Exfiltração após desligamento | `reports.read` com alcance `TENANT` é revalidada no worker, ao assinar a URL e no download | Job `DENIED` e auditoria sem conteúdo | `RelatoriosExportacoesTest` | Baixo |
+| Acesso cruzado a job ou arquivo | Vazamento entre empresas | RLS `ENABLE + FORCE`, solicitante vinculado ao job e assinatura ligada a tenant/job/usuário/expiração | Auditoria de download | `RelatoriosExportacoesTest` | Baixo |
+| Arquivo lido diretamente no volume | Vazamento fora da API | AES-256-GCM antes da persistência, AAD por tenant/job, diretório fora do web root | Hash de integridade antes da entrega | `RelatoriosExportacoesTest` | Baixo; chave e volume precisam de backup seguro |
+| Link copiado ou reutilizado | Entrega indevida | HMAC com chave exclusiva, validade máxima de 5 minutos e sessão ainda obrigatória | Pedido e download auditados | `RelatoriosExportacoesTest` | Baixo |
+| Fórmula executada ao abrir CSV | Execução no computador do operador | Neutralização de `=`, `+`, `-` e `@`, inclusive após espaços; escape RFC 4180 | Teste de contrato | `CsvSeguroTest` | Baixo |
+| Rajada ou arquivo excessivo | Exaustão de CPU, banco ou disco | Idempotência, lote e concorrência por tenant, tentativas, limite de linhas/colunas e 5 MiB | Estado e falha sanitizados no job | `RelatoriosExportacoesTest` | Baixo em uma instância; storage compartilhado é requisito para escala horizontal |
+| Expurgo apaga evidência sob hold | Violação de retenção | Expiração invalida acesso, mas `REPORT_EXPORT`/tenant sob legal hold preserva o ciphertext | `purged_at` e hold consultáveis | `RelatoriosExportacoesTest` | Baixo |
+
 ---
 
 ## Fluxos ainda inexistentes
@@ -139,11 +154,5 @@ a fronteira que precisará ser tratada no prompt correspondente.
 
 | Fluxo | Situação | Fronteira a tratar quando existir | Prompt |
 |---|---|---|---|
-| **Exportação** | Nenhum endpoint exporta | Autorização revalidada **na execução**, não só na criação; o arquivo gerado é um segundo canal de vazamento e precisa de escopo e expiração | 21 |
-| **Job agendado** | Não existe | Job roda sem usuário; precisa de identidade própria e de revalidar autorização a cada execução, porque quem o criou pode ter perdido o acesso | 21 |
-| **Billing** | Não existe | Manipulação de valor, replay de webhook de pagamento, idempotência de cobrança | 20 |
+| **Billing** | Deliberadamente adiado pela ADR-0017; venda atual é por implantação | Antes de ativar: preço, moeda, fechamento, arredondamento, tributo, estorno, provedor, webhook e reconciliação | 20 |
 | **Agente privado** | Não existe | Enrollment, rotação de credencial, execução remota — a maior ampliação de superfície do roteiro | 25, 25B, 25C |
-
-Enquanto não existirem, a revalidação de autorização exigida pelo Prompt 06
-para job e exportação é herdada por `Autorizacao`; o lugar de comprová-la é o
-Prompt 21.

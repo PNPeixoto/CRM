@@ -9,8 +9,8 @@ e o resultado observado nesta execução ou registrado em sessão anterior;
 comportamento observado. A diferença importa: inspeção não pega
 comportamento em runtime que contradiz o que o código parece dizer.
 
-Baseline atualizado no Prompt 16: suíte backend com 187 testes verdes e
-frontend com 128.
+Baseline atualizado no Backend 21: suíte backend com 301 testes verdes e
+frontend com 155.
 
 ---
 
@@ -102,7 +102,7 @@ o arquivo continua indisponível; este é o risco residual de V5.
 | Decisão por registro (anti-IDOR) | sim **(nível 3)** | `exigirSobreRegistro`; recorte de alcance próprio **dentro da consulta**; atualização verifica antes e depois de aplicar | `AutorizacaoPorAlcanceTest` (leitura, escrita e exclusão por id alheio) | execução |
 | Isolamento entre tenants | sim **(nível 3)** | RLS `ENABLE + FORCE`; runtime sem `SUPERUSER` e sem `BYPASSRLS`; tenant vem de credencial, nunca de corpo, query ou header | `BancoSegurancaTest`, `IsolamentoEntreTenantsTest` | execução |
 | Recurso coletivo | sim | Canal, caixa de entrada, relatório e onboarding exigem alcance `TENANT`; `OWN` nunca é promovido a acesso coletivo | `AutorizacaoPorAlcanceTest` | execução |
-| Revalidação em canal assíncrono | **parcial** | WebSocket revalida permissão e destino a cada SUBSCRIBE. Job e exportação **não existem** como superfície | `EscutaDeTopicoTest` | execução |
+| Revalidação em canal assíncrono | **parcial** | WebSocket revalida a cada SUBSCRIBE; a exportação revalida `reports.read/TENANT` ao executar, criar URL e baixar. Uma inscrição WebSocket já ativa ainda vive até reconectar | `EscutaDeTopicoTest`, `RelatoriosExportacoesTest` | execução |
 | Escopo por unidade | **não implementado, falha fechada** | Nenhuma tabela de domínio declara unidade; `UNIT` é negado em vez de promovido — ADR-0008 | `AutorizacaoPorAlcanceTest.escopoDeUnidadeNaoDecideSobreRegistroDeDominio` | execução |
 | Menu versus permissão | sim | `GET /api/organizacao/permissoes` informa a interface; a decisão continua no backend em cada endpoint | — | inspeção |
 

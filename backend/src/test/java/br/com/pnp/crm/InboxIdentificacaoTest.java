@@ -27,6 +27,7 @@ class InboxIdentificacaoTest {
 
     private UUID tenant;
     private UUID atendente;
+    private UUID canal;
     private UUID conversa;
 
     @BeforeEach
@@ -37,7 +38,7 @@ class InboxIdentificacaoTest {
         cenario.concederTudoNoTenant(
                 tenant, atendente, "conversations.read", "conversations.write");
 
-        UUID canal = UuidV7.gerar();
+        canal = UuidV7.gerar();
         conversa = UuidV7.gerar();
         UUID mensagem = UuidV7.gerar();
         TenantContext.executarComo(tenant, () -> {
@@ -90,5 +91,41 @@ class InboxIdentificacaoTest {
                                 .claim("tid", tenant.toString()).claim("login", "ana"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.itens[0].autorNome").value("Usuário ana"));
+    }
+
+    @Test
+    void listaConversaEMensagemSemAtendenteNemAutor() throws Exception {
+        UUID conversaSemAtendente = UuidV7.gerar();
+        UUID mensagemRecebida = UuidV7.gerar();
+        TenantContext.executarComo(tenant, () -> {
+            jdbc.update("""
+                    INSERT INTO conversation
+                        (id, tenant_id, channel_connection_id, external_contact_id,
+                         contact_display_name, status, last_message_at)
+                    VALUES (?, ?, ?, '5511977770000@s.whatsapp.net',
+                            'Contato sem atendente', 'OPEN', now() + interval '1 minute')
+                    """, conversaSemAtendente, tenant, canal);
+            jdbc.update("""
+                    INSERT INTO message
+                        (id, tenant_id, conversation_id, channel_connection_id, direction,
+                         content_type, text_content, status)
+                    VALUES (?, ?, ?, ?, 'INBOUND', 'TEXT', 'Preciso de ajuda', 'RECEIVED')
+                    """, mensagemRecebida, tenant, conversaSemAtendente, canal);
+            return null;
+        });
+
+        mockMvc.perform(get("/api/conversas").with(jwt().jwt(builder -> builder
+                        .subject(atendente.toString()).claim("tid", tenant.toString())
+                        .claim("login", "ana"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itens[0].contatoNome").value("Contato sem atendente"))
+                .andExpect(jsonPath("$.itens[0].atendenteNome").doesNotExist());
+
+        mockMvc.perform(get("/api/conversas/" + conversaSemAtendente + "/mensagens")
+                        .with(jwt().jwt(builder -> builder.subject(atendente.toString())
+                                .claim("tid", tenant.toString()).claim("login", "ana"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itens[0].texto").value("Preciso de ajuda"))
+                .andExpect(jsonPath("$.itens[0].autorNome").doesNotExist());
     }
 }

@@ -87,7 +87,8 @@ class FundacaoOmnichannelTest {
             assertThatThrownBy(() -> jdbc.update(
                     "UPDATE usage_event SET quantity = 2 WHERE message_id = ?", mensagemId))
                     .isInstanceOf(DataAccessException.class)
-                    .hasMessageContaining("append-only");
+                    .rootCause()
+                    .hasMessageContaining("permission denied");
             return null;
         });
 

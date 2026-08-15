@@ -120,9 +120,10 @@ services:
     image: alpine:3.23
     # O volume nasce como root. Este init efemero entrega somente a pasta de
     # quarentena ao UID sem privilegio usado pela aplicacao.
-    command: ["sh", "-c", "chown -R 10001:10001 /media && chmod 700 /media"]
+    command: ["sh", "-c", "chown -R 10001:10001 /media /exports && chmod 700 /media /exports"]
     volumes:
       - telegram_media_quarantine:/media
+      - report_export_storage:/exports
     restart: "no"
 
   telegram-tunnel:
@@ -165,6 +166,7 @@ services:
       CORS_ALLOWED_ORIGINS: http://localhost:5174
       # Volume privado e gravavel; a imagem e o restante do filesystem seguem read-only.
       TELEGRAM_MEDIA_STORAGE_PATH: /var/lib/crm/media-quarantine
+      REPORT_EXPORT_STORAGE_PATH: /var/lib/crm/report-exports
       TELEGRAM_RECONCILIATION_ENABLED: ${TELEGRAM_RECONCILIATION_ENABLED:-false}
       TELEGRAM_PUBLIC_BASE_URL: ${TELEGRAM_PUBLIC_BASE_URL:-}
       # Ponte experimental local; producao permanece na Cloud API oficial.
@@ -181,6 +183,7 @@ services:
       - /tmp:size=64m,mode=1777
     volumes:
       - telegram_media_quarantine:/var/lib/crm/media-quarantine
+      - report_export_storage:/var/lib/crm/report-exports
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -198,6 +201,7 @@ services:
 volumes:
   postgres_data:
   telegram_media_quarantine:
+  report_export_storage:
   evolution_postgres_data:
   evolution_redis_data:
   evolution_instances:

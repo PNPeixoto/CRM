@@ -69,7 +69,7 @@ app:
   schema:
     # Atualizado junto com toda migration estrutural. Readiness compara este
     # valor ao histórico realmente aplicado e detecta inclusive imagem antiga.
-    expected-version: "26"
+    expected-version: "28"
   security:
     # Sem valor padrão, de propósito: a aplicação não sobe sem estes segredos.
     # Um default aqui seria herdado silenciosamente em produção, e um pepper
@@ -89,6 +89,10 @@ app:
     # Chave exclusiva do cofre do conector HTTP. Segredos de integrações não
     # compartilham domínio criptográfico com canais, MFA ou URLs de mídia.
     http-connector-secret-key: ${HTTP_CONNECTOR_SECRET_KEY}
+    # Dominios criptograficos exclusivos para o conteudo cifrado e para URLs
+    # temporarias de exportacao. Nenhuma das duas reutiliza JWT ou midia.
+    report-export-encryption-key: ${REPORT_EXPORT_ENCRYPTION_KEY}
+    report-export-signing-key: ${REPORT_EXPORT_SIGNING_KEY}
     # HTTPS obrigatório fora de desenvolvimento: o cookie de refresh não pode
     # trafegar em texto puro, e o CSP não deve aceitar WebSocket sem TLS.
     cookie-secure: true
@@ -181,6 +185,17 @@ app:
     max-requests-per-minute: 120
     max-timeout-ms: 30000
     max-response-bytes: 1048576
+
+  report-export:
+    worker-enabled: true
+    worker-interval-ms: 2000
+    batch-size: 10
+    lease-seconds: 60
+    max-concurrent-per-tenant: 2
+    max-attempts: 3
+    retention-hours: 24
+    signed-url-seconds: 300
+    storage-path: ${REPORT_EXPORT_STORAGE_PATH:./var/report-exports}
 
   providers:
     meta:

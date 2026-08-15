@@ -1,14 +1,14 @@
 # Estado atual
 
 > Reescrito ao fim de cada sessão. Máximo 150 linhas.
-> Última atualização: 2026-08-14 21:22 (America/Sao_Paulo), branch `agent/refino-apresentacao`, head anterior `55217d1`
+> Última atualização: 2026-08-15 10:15 (America/Sao_Paulo), branch `main`
 
 ## Onde parei
 
-Os Prompts backend 00–18 e frontend F0–F6/F8 estão concluídos. A última suíte backend tinha **267 testes**; três casos novos exigem JDK 25. O frontend tem **152 testes**, zero falhas.
+Os Prompts backend 00–19 e 21 e frontend F0–F6/F8 estão concluídos. O backend 20 foi adiado por decisão comercial (`ADR-0017`). A suíte backend tem **301 testes**, zero falhas; o frontend mantém **155 testes verdes**.
 Gates A, B e D fechados; o Gate C ainda aguarda a jornada E2E reproduzível.
 
-Fora da trilha, a Fase 4 comercial inclui papéis, equipes, preset de cinco funções, Agenda, Inbox identificada, dashboard e ficha 360º. Os manifestos não mudaram; `backend:19` segue como próximo prompt.
+Fora da trilha, a Fase 4 comercial inclui papéis, equipes, preset de cinco funções, Agenda, Inbox identificada, dashboard e ficha 360º.
 O expurgo continua desligado até a decisão dos prazos de retenção.
 
 ## Produto e segurança implementados
@@ -77,6 +77,27 @@ O expurgo continua desligado até a decisão dos prazos de retenção.
 - Inventário e política de backup em `contexto/privacidade/`. A API de auditoria
   é tipada: token, segredo, payload e mensagem não existem no schema.
 
+## Entitlements e medição — backend 19 (`ADR-0016`)
+
+- V27 adiciona catálogo técnico, concessões versionadas sob RLS e fonte
+  reconciliável ao ledger. Nenhum tenant recebe concessão ou limite por default.
+- Evento atrasado usa a versão vigente na ocorrência. Agregação deriva janela e
+  timezone explícitos; hard limit é atômico sem contador mutável paralelo.
+- Contratação não concede permissão e navegação não protege API. Billing está
+  desativado: a venda inicial é por implantação, sem preço recorrente fictício.
+
+## Billing e relatórios — backend 20 e 21 (`ADR-0017`, `ADR-0018`)
+
+- Backend 20 foi deliberadamente adiado. A fundação futura continua na V27,
+  sem preço, fatura, pagamento, moeda ou provedor inventados.
+- V28 cria catálogo versionado de 13 métricas e jobs de exportação sob RLS.
+  Dashboard e CSV usam a mesma fotografia, fórmula, timezone, unidade e moeda.
+- CSV assíncrono é idempotente, limitado e neutraliza fórmulas. O arquivo fica
+  cifrado fora do web root; URL HMAC dura até 5 minutos e ainda exige sessão.
+- `reports.read/TENANT` é revalidada ao processar, assinar e baixar. Revogação
+  posterior ao pedido falha fechada; pedido, conclusão, cancelamento e download
+  são auditados. Expiração respeita legal hold.
+
 ## Administração de acessos — Fase 4 do plano de MVP
 
 - O modelo de papéis existia sob RLS desde a V10 e não tinha API. Seis rotas
@@ -103,25 +124,20 @@ O expurgo continua desligado até a decisão dos prazos de retenção.
   atendimento e Gerente comercial sem sobrescrever edições do cliente.
 
 ## Refino para apresentação
-- `/agenda` é mensal e real sobre tarefas; a Inbox busca e filtra conversas e identifica canal, conta, contato/número, atendente, autor e operador que responde.
-- A identidade FinUp e o cenário local de dashboard, contatos, funil, Agenda e Inbox são servidos por `npm run demo:api`; o Instagram também possui conexão oficial no backend e na tela de canais.
-- O Kanban move por mouse, toque ou teclado; as colunas têm altura independente e rolagem interna ao atingir a tela.
-- A ficha reúne cadastro, carteira e atividades; oportunidades e tarefas são filtradas no backend pelo contato e alcance autorizado.
-- Conversas ainda não entram na ficha: o domínio não popula nem publica esse vínculo de forma confiável.
-- OpenAPI/tipos sincronizados; build, lint, `api:check`, 155 testes e revisão visual passaram sem overflow de página.
+- Agenda real sobre tarefas; Inbox identifica canal, conta, contato e operadores;
+  Kanban funciona por mouse, toque e teclado; ficha reúne carteira e atividades.
+- Conversas ainda não entram na ficha: o domínio não publica o vínculo de modo
+  confiável. Frontend: build, lint, `api:check` e 155 testes verdes.
 
 ## Migrations e verificação nesta máquina
 
-- V1–V9 fundação; V10–V14 organização, sessão/MFA e idempotência; V15–V17
-  omnichannel, Telegram e mídia em quarentena; V18–V21 Evolution, Inbox com SLA,
-  automações e conector HTTP; V22 auditoria; V23 retenção e legal hold; V24
-  legal hold imutável; V25 equipe e alcance de equipe; V26 Instagram Messaging
-  oficial. **26 migrations, 67
-  rotas.** Seeds e dados demonstrativos só no profile `dev`.
+- V1–V27 cobrem fundação, produto, canais, automações, auditoria, privacidade,
+  equipes, Instagram e medição; V28 cobre relatórios. **28 migrations, 74
+  caminhos OpenAPI.** Seeds e dados demonstrativos só no profile `dev`.
 - A integração foi consolidada na branch `codex/integrar-versao-outra-maquina`;
-  backend com **283 testes verdes** em Java 25 e frontend com **155 testes verdes**.
-- A atualização V8→V26 e a instalação limpa V1→V26 passaram em PostgreSQL 17.
-  `team_member` tem RLS forçado, e o `DELETE` foi recusado na verificação.
+  backend agora com **301 testes verdes** em Java 25 e frontend com **155**.
+- A atualização V8→V28, V26→V28 e a instalação limpa V1→V28 passaram em
+  PostgreSQL 17. OpenAPI e tipos TypeScript estão sincronizados.
 - Fluxo de acessos exercitado no navegador contra o backend real: papel criado,
   atribuído com alcance de equipe e equipe montada, com os três eventos na
   trilha. O recorte em si continua provado por `AlcanceDeEquipeTest`, não pela
@@ -129,26 +145,20 @@ O expurgo continua desligado até a decisão dos prazos de retenção.
 
 ## Próximo passo
 
-1. Decidir os prazos de retenção por categoria para poder ligar o expurgo.
-2. Fazer o ensaio externo da Meta com app aprovado, callback HTTPS público e
-   uma conta profissional real.
-3. Fase 1 do plano de MVP: CRUD de etapas do funil — `/api/funis` é só leitura.
-4. Executar `backend:19` (entitlements e medição); F9 segue adiado até haver medição representativa.
+1. Avançar para `backend:22` (observabilidade e SLOs).
+2. Decidir prazos de retenção; o expurgo segue desligado.
+3. CRUD de etapas do funil continua pendente; conexão Instagram ficou pausada.
 
 ## Riscos restantes
 
-- Evolution é ponte experimental de sessão WhatsApp Web; produção ainda exige
-  WhatsApp Cloud oficial. Instagram oficial recebe webhook com HMAC, envia
-  texto e reconcilia a assinatura, mas o aceite externo depende de app/negócio
-  aprovados pela Meta; mídia continua fora deste incremento.
-- Alcance por **unidade** continua sem decidir registro de domínio, e `UNIT`
-  segue oculto na API (`ADR-0008`). O alcance intermediário que existe é o de
-  **equipe**, de um nível só, e ele não substitui recorte por filial.
+- Evolution é ponte experimental; produção exige WhatsApp Cloud. Instagram
+  oficial ainda depende de app/negócio Meta aprovados e não cobre mídia.
+- Alcance `UNIT` segue sem registro de domínio e oculto (`ADR-0008`); `TEAM` é
+  de um nível e não substitui recorte por filial.
 - Revogação de acesso não é instantânea: vale na chamada seguinte à API, mas a
   sessão já emitida carrega o token por até 15 minutos. Ver também `SEC-011`.
-- Oportunidades e tarefas da ficha são filtradas e indexadas, mas ainda não têm paginação; histórico extremo exigirá contrato paginado.
-- `PrivacidadeController` audita a recusa por legal hold **dentro** da transação
-  revertida, então o registro `DENIED` é descartado. Correção em sessão própria.
-- Broker STOMP em memória impede escala horizontal; revisto no Prompt 28. Gate E
-  depende de backup/restore medido, SLOs e CI/CD rastreável; Gate C aguarda
-  runner E2E reproduzível (`frontend:F12`).
+- `PrivacidadeController` perde o evento `DENIED` ao reverter a transação.
+- Storage de exportação é privado e cifrado, mas local a uma instância; escala
+  horizontal exigirá storage compartilhado.
+- STOMP em memória impede escala horizontal. Gate E depende de backup/SLO/CI;
+  Gate C aguarda runner E2E reproduzível (`frontend:F12`).

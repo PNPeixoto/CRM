@@ -43,6 +43,8 @@ import java.lang.annotation.Target;
         "app.entrada-de-webhook.habilitada=false",
         "app.retencao-de-webhook.habilitada=false",
         "app.automation.worker-enabled=false",
+        "app.report-export.worker-enabled=false",
+        "app.report-export.storage-path=${java.io.tmpdir}/crm-pnp-report-exports-test",
         "app.providers.telegram.reconciliation-enabled=false",
         "app.providers.telegram.media-retention-enabled=false",
         // 32 bytes em base64, exigidos pelo AES-256 do cofre de credenciais.
@@ -50,6 +52,8 @@ import java.lang.annotation.Target;
         "app.security.mfa-secret-key=dGVzdC1tZmEta2V5LXNlcGFyYXRlLTMyLWJ5dGVzISE=",
         "app.security.media-signing-key=dGVzdC1tZWRpYS1rZXktc2VwYXJhdGUtMzItYnl0ZXMh",
         "app.security.http-connector-secret-key=dGVzdC1odHRwLWNvbm5lY3Rvci1rZXktMzItYnl0ZXM=",
+        "app.security.report-export-encryption-key=dGVzdC1yZXBvcnQtZXhwb3J0LWtleS0zMi1ieXRlcyE=",
+        "app.security.report-export-signing-key=dGVzdC1yZXBvcnQtc2lnbmluZy1rZXktMzItYnl0ZSE=",
         "app.security.password-reset-delivery-enabled=false"
 })
 public @interface TesteDeIntegracao {

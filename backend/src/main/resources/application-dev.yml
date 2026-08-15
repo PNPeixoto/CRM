@@ -58,6 +58,9 @@ app:
     # TESTE — HMAC separado para links curtos de midia liberada.
     media-signing-key: ${MEDIA_SIGNING_KEY:ZGV2LW1lZGlhLXNpZ25pbmcta2V5LTMyLWJ5dGVzISE=}
     http-connector-secret-key: ${HTTP_CONNECTOR_SECRET_KEY:ZGV2LWh0dHAtY29ubmVjdG9yLWtleS0zMi1ieXRlcyE=}
+    # TESTE — chaves locais separadas para exportacao; nunca promover.
+    report-export-encryption-key: ${REPORT_EXPORT_ENCRYPTION_KEY:ZGV2LXJlcG9ydC1leHBvcnQta2V5LTMyLWJ5dGVzISE=}
+    report-export-signing-key: ${REPORT_EXPORT_SIGNING_KEY:ZGV2LXJlcG9ydC1zaWduaW5nLWtleS0zMi1ieXRlcyE=}
     # Desenvolvimento não possui provedor de e-mail; nenhum token é logado.
     password-reset-delivery-enabled: false
     # false porque o desenvolvimento roda em http://localhost: com Secure=true

@@ -86,7 +86,7 @@ class ConversaService {
         List<ConversationDtos.ConversaResumo> itens = encontradas.stream()
                 .map(entity -> paraResumo(entity,
                         canaisConhecidos.get(entity.getChannelConnectionId()),
-                        atendentes.get(entity.getAssignedUserId()),
+                        referencia(atendentes, entity.getAssignedUserId()),
                         ultimosRecebimentos.get(entity.getId())))
                 .toList();
         return new ConversationDtos.PaginaConversas(
@@ -131,7 +131,8 @@ class ConversaService {
                 TenantContext.obrigatorio(), pagina.stream().map(MessageEntity::getAuthorUserId)
                         .filter(Objects::nonNull).distinct().toList());
         List<ConversationDtos.MensagemResposta> itens = pagina.stream()
-                .map(entity -> paraResposta(entity, autores.get(entity.getAuthorUserId())))
+                .map(entity -> paraResposta(
+                        entity, referencia(autores, entity.getAuthorUserId())))
                 .toList();
         return new ConversationDtos.PaginaMensagens(
                 itens,
@@ -258,6 +259,14 @@ class ConversaService {
     private UsuarioLookup.UsuarioReference usuario(UUID tenantId, UUID usuarioId) {
         if (usuarioId == null) return null;
         return usuarios.findKnown(tenantId, List.of(usuarioId)).get(usuarioId);
+    }
+
+    private static UsuarioLookup.UsuarioReference referencia(
+            Map<UUID, UsuarioLookup.UsuarioReference> conhecidas, UUID usuarioId) {
+        // Map.of()/Map.copyOf(), usados pelo lookup de identidade, rejeitam
+        // chaves nulas. Conversas ainda não atribuídas e mensagens recebidas
+        // legitimamente não possuem usuário interno associado.
+        return usuarioId == null ? null : conhecidas.get(usuarioId);
     }
 
     private static Instant momentoDaOrdem(ConversationEntity conversa) {

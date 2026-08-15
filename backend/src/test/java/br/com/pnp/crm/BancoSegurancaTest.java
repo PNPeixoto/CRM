@@ -27,10 +27,12 @@ class BancoSegurancaTest {
             "automation_execution", "automation_execution_step",
             "automation_compensation", "automation_transition",
             "http_connector", "http_connector_secret", "http_connector_attempt",
-            "audit_event", "legal_hold", "team_member");
+            "audit_event", "legal_hold", "team_member", "entitlement_grant",
+            "report_export_job");
 
     private static final Set<String> TABELAS_OPERACIONAIS = Set.of(
-            "event_publication", "flyway_schema_history");
+            "event_publication", "flyway_schema_history",
+            "technical_capability", "usage_metric", "report_metric_definition");
 
     private static final Set<String> FUNCOES_RUNTIME = Set.of(
             "current_tenant_id",
@@ -57,7 +59,10 @@ class BancoSegurancaTest {
             "expurgar_eventos_tempo_real",
             "expurgar_tentativas_de_conector",
             "expurgar_auditoria",
-            "reservar_execucoes_automacao");
+            "reservar_execucoes_automacao",
+            "registrar_evento_de_uso",
+            "reservar_exportacoes_relatorio",
+            "listar_exportacoes_para_expurgo");
 
     @Autowired JdbcTemplate jdbc;
     @Autowired Flyway flyway;
@@ -140,6 +145,8 @@ class BancoSegurancaTest {
                 "reservar_canais_evolution_para_reconciliar",
                 "reservar_canais_instagram_para_reconciliar",
                 "reservar_midias_expiradas",
+                "medir_uso_de_mensagem",
+                "medir_uso_de_midia",
                 "reservar_slas_vencidos",
                 "ha_legal_hold",
             "expurgar_conversas_encerradas",
@@ -148,7 +155,10 @@ class BancoSegurancaTest {
             "expurgar_eventos_tempo_real",
             "expurgar_tentativas_de_conector",
             "expurgar_auditoria",
-            "reservar_execucoes_automacao");
+            "reservar_execucoes_automacao",
+            "registrar_evento_de_uso",
+            "reservar_exportacoes_relatorio",
+            "listar_exportacoes_para_expurgo");
 
         List<String> executaveis = jdbc.queryForList("""
                 SELECT p.proname
@@ -171,7 +181,7 @@ class BancoSegurancaTest {
     }
 
     @Test
-    void flywayValidaHistoricoLimpoAteV26() {
+    void flywayValidaHistoricoLimpoAteV28() {
         flyway.validate();
         List<String> versoes = jdbc.queryForList("""
                 SELECT version
@@ -180,6 +190,6 @@ class BancoSegurancaTest {
                  ORDER BY installed_rank
                 """, String.class);
         assertThat(versoes).containsExactly(
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26");
+                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28");
     }
 }
