@@ -75,7 +75,7 @@ Critério deste relatório: **pronta** conclui integralmente seu objetivo atual;
 | `/login` | fora do registro | parcial | Login, restauração e erro uniforme funcionam; não há teste de sessão, recuperação ou MFA. |
 | `/primeiro-acesso` | fora do registro | parcial | Persiste segmento e atualiza navegação; guard/provider têm testes, mas não é onboarding completo. |
 | `/dashboard` | `pronto` | parcial | KPIs reais; sem teste da página e sem autorização por função/escopo. |
-| `/inbox` | `pronto` | parcial | REST + STOMP e envio real; sem cursor, sequence, polling, erro completo ou layout mobile. |
+| `/inbox` | `pronto` | parcial | REST + STOMP, busca, filtros e identificação operacional; Instagram está no demo, mas a conexão Meta real ainda não tem adaptador. |
 | `/contatos` | `pronto` | parcial | Busca paginada, criação, exclusão e ficha com oportunidades/atividades; edição e paginação das relações ainda ausentes. |
 | `/funis` | `pronto` | parcial | Colunas independentes, resumo, totais, criação por etapa e movimento otimista por mouse, toque ou teclado; edição/exclusão de etapas e paginação ainda ausentes. |
 | `/tarefas` | `pronto` | parcial | Lista, filtro, criação, conclusão e exclusão; edição, paginação e erros de mutação ausentes. |
@@ -136,7 +136,7 @@ confirmam claro + shell escuro, `#4B2ED4`, Manrope e JetBrains Mono.
 | Contatos | `GET/POST/PUT/DELETE /contatos`, GET por ID e relações por contato; UI não usa PUT | `Contato`, `Oportunidade` e `Tarefa` mapeados do OpenAPI | Implementado; lista principal é paginada, relações ainda devolvem array. |
 | Funis/oportunidades | GET funis/lista, POST criar/mover; UI não usa PUT/DELETE | `Funil`/`Oportunidade` manuais | Implementado com movimento otimista e rollback; lista não paginada. |
 | Tarefas | GET/POST, POST concluir, DELETE; UI não usa PUT | `Tarefa` manual | Implementado; lista não é paginada. |
-| Inbox | GET conversas/mensagens, POST mensagem e STOMP `/ws` | Tipos REST/push manuais | Implementado sem cursor/sequence no contrato atual. |
+| Inbox | GET conversas/mensagens, POST mensagem e STOMP `/ws` | Tipos REST/push manuais | Implementado; Instagram existe no enum/DB/OpenAPI, mas sem tradutor de webhook ou adaptador de saída Meta. |
 | Canais | GET/POST, POST ativação; UI não usa PUT | `Canal` manual | Implementado; segredo é entrada, nunca resposta. |
 | Placeholders | nenhum | nenhum | Módulos variam entre fundação backend e ausência de API pública. |
 

@@ -1,11 +1,11 @@
 # Estado atual
 
 > Reescrito ao fim de cada sessão. Máximo 150 linhas.
-> Última atualização: 2026-08-14 20:59 (America/Sao_Paulo), branch `agent/refino-apresentacao`, head anterior `919c7cf`
+> Última atualização: 2026-08-14 21:22 (America/Sao_Paulo), branch `agent/refino-apresentacao`, head anterior `55217d1`
 
 ## Onde parei
 
-Os Prompts backend 00–18 e frontend F0–F6/F8 estão concluídos. A última suíte backend tinha **267 testes**; três casos novos exigem JDK 25. O frontend tem **151 testes**, zero falhas.
+Os Prompts backend 00–18 e frontend F0–F6/F8 estão concluídos. A última suíte backend tinha **267 testes**; três casos novos exigem JDK 25. O frontend tem **152 testes**, zero falhas.
 Gates A, B e D fechados; o Gate C ainda aguarda a jornada E2E reproduzível.
 
 Fora da trilha, a Fase 4 comercial inclui papéis, equipes, preset de cinco funções, Agenda, Inbox identificada, dashboard e ficha 360º. Os manifestos não mudaram; `backend:19` segue como próximo prompt.
@@ -103,12 +103,12 @@ O expurgo continua desligado até a decisão dos prazos de retenção.
   atendimento e Gerente comercial sem sobrescrever edições do cliente.
 
 ## Refino para apresentação
-- `/agenda` é mensal e real sobre tarefas; a Inbox identifica canal, conta, contato/número, atendente, autor e operador que responde.
-- A identidade FinUp e o cenário local de dashboard, contatos, funil, Agenda e Inbox são servidos por `npm run demo:api`.
+- `/agenda` é mensal e real sobre tarefas; a Inbox busca e filtra conversas e identifica canal, conta, contato/número, atendente, autor e operador que responde.
+- A identidade FinUp e o cenário local de dashboard, contatos, funil, Agenda e Inbox, agora com Instagram demonstrativo, são servidos por `npm run demo:api`.
 - O Kanban move por mouse, toque ou teclado; as colunas têm altura independente e rolagem interna ao atingir a tela.
 - A ficha reúne cadastro, carteira e atividades; oportunidades e tarefas são filtradas no backend pelo contato e alcance autorizado.
 - Conversas ainda não entram na ficha: o domínio não popula nem publica esse vínculo de forma confiável.
-- OpenAPI/tipos sincronizados; build, lint, `api:check`, 151 testes e revisão visual passaram com overflow isolado no quadro.
+- OpenAPI/tipos sincronizados; build, lint, `api:check`, 152 testes e revisão visual passaram sem overflow de página.
 
 ## Migrations e verificação nesta máquina
 
@@ -117,7 +117,7 @@ O expurgo continua desligado até a decisão dos prazos de retenção.
   automações e conector HTTP; V22 auditoria; V23 retenção e legal hold; V24
   legal hold imutável; V25 equipe e alcance de equipe. **25 migrations, 67
   rotas.** Seeds e dados demonstrativos só no profile `dev`.
-- Base `main` em `32bfc0b`; backend histórico com **267 testes verdes**. O host tem Java 21 e o projeto exige 25; frontend com **151 testes verdes**.
+- Base `main` em `32bfc0b`; backend histórico com **267 testes verdes**. O host tem Java 21 e o projeto exige 25; frontend com **152 testes verdes**.
 - CRM local saudável na **V25**, com contadores idênticos à linha de base.
   `team_member` tem RLS forçado, e o `DELETE` foi recusado na verificação.
 - Fluxo de acessos exercitado no navegador contra o backend real: papel criado,
@@ -135,8 +135,8 @@ O expurgo continua desligado até a decisão dos prazos de retenção.
 ## Riscos restantes
 
 - Evolution é ponte experimental de sessão WhatsApp Web; produção exige o
-  adaptador oficial. Sem promoção pelo scanner externo, a mídia continua
-  indisponível por desenho.
+  adaptador oficial. Instagram está só no contrato e no demo: ainda faltam
+  webhook Meta e adaptador de saída. Mídia sem promoção segue indisponível.
 - Alcance por **unidade** continua sem decidir registro de domínio, e `UNIT`
   segue oculto na API (`ADR-0008`). O alcance intermediário que existe é o de
   **equipe**, de um nível só, e ele não substitui recorte por filial.

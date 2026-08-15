@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Fragment, useEffect, useRef, useState, type FormEvent } from 'react';
 import { SendHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -6,6 +6,8 @@ import { AlertaErro } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import type { Mensagem, StatusMensagem } from '@/shared/conversas/tipos';
 import type { TipoCanal } from '@/shared/crm/tipos';
+import { FUSO_DE_NEGOCIO } from '@/shared/formato';
+import { IdentificacaoDoCanal } from './IdentificacaoDoCanal';
 import { rotuloDoCanal } from './identificacao';
 
 /**
@@ -107,10 +109,21 @@ export function Conversa({
           </p>
         ) : (
           <ol className="space-y-3">
-            {mensagens.map((mensagem) => (
-              <li key={mensagem.id}>
-                <Balao mensagem={mensagem} contatoNome={contatoNome} />
-              </li>
+            {mensagens.map((mensagem, indice) => (
+              <Fragment key={mensagem.id}>
+                {(indice === 0 || chaveDaData(mensagem.criadaEm) !== chaveDaData(mensagens[indice - 1].criadaEm)) && (
+                  <li className="flex items-center gap-3 py-1" aria-hidden="true">
+                    <span className="h-px flex-1 bg-[var(--border-subtle)]" />
+                    <time className="text-[11px] font-medium text-[var(--text-muted)]">
+                      {formatarDia(mensagem.criadaEm)}
+                    </time>
+                    <span className="h-px flex-1 bg-[var(--border-subtle)]" />
+                  </li>
+                )}
+                <li>
+                  <Balao mensagem={mensagem} contatoNome={contatoNome} />
+                </li>
+              </Fragment>
             ))}
           </ol>
         )}
@@ -123,10 +136,22 @@ export function Conversa({
       >
         {erro && <AlertaErro className="mb-3">{erro}</AlertaErro>}
 
-        <p className="mb-2 text-xs text-[var(--text-muted)]">
-          Respondendo como <strong className="font-medium text-[var(--text-strong)]">{respondendoComo}</strong>
-          {' '}via {rotuloDoCanal(canalTipo)}
-        </p>
+        <div
+          className="mb-2 flex flex-wrap items-center gap-2 text-xs"
+          aria-label={`Respondendo como ${respondendoComo} via ${rotuloDoCanal(canalTipo)}`}
+        >
+          <span
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] text-[10px] font-semibold text-[var(--brand)]"
+            aria-hidden="true"
+          >
+            {iniciaisDe(respondendoComo)}
+          </span>
+          <span className="text-[var(--text-muted)]">
+            Respondendo como <strong className="font-medium text-[var(--text-strong)]">{respondendoComo}</strong>
+          </span>
+          <span className="text-[var(--text-muted)]">via</span>
+          <IdentificacaoDoCanal tipo={canalTipo} />
+        </div>
 
         <div className="flex items-end gap-2">
           <div className="flex-1">
@@ -217,6 +242,41 @@ function formatarHorario(iso: string): string {
   return new Intl.DateTimeFormat('pt-BR', {
     hour: '2-digit',
     minute: '2-digit',
-    timeZone: 'America/Sao_Paulo',
+    timeZone: FUSO_DE_NEGOCIO,
   }).format(new Date(iso));
+}
+
+function formatarDia(iso: string): string {
+  const data = new Date(iso);
+  const diaEMes = new Intl.DateTimeFormat('pt-BR', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: FUSO_DE_NEGOCIO,
+  }).format(data);
+  if (chaveDaData(iso) === chaveDaData(new Date().toISOString())) {
+    return `Hoje · ${diaEMes}`;
+  }
+  if (chaveDaData(iso) === chaveDaData(new Date(Date.now() - 86_400_000).toISOString())) {
+    return `Ontem · ${diaEMes}`;
+  }
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: FUSO_DE_NEGOCIO,
+  }).format(data);
+}
+
+function chaveDaData(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: FUSO_DE_NEGOCIO,
+  }).format(new Date(iso));
+}
+
+function iniciaisDe(nome: string): string {
+  return nome.split(/\s+/).filter(Boolean).slice(0, 2)
+    .map((parte) => parte[0]).join('').toUpperCase();
 }

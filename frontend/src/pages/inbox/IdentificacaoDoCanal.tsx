@@ -28,8 +28,8 @@ const CANAIS: Record<TipoCanal, AparenciaDoCanal> = {
     cor: 'var(--success)', fundo: 'var(--success-soft)',
   },
   INSTAGRAM: {
-    rotulo: 'Instagram', detalhe: 'Instagram', Icone: Camera,
-    cor: 'var(--danger)', fundo: 'var(--danger-soft)',
+    rotulo: 'Instagram', detalhe: 'Instagram Messaging', Icone: Camera,
+    cor: 'var(--brand)', fundo: 'var(--brand-soft)',
   },
 };
 

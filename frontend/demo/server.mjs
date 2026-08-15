@@ -59,6 +59,7 @@ const definicoesDoPreset = [
 ];
 
 const conversas = [
+  conversa('5', 'Marina Costa', '@marina.costa', 'INSTAGRAM', 'Instagram Comercial', '@finup.oficial', 'OPEN', 'Carla Mendes', '2026-08-14T19:42:00Z'),
   conversa('1', 'Maria Silva', '5511998765432@s.whatsapp.net', 'WHATSAPP_EVOLUTION', 'WhatsApp Vendas', '551130001234', 'OPEN', 'Carla Mendes', '2026-08-14T19:34:00Z'),
   conversa('2', 'João Ribeiro', '@joao_ribeiro', 'TELEGRAM', 'Bot Pré-vendas', '@crm_comercial_bot', 'PENDING', 'Alex Peixoto', '2026-08-14T19:20:00Z'),
   conversa('3', 'Loja Aurora', '551132109876', 'WHATSAPP_CLOUD', 'WhatsApp Suporte', '551140005555', 'OPEN', 'Bruno Costa', '2026-08-14T18:52:00Z'),
@@ -66,6 +67,11 @@ const conversas = [
 ];
 
 const mensagens = {
+  '5': [
+    mensagem('51', 'INBOUND', 'Oi! Vi o post sobre atendimento multicanal e queria entender os planos.', 'RECEIVED', null, '2026-08-14T19:36:00Z'),
+    mensagem('52', 'OUTBOUND', 'Oi, Marina! Sou a Carla, da FinUp. Posso te explicar por aqui mesmo.', 'READ', 'Carla Mendes', '2026-08-14T19:39:00Z'),
+    mensagem('53', 'INBOUND', 'Perfeito. Somos uma equipe de 12 pessoas e usamos Instagram e WhatsApp.', 'RECEIVED', null, '2026-08-14T19:42:00Z'),
+  ],
   '1': [
     mensagem('11', 'INBOUND', 'Olá, vi a proposta e queria tirar uma dúvida.', 'RECEIVED', null, '2026-08-14T19:28:00Z'),
     mensagem('12', 'OUTBOUND', 'Olá, Maria! Claro. É sobre prazo ou condições de pagamento?', 'READ', 'Carla Mendes', '2026-08-14T19:30:00Z'),
@@ -133,7 +139,9 @@ const server = http.createServer(async (request, response) => {
   if (request.method === 'GET' && path === '/api/relatorios/visao-geral') {
     const abertas = oportunidades.filter((item) => item.status === 'OPEN');
     return json(response, {
-      conversasAbertas: 2, conversasAguardando: 1, mensagensRecebidasHoje: 18,
+      conversasAbertas: conversas.filter((item) => item.status === 'OPEN').length,
+      conversasAguardando: conversas.filter((item) => item.status === 'PENDING').length,
+      mensagensRecebidasHoje: 20,
       totalDeContatos: contatos.length,
       oportunidadesAbertas: abertas.length,
       valorAbertoCentavos: abertas.reduce((total, item) => total + item.valorCentavos, 0),
@@ -220,11 +228,11 @@ const server = http.createServer(async (request, response) => {
   }
 
   if (request.method === 'GET' && path === '/api/conversas') {
-    return json(response, { itens: conversas, temMais: false, sequenciaDoStream: 14 });
+    return json(response, { itens: conversas, temMais: false, sequenciaDoStream: 17 });
   }
   const historico = path.match(/^\/api\/conversas\/([^/]+)\/mensagens$/);
   if (request.method === 'GET' && historico) {
-    return json(response, { itens: mensagens[historico[1]] ?? [], temMais: false, sequenciaDoStream: 14 });
+    return json(response, { itens: mensagens[historico[1]] ?? [], temMais: false, sequenciaDoStream: 17 });
   }
   if (request.method === 'POST' && historico) {
     const body = await readJson(request);
@@ -233,7 +241,7 @@ const server = http.createServer(async (request, response) => {
     return json(response, nova);
   }
   if (request.method === 'GET' && path === '/api/conversas/eventos') {
-    return json(response, { eventos: [], temMais: false, resetObrigatorio: false, ultimaSequencia: 14 });
+    return json(response, { eventos: [], temMais: false, resetObrigatorio: false, ultimaSequencia: 17 });
   }
 
   if (request.method === 'GET' && path === '/api/organizacao/papeis') {
