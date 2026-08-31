@@ -28,7 +28,7 @@
 	</scm>
 	<properties>
 		<java.version>25</java.version>
-		<spring-modulith.version>2.1.0</spring-modulith.version>
+		<spring-modulith.version>2.1.1</spring-modulith.version>
 		<!-- Override temporário do BOM do Spring Boot: 42.7.11 é afetado pela
 		     CVE-2026-54291; 42.7.12 contém a correção upstream. -->
 		<postgresql.version>42.7.12</postgresql.version>
